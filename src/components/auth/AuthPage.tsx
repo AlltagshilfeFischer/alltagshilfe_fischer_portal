@@ -77,7 +77,7 @@ export default function AuthPage() {
             <img src="/lovable-uploads/891b224f-e6be-40c4-bfcb-acf04320f118.png" alt="Alltagshilfe Fischer Logo" className="w-12 h-12" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Alltagshilfe Fischer</h1>
-          <p className="text-muted-foreground">Mitarbeiterportal</p>
+          <p className="text-muted-foreground">Controlboard</p>
         </div>
 
         <Card className="shadow-xl">
