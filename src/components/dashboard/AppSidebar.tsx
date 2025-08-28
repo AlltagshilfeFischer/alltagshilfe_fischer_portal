@@ -21,13 +21,14 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-const navigationItems = [
-  { title: 'Übersicht', url: '/dashboard', icon: Home },
-  { title: 'Dienstplan', url: '/dashboard/schedule', icon: Calendar },
-  { title: 'Zeiterfassung', url: '/dashboard/timesheet', icon: Clock },
-  { title: 'Kunden', url: '/dashboard/clients', icon: Users },
-  { title: 'Berichte', url: '/dashboard/reports', icon: FileText },
-  { title: 'Kontakt', url: '/dashboard/contact', icon: Phone },
+const dashboardItems = [
+  { title: 'Dashboard', url: '/dashboard', icon: Home },
+];
+
+const controlboardItems = [
+  { title: 'Dienstplan erstellen', url: '/dashboard/controlboard/schedule-builder', icon: Calendar },
+  { title: 'Stammdaten verwalten', url: '/dashboard/controlboard/master-data', icon: FileText },
+  { title: 'Neukunden & Mitarbeiter', url: '/dashboard/controlboard/new-entries', icon: Users },
 ];
 
 const settingsItems = [
@@ -71,12 +72,31 @@ export function AppSidebar() {
           </div>
         </div>
 
-        {/* Main Navigation */}
+        {/* Dashboard */}
         <SidebarGroup>
-          <SidebarGroupLabel>Hauptmenü</SidebarGroupLabel>
+          <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
+              {dashboardItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink to={item.url} className={getNavClass(item.url)}>
+                      <item.icon className="h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Controlboard */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Controlboard</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {controlboardItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={getNavClass(item.url)}>
