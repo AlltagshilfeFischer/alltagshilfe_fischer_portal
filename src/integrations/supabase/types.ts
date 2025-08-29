@@ -81,6 +81,7 @@ export type Database = {
         Row: {
           address: string | null
           birth_date: string | null
+          capacity_per_day: number | null
           created_at: string
           email: string | null
           emergency_contact_name: string | null
@@ -89,12 +90,16 @@ export type Database = {
           id: string
           last_name: string
           notes: string | null
+          operating_days: string[] | null
+          operating_hours_end: string | null
+          operating_hours_start: string | null
           phone: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
           birth_date?: string | null
+          capacity_per_day?: number | null
           created_at?: string
           email?: string | null
           emergency_contact_name?: string | null
@@ -103,12 +108,16 @@ export type Database = {
           id?: string
           last_name: string
           notes?: string | null
+          operating_days?: string[] | null
+          operating_hours_end?: string | null
+          operating_hours_start?: string | null
           phone?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
           birth_date?: string | null
+          capacity_per_day?: number | null
           created_at?: string
           email?: string | null
           emergency_contact_name?: string | null
@@ -117,6 +126,9 @@ export type Database = {
           id?: string
           last_name?: string
           notes?: string | null
+          operating_days?: string[] | null
+          operating_hours_end?: string | null
+          operating_hours_start?: string | null
           phone?: string | null
           updated_at?: string
         }
@@ -130,11 +142,16 @@ export type Database = {
           hourly_rate: number | null
           id: string
           is_active: boolean | null
+          max_appointments_per_day: number | null
           notes: string | null
           position: string | null
           qualifications: string[] | null
           updated_at: string
           user_id: string
+          vacation_days: string[] | null
+          working_days: string[] | null
+          working_hours_end: string | null
+          working_hours_start: string | null
         }
         Insert: {
           created_at?: string
@@ -143,11 +160,16 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
+          max_appointments_per_day?: number | null
           notes?: string | null
           position?: string | null
           qualifications?: string[] | null
           updated_at?: string
           user_id: string
+          vacation_days?: string[] | null
+          working_days?: string[] | null
+          working_hours_end?: string | null
+          working_hours_start?: string | null
         }
         Update: {
           created_at?: string
@@ -156,11 +178,16 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
+          max_appointments_per_day?: number | null
           notes?: string | null
           position?: string | null
           qualifications?: string[] | null
           updated_at?: string
           user_id?: string
+          vacation_days?: string[] | null
+          working_days?: string[] | null
+          working_hours_end?: string | null
+          working_hours_start?: string | null
         }
         Relationships: []
       }
@@ -209,6 +236,42 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      schedule_templates: {
+        Row: {
+          created_at: string
+          customer_id: string
+          day_of_week: string
+          employee_id: string
+          end_time: string
+          id: string
+          is_active: boolean | null
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          day_of_week: string
+          employee_id: string
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          day_of_week?: string
+          employee_id?: string
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          start_time?: string
+          updated_at?: string
         }
         Relationships: []
       }
