@@ -65,15 +65,15 @@ export default function DashboardHome() {
   });
 
   // Kategorisierung der Termine
-  const todayAppointments = appointments?.filter(apt => 
+  const todayAppointments = appointments?.filter((apt: any) => 
     isToday(new Date(apt.termin_datum))
   ) || [];
   
-  const upcomingAppointments = appointments?.filter(apt => 
+  const upcomingAppointments = appointments?.filter((apt: any) => 
     isFuture(new Date(apt.termin_datum)) && !isToday(new Date(apt.termin_datum))
   ) || [];
   
-  const pastAppointments = appointments?.filter(apt => 
+  const pastAppointments = appointments?.filter((apt: any) => 
     isPast(new Date(apt.termin_datum)) && !isToday(new Date(apt.termin_datum))
   ) || [];
 
@@ -136,8 +136,8 @@ export default function DashboardHome() {
             <div className="text-center py-4">Lade Mitarbeiter...</div>
           ) : employees && employees.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {employees.map((employee) => {
-                const profile = profiles?.find(p => p.benutzer_id === employee.benutzer_id);
+              {employees.map((employee: any) => {
+                const profile = profiles?.find((p: any) => p.benutzer_id === employee.benutzer_id);
                 return (
                   <div
                     key={employee.id}
@@ -340,7 +340,7 @@ export default function DashboardHome() {
             <div className="text-center py-4">Lade Kunden...</div>
           ) : customers && customers.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {customers.map((customer) => (
+              {customers.map((customer: any) => (
                 <div
                   key={customer.id}
                   className="p-4 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -365,7 +365,7 @@ export default function DashboardHome() {
             <div className="text-center py-4 text-muted-foreground">
               Keine Kunden gefunden
             </div>
-          )}
+            )}
         </CardContent>
       </Card>
     </div>
