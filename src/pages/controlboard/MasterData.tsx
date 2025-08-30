@@ -34,10 +34,10 @@ export default function MasterData() {
   const queryClient = useQueryClient();
 
   const { data: customers, isLoading: customersLoading } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['kunden'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('customers')
+        .from('kunden')
         .select('*')
         .order('nachname');
       
@@ -47,10 +47,10 @@ export default function MasterData() {
   });
 
   const { data: employees, isLoading: employeesLoading } = useQuery({
-    queryKey: ['employees'],
+    queryKey: ['mitarbeiter'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('employees')
+        .from('mitarbeiter')
         .select('*')
         .eq('ist_aktiv', true);
       
@@ -60,10 +60,10 @@ export default function MasterData() {
   });
 
   const { data: profiles } = useQuery({
-    queryKey: ['profiles'],
+    queryKey: ['profile'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profile')
         .select('*');
       
       if (error) throw error;
@@ -74,14 +74,14 @@ export default function MasterData() {
   const updateCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
       const { error } = await supabase
-        .from('customers')
+        .from('kunden')
         .update(customerData)
         .eq('id', customerData.id);
       
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['kunden'] });
       setIsDialogOpen(false);
       setEditingCustomer(null);
       toast({

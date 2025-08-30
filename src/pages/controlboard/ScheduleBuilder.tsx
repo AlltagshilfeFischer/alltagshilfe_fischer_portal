@@ -22,10 +22,10 @@ export default function ScheduleBuilder() {
 
   // Fetch employees with capacity
   const { data: employees } = useQuery({
-    queryKey: ['employees-with-capacity'],
+    queryKey: ['mitarbeiter-with-capacity'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('employees')
+        .from('mitarbeiter')
         .select(`
           id,
           benutzer_id,
@@ -47,10 +47,10 @@ export default function ScheduleBuilder() {
 
   // Fetch profiles separately
   const { data: profiles } = useQuery({
-    queryKey: ['profiles'],
+    queryKey: ['profile'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profile')
         .select('*');
       
       if (error) throw error;
@@ -60,10 +60,10 @@ export default function ScheduleBuilder() {
 
   // Fetch customers with capacity
   const { data: customers } = useQuery({
-    queryKey: ['customers-with-capacity'],
+    queryKey: ['kunden-with-capacity'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('customers')
+        .from('kunden')
         .select(`
           id,
           vorname,
@@ -84,13 +84,13 @@ export default function ScheduleBuilder() {
 
   // Fetch appointments for current month
   const { data: appointments } = useQuery({
-    queryKey: ['monthly-appointments', currentMonth],
+    queryKey: ['monthly-termine', currentMonth],
     queryFn: async () => {
       const start = startOfMonth(currentMonth);
       const end = endOfMonth(currentMonth);
       
       const { data, error } = await supabase
-        .from('appointments')
+        .from('termine')
         .select(`
           id,
           titel,
@@ -121,7 +121,7 @@ export default function ScheduleBuilder() {
       const endTime = `${(parseInt(hours) + 1).toString().padStart(2, '0')}:00`;
       
       const { data, error } = await supabase
-        .from('appointments')
+        .from('termine')
         .insert({
           mitarbeiter_id: employeeId,
           kunden_id: customerId,
@@ -136,7 +136,7 @@ export default function ScheduleBuilder() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['monthly-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-termine'] });
       toast.success('Termin erfolgreich erstellt');
     },
     onError: (error) => {

@@ -9,10 +9,10 @@ import { de } from 'date-fns/locale';
 
 export default function DashboardHome() {
   const { data: employees, isLoading: employeesLoading } = useQuery({
-    queryKey: ['employees'],
+    queryKey: ['mitarbeiter'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('employees')
+        .from('mitarbeiter')
         .select('*')
         .eq('ist_aktiv', true);
       
@@ -22,10 +22,10 @@ export default function DashboardHome() {
   });
 
   const { data: profiles, isLoading: profilesLoading } = useQuery({
-    queryKey: ['profiles'],
+    queryKey: ['profile'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profile')
         .select('*');
       
       if (error) throw error;
@@ -34,10 +34,10 @@ export default function DashboardHome() {
   });
 
   const { data: customers, isLoading: customersLoading } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['kunden'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('customers')
+        .from('kunden')
         .select('*')
         .order('nachname');
       
@@ -47,14 +47,14 @@ export default function DashboardHome() {
   });
 
   const { data: appointments, isLoading: appointmentsLoading } = useQuery({
-    queryKey: ['appointments'],
+    queryKey: ['termine'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('appointments')
+        .from('termine')
         .select(`
           *,
-          employees!inner(*),
-          customers!inner(*)
+          mitarbeiter!inner(*),
+          kunden!inner(*)
         `)
         .order('termin_datum', { ascending: true })
         .order('startzeit', { ascending: true });
@@ -199,10 +199,10 @@ export default function DashboardHome() {
                             <div>
                               <div className="font-medium">{appointment.titel}</div>
                               <div className="text-sm text-muted-foreground">
-                                {appointment.customers?.vorname} {appointment.customers?.nachname}
+                                 {appointment.kunden?.vorname} {appointment.kunden?.nachname}
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
-                                Mitarbeiter: {appointment.employees?.position || 'Unbekannt'}
+                                 Mitarbeiter: {appointment.mitarbeiter?.position || 'Unbekannt'}
                               </div>
                             </div>
                             <div className="text-right text-sm">
@@ -245,10 +245,10 @@ export default function DashboardHome() {
                             <div>
                               <div className="font-medium">{appointment.titel}</div>
                               <div className="text-sm text-muted-foreground">
-                                {appointment.customers?.vorname} {appointment.customers?.nachname}
+                                 {appointment.kunden?.vorname} {appointment.kunden?.nachname}
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
-                                Mitarbeiter: {appointment.employees?.position || 'Unbekannt'}
+                                 Mitarbeiter: {appointment.mitarbeiter?.position || 'Unbekannt'}
                               </div>
                             </div>
                             <div className="text-right text-sm">
@@ -291,10 +291,10 @@ export default function DashboardHome() {
                             <div>
                               <div className="font-medium">{appointment.titel}</div>
                               <div className="text-sm text-muted-foreground">
-                                {appointment.customers?.vorname} {appointment.customers?.nachname}
+                                {appointment.kunden?.vorname} {appointment.kunden?.nachname}
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
-                                Mitarbeiter: {appointment.employees?.position || 'Unbekannt'}
+                                Mitarbeiter: {appointment.mitarbeiter?.position || 'Unbekannt'}
                               </div>
                             </div>
                             <div className="text-right text-sm">

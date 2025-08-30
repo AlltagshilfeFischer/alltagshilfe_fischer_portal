@@ -37,13 +37,13 @@ export default function NewEntries() {
   const createCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
       const { error } = await supabase
-        .from('customers')
+        .from('kunden')
         .insert([customerData]);
       
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['kunden'] });
       setNewCustomer({
         vorname: '',
         nachname: '',
