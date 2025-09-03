@@ -73,6 +73,10 @@ export default function ScheduleBuilder() {
     return assignments.filter(a => a.employeeId === employeeId).length;
   };
 
+  const getShiftsForDate = (date: string) => {
+    return openShifts.filter(shift => shift.datum === date);
+  };
+
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
