@@ -8,8 +8,9 @@ import { format, isToday, isFuture, isPast } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 export default function DashboardHome() {
+  // Direct queries to the actual table names in the database
   const { data: employees, isLoading: employeesLoading } = useQuery({
-    queryKey: ['mitarbeiter'],
+    queryKey: ['employees'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('mitarbeiter')
@@ -21,20 +22,8 @@ export default function DashboardHome() {
     },
   });
 
-  const { data: profiles, isLoading: profilesLoading } = useQuery({
-    queryKey: ['profile'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profile')
-        .select('*');
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const { data: customers, isLoading: customersLoading } = useQuery({
-    queryKey: ['kunden'],
+    queryKey: ['customers'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('kunden')
@@ -47,17 +36,16 @@ export default function DashboardHome() {
   });
 
   const { data: appointments, isLoading: appointmentsLoading } = useQuery({
-    queryKey: ['termine'],
+    queryKey: ['appointments'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('termine')
         .select(`
           *,
-          mitarbeiter!inner(*),
-          kunden!inner(*)
+          mitarbeiter:mitarbeiter_id(*),
+          kunden:kunden_id(*)
         `)
-        .order('termin_datum', { ascending: true })
-        .order('startzeit', { ascending: true });
+        .order('start_at', { ascending: true });
       
       if (error) throw error;
       return data;
@@ -66,15 +54,15 @@ export default function DashboardHome() {
 
   // Kategorisierung der Termine
   const todayAppointments = appointments?.filter((apt: any) => 
-    isToday(new Date(apt.startzeit))
+    isToday(new Date(apt.start_at))
   ) || [];
   
   const upcomingAppointments = appointments?.filter((apt: any) => 
-    isFuture(new Date(apt.startzeit)) && !isToday(new Date(apt.startzeit))
+    isFuture(new Date(apt.start_at)) && !isToday(new Date(apt.start_at))
   ) || [];
   
   const pastAppointments = appointments?.filter((apt: any) => 
-    isPast(new Date(apt.startzeit)) && !isToday(new Date(apt.startzeit))
+    isPast(new Date(apt.start_at)) && !isToday(new Date(apt.start_at))
   ) || [];
 
   return (
@@ -132,31 +120,28 @@ export default function DashboardHome() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {employeesLoading || profilesLoading ? (
+          {employeesLoading ? (
             <div className="text-center py-4">Lade Mitarbeiter...</div>
           ) : employees && employees.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {employees.map((employee: any) => {
-                const profile = profiles?.find((p: any) => p.benutzer_id === employee.benutzer_id);
-                return (
-                  <div
-                    key={employee.id}
-                    className="p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="font-medium">
-                      {profile?.vorname} {profile?.nachname}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {employee.position || 'Keine Position angegeben'}
-                    </div>
-                    {employee.mitarbeiter_nummer && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Nr: {employee.mitarbeiter_nummer}
-                      </div>
-                    )}
+              {employees.map((employee: any) => (
+                <div
+                  key={employee.id}
+                  className="p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div className="font-medium">
+                    {employee.vorname} {employee.nachname}
                   </div>
-                );
-              })}
+                  <div className="text-sm text-muted-foreground">
+                    {employee.email || 'Keine E-Mail angegeben'}
+                  </div>
+                  {employee.telefon && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Tel: {employee.telefon}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           ) : (
             <div className="text-center py-4 text-muted-foreground">
@@ -202,21 +187,16 @@ export default function DashboardHome() {
                                  {appointment.kunden?.vorname} {appointment.kunden?.nachname}
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
-                                 Mitarbeiter: {appointment.mitarbeiter?.position || 'Unbekannt'}
+                                 Mitarbeiter: {appointment.mitarbeiter?.vorname} {appointment.mitarbeiter?.nachname}
                               </div>
                             </div>
                             <div className="text-right text-sm">
-                              <div>{appointment.startzeit} - {appointment.endzeit}</div>
+                              <div>{format(new Date(appointment.start_at), 'HH:mm', { locale: de })} - {format(new Date(appointment.end_at), 'HH:mm', { locale: de })}</div>
                               <div className="text-xs text-muted-foreground">
-                                {format(new Date(appointment.termin_datum), 'dd.MM.yyyy', { locale: de })}
+                                {format(new Date(appointment.start_at), 'dd.MM.yyyy', { locale: de })}
                               </div>
                             </div>
                           </div>
-                          {appointment.beschreibung && (
-                            <div className="mt-2 text-sm text-muted-foreground">
-                              {appointment.beschreibung}
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -248,21 +228,16 @@ export default function DashboardHome() {
                                  {appointment.kunden?.vorname} {appointment.kunden?.nachname}
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
-                                 Mitarbeiter: {appointment.mitarbeiter?.position || 'Unbekannt'}
+                                 Mitarbeiter: {appointment.mitarbeiter?.vorname} {appointment.mitarbeiter?.nachname}
                               </div>
                             </div>
                             <div className="text-right text-sm">
-                              <div>{appointment.startzeit} - {appointment.endzeit}</div>
+                              <div>{format(new Date(appointment.start_at), 'HH:mm', { locale: de })} - {format(new Date(appointment.end_at), 'HH:mm', { locale: de })}</div>
                               <div className="text-xs text-muted-foreground">
-                                {format(new Date(appointment.termin_datum), 'dd.MM.yyyy', { locale: de })}
+                                {format(new Date(appointment.start_at), 'dd.MM.yyyy', { locale: de })}
                               </div>
                             </div>
                           </div>
-                          {appointment.beschreibung && (
-                            <div className="mt-2 text-sm text-muted-foreground">
-                              {appointment.beschreibung}
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -294,21 +269,16 @@ export default function DashboardHome() {
                                 {appointment.kunden?.vorname} {appointment.kunden?.nachname}
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
-                                Mitarbeiter: {appointment.mitarbeiter?.position || 'Unbekannt'}
+                                Mitarbeiter: {appointment.mitarbeiter?.vorname} {appointment.mitarbeiter?.nachname}
                               </div>
                             </div>
                             <div className="text-right text-sm">
-                              <div>{appointment.startzeit} - {appointment.endzeit}</div>
+                              <div>{format(new Date(appointment.start_at), 'HH:mm', { locale: de })} - {format(new Date(appointment.end_at), 'HH:mm', { locale: de })}</div>
                               <div className="text-xs text-muted-foreground">
-                                {format(new Date(appointment.termin_datum), 'dd.MM.yyyy', { locale: de })}
+                                {format(new Date(appointment.start_at), 'dd.MM.yyyy', { locale: de })}
                               </div>
                             </div>
                           </div>
-                          {appointment.beschreibung && (
-                            <div className="mt-2 text-sm text-muted-foreground">
-                              {appointment.beschreibung}
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -348,11 +318,6 @@ export default function DashboardHome() {
                   <div className="font-medium">
                     {customer.vorname} {customer.nachname}
                   </div>
-                  {customer.adresse && (
-                    <div className="text-sm text-muted-foreground">
-                      {customer.adresse}
-                    </div>
-                  )}
                   {customer.telefon && (
                     <div className="text-xs text-muted-foreground mt-1">
                       Tel: {customer.telefon}
