@@ -538,10 +538,9 @@ export default function ScheduleBuilder() {
                           </div>
                           <div className="text-xs opacity-75 flex items-center gap-1 mb-1">
                             <Clock className="h-3 w-3" />
-                            <span className="font-mono bg-white/50 px-1 rounded">
-                              {appointment.startzeit} - {appointment.endzeit}
+                            <span className="font-mono bg-white/50 px-1 rounded text-xs">
+                              {appointment.startzeit}-{appointment.endzeit} ({appointment.dauer}min)
                             </span>
-                            <span className="text-xs ml-1">({appointment.dauer}min)</span>
                           </div>
                           <div className="text-xs font-medium truncate">{appointment.kunde}</div>
                           {viewMode === 'detailed' && (
