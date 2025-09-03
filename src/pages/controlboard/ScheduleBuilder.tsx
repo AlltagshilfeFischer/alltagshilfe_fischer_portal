@@ -13,30 +13,33 @@ import { de } from 'date-fns/locale';
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
-// Dummy data for demonstration
+// Dummy data for demonstration - in real app these would be appointments from database
 const dummyEmployees = [
-  { id: '1', vorname: 'Max', nachname: 'Mustermann', ist_aktiv: true, max_termine_pro_tag: 8 },
-  { id: '2', vorname: 'Anna', nachname: 'Schmidt', ist_aktiv: true, max_termine_pro_tag: 6 },
-  { id: '3', vorname: 'Tom', nachname: 'Weber', ist_aktiv: true, max_termine_pro_tag: 7 },
+  { id: '1', vorname: 'Max', nachname: 'Mustermann', ist_aktiv: true, max_termine_pro_tag: 8, position: 0 },
+  { id: '2', vorname: 'Anna', nachname: 'Schmidt', ist_aktiv: true, max_termine_pro_tag: 6, position: 1 },
+  { id: '3', vorname: 'Tom', nachname: 'Weber', ist_aktiv: true, max_termine_pro_tag: 7, position: 2 },
 ];
 
-const dummyOpenShifts = [
-  { id: 'o1', titel: 'Frühdienst', startzeit: '06:00', endzeit: '14:00', datum: '2025-09-03' },
-  { id: 'o2', titel: 'Spätdienst', startzeit: '14:00', endzeit: '22:00', datum: '2025-09-03' },
-  { id: 'o3', titel: 'Nachtdienst', startzeit: '22:00', endzeit: '06:00', datum: '2025-09-04' },
+// These are actually appointments (Termine) with customers but no assigned employee
+const dummyOpenAppointments = [
+  { id: 'a1', titel: 'Hausbesuch Familie Müller', startzeit: '08:00', endzeit: '10:00', datum: '2025-09-03', kunde: 'Familie Müller' },
+  { id: 'a2', titel: 'Beratung Herr Schmidt', startzeit: '14:00', endzeit: '15:30', datum: '2025-09-03', kunde: 'Herr Schmidt' },
+  { id: 'a3', titel: 'Nachkontrolle Frau Weber', startzeit: '09:00', endzeit: '11:00', datum: '2025-09-04', kunde: 'Frau Weber' },
+  { id: 'a4', titel: 'Erstberatung Familie Klein', startzeit: '16:00', endzeit: '17:00', datum: '2025-09-04', kunde: 'Familie Klein' },
+  { id: 'a5', titel: 'Therapie Herr Fischer', startzeit: '10:00', endzeit: '12:00', datum: '2025-09-05', kunde: 'Herr Fischer' },
 ];
 
 export default function ScheduleBuilder() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [draggedItem, setDraggedItem] = useState<any>(null);
-  const [dragType, setDragType] = useState<'employee' | 'shift' | null>(null);
+  const [dragType, setDragType] = useState<'employee' | 'appointment' | null>(null);
+  const [employees, setEmployees] = useState(dummyEmployees);
+  const [assignments, setAssignments] = useState<any[]>([]); // Employee appointment assignments
   const queryClient = useQueryClient();
 
   // Use dummy data for now - in production this would come from the database
-  const employees = dummyEmployees;
-  const openShifts = dummyOpenShifts;
-  const assignments: any[] = []; // Employee shift assignments
+  const openAppointments = dummyOpenAppointments;
 
   // Generate week dates starting from Monday
   const getWeekDates = () => {
@@ -47,17 +50,50 @@ export default function ScheduleBuilder() {
   const weekDates = getWeekDates();
   const currentWeekNumber = getWeek(currentWeek, { weekStartsOn: 1 });
 
-  const handleDragStart = (item: any, type: 'employee' | 'shift') => {
+  const handleDragStart = (item: any, type: 'employee' | 'appointment') => {
     setDraggedItem(item);
     setDragType(type);
   };
 
   const handleDrop = (employeeId: string, date: string) => {
-    if (draggedItem && dragType === 'shift') {
-      // Assign open shift to employee
-      toast.success(`Schicht "${draggedItem.titel}" wurde ${employees.find(e => e.id === employeeId)?.vorname} zugewiesen`);
+    if (draggedItem && dragType === 'appointment') {
+      // Assign open appointment to employee
+      const newAssignment = {
+        id: `assignment-${Date.now()}`,
+        employeeId,
+        appointmentId: draggedItem.id,
+        date,
+        appointment: draggedItem
+      };
+      
+      setAssignments(prev => [...prev, newAssignment]);
+      
+      const employeeName = employees.find(e => e.id === employeeId)?.vorname;
+      toast.success(`Termin "${draggedItem.titel}" wurde ${employeeName} zugewiesen`);
+      
       setDraggedItem(null);
       setDragType(null);
+    }
+  };
+
+  const handleEmployeeDrop = (draggedEmployeeId: string, targetEmployeeId: string) => {
+    if (draggedEmployeeId === targetEmployeeId) return;
+    
+    const draggedEmployee = employees.find(e => e.id === draggedEmployeeId);
+    const targetEmployee = employees.find(e => e.id === targetEmployeeId);
+    
+    if (draggedEmployee && targetEmployee) {
+      const newEmployees = employees.map(emp => {
+        if (emp.id === draggedEmployeeId) {
+          return { ...emp, position: targetEmployee.position };
+        }
+        if (emp.id === targetEmployeeId) {
+          return { ...emp, position: draggedEmployee.position };
+        }
+        return emp;
+      });
+      
+      setEmployees(newEmployees.sort((a, b) => a.position - b.position));
     }
   };
 
@@ -69,12 +105,15 @@ export default function ScheduleBuilder() {
     setCurrentWeek(direction === 'prev' ? addDays(currentWeek, -7) : addDays(currentWeek, 7));
   };
 
-  const getShiftCount = (employeeId: string) => {
+  const getAppointmentCount = (employeeId: string) => {
     return assignments.filter(a => a.employeeId === employeeId).length;
   };
 
-  const getShiftsForDate = (date: string) => {
-    return openShifts.filter(shift => shift.datum === date);
+  const getAppointmentsForDate = (date: string) => {
+    const assignedAppointmentIds = assignments.map(a => a.appointmentId);
+    return openAppointments.filter(appointment => 
+      appointment.datum === date && !assignedAppointmentIds.includes(appointment.id)
+    );
   };
 
   const getAssignmentsForEmployeeAndDate = (employeeId: string, date: string) => {
@@ -103,28 +142,27 @@ export default function ScheduleBuilder() {
       <div className="grid grid-cols-[200px_1fr] gap-4">
         {/* Left Sidebar with Employees */}
         <div className="space-y-4">
-          {/* Open Shifts Section */}
+          {/* Summary Card */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white bg-orange-500 px-2 py-1 rounded">
-                OFFENE SCHICHTEN
+              <CardTitle className="text-sm font-medium text-white bg-blue-500 px-2 py-1 rounded">
+                ÜBERSICHT
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-2 space-y-2">
-              {openShifts.map((shift) => (
-                <div
-                  key={shift.id}
-                  draggable
-                  onDragStart={() => handleDragStart(shift, 'shift')}
-                  className="p-2 bg-blue-100 text-blue-800 rounded text-sm cursor-move hover:bg-blue-200 transition-colors"
-                >
-                  <div className="font-medium">{shift.titel}</div>
-                  <div className="text-xs">{shift.startzeit} - {shift.endzeit}</div>
+              <div className="text-xs">
+                <div className="flex justify-between">
+                  <span>Offene Termine:</span>
+                  <span className="font-medium">{openAppointments.filter(a => !assignments.some(assign => assign.appointmentId === a.id)).length}</span>
                 </div>
-              ))}
+                <div className="flex justify-between">
+                  <span>Zugewiesene Termine:</span>
+                  <span className="font-medium">{assignments.length}</span>
+                </div>
+              </div>
               <Button variant="outline" size="sm" className="w-full">
                 <Plus className="h-3 w-3 mr-1" />
-                Neue Schicht
+                Neuer Termin
               </Button>
             </CardContent>
           </Card>
@@ -137,15 +175,27 @@ export default function ScheduleBuilder() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-2 space-y-2">
-              {employees.map((employee) => {
-                const shiftCount = getShiftCount(employee.id);
+              {employees.sort((a, b) => a.position - b.position).map((employee) => {
+                const appointmentCount = getAppointmentCount(employee.id);
                 return (
-                  <div key={employee.id} className="space-y-1">
+                  <div 
+                    key={employee.id} 
+                    className="space-y-1 p-2 rounded cursor-move hover:bg-muted/20 transition-colors"
+                    draggable
+                    onDragStart={() => handleDragStart(employee, 'employee')}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedItem && dragType === 'employee' && draggedItem.id !== employee.id) {
+                        handleEmployeeDrop(draggedItem.id, employee.id);
+                      }
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                  >
                     <div className="font-medium text-sm">
                       {employee.vorname} {employee.nachname}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {shiftCount} Schichten
+                      {appointmentCount} Termine
                     </div>
                   </div>
                 );
@@ -157,27 +207,59 @@ export default function ScheduleBuilder() {
         {/* Calendar Grid */}
         <Card>
           <CardContent className="p-0">
-            {/* Week Header */}
+            {/* Week Header with Open Appointments */}
             <div className="grid grid-cols-8 border-b">
               <div className="p-2 text-xs text-muted-foreground border-r">
                 KW {currentWeekNumber}
               </div>
-              {weekDates.map((date, index) => (
-                <div key={index} className="p-2 text-center border-r last:border-r-0">
-                  <div className="text-xs text-muted-foreground">
-                    {WEEKDAYS[index]}
+              {weekDates.map((date, index) => {
+                const dateStr = format(date, 'yyyy-MM-dd');
+                const dayAppointments = getAppointmentsForDate(dateStr);
+                return (
+                  <div key={index} className="p-2 border-r last:border-r-0">
+                    <div className="text-center mb-2">
+                      <div className="text-xs text-muted-foreground">
+                        {WEEKDAYS[index]}
+                      </div>
+                      <div className="text-sm font-medium">
+                        {format(date, 'd')}
+                      </div>
+                    </div>
+                    {/* Open appointments for this day */}
+                    <div className="space-y-1 min-h-[60px]">
+                      {dayAppointments.map((appointment) => (
+                        <div
+                          key={appointment.id}
+                          draggable
+                          onDragStart={() => handleDragStart(appointment, 'appointment')}
+                          className="p-1 bg-orange-100 text-orange-800 rounded text-xs cursor-move hover:bg-orange-200 transition-colors"
+                        >
+                          <div className="font-medium text-xs">{appointment.titel}</div>
+                          <div className="text-xs opacity-75">{appointment.startzeit}-{appointment.endzeit}</div>
+                          <div className="text-xs opacity-75">{appointment.kunde}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="text-sm font-medium">
-                    {format(date, 'd')}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Employee Rows */}
-            {employees.map((employee) => (
+            {employees.sort((a, b) => a.position - b.position).map((employee) => (
               <div key={employee.id} className="grid grid-cols-8 border-b last:border-b-0">
-                <div className="p-3 border-r bg-muted/30">
+                <div 
+                  className="p-3 border-r bg-muted/30 cursor-move hover:bg-muted/50 transition-colors"
+                  draggable
+                  onDragStart={() => handleDragStart(employee, 'employee')}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggedItem && dragType === 'employee' && draggedItem.id !== employee.id) {
+                      handleEmployeeDrop(draggedItem.id, employee.id);
+                    }
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                >
                   <div className="font-medium text-sm">
                     {employee.vorname}
                   </div>
@@ -185,7 +267,7 @@ export default function ScheduleBuilder() {
                     {employee.nachname}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {getShiftCount(employee.id)} Schichten
+                    {getAppointmentCount(employee.id)} Termine
                   </div>
                 </div>
                 {weekDates.map((date, dayIndex) => {
@@ -197,16 +279,17 @@ export default function ScheduleBuilder() {
                       onDrop={() => handleDrop(employee.id, dateStr)}
                       onDragOver={handleDragOver}
                     >
-                      {/* Display assigned shifts */}
+                      {/* Display assigned appointments */}
                       {getAssignmentsForEmployeeAndDate(employee.id, dateStr).map((assignment) => (
                         <div key={assignment.id} className="mb-1 p-1 bg-green-100 text-green-800 rounded text-xs">
-                          <div className="font-medium">{assignment.shift.titel}</div>
-                          <div className="text-xs">{assignment.shift.startzeit} - {assignment.shift.endzeit}</div>
+                          <div className="font-medium">{assignment.appointment.titel}</div>
+                          <div className="text-xs">{assignment.appointment.startzeit} - {assignment.appointment.endzeit}</div>
+                          <div className="text-xs opacity-75">{assignment.appointment.kunde}</div>
                         </div>
                       ))}
                       {getAssignmentsForEmployeeAndDate(employee.id, dateStr).length === 0 && (
                         <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
-                          Drop hier
+                          Termin hier zuweisen
                         </div>
                       )}
                     </div>
@@ -223,10 +306,10 @@ export default function ScheduleBuilder() {
         <AlertDescription>
           <strong>Dienstplan-Funktionen:</strong>
           <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-            <li>Ziehen Sie offene Schichten auf Mitarbeiter-Zeitslots</li>
-            <li>Links werden offene Schichten und Mitarbeiter angezeigt</li>
-            <li>Oben sind die Wochentage zu sehen</li>
-            <li>Dummy-Daten werden für die Demonstration verwendet</li>
+            <li>Ziehen Sie offene Termine aus der Tagesübersicht auf Mitarbeiter-Zeitslots</li>
+            <li>Mitarbeiter können per Drag & Drop umsortiert werden</li>
+            <li>Jeder Termin hat einen festen Kunden und kann einem Mitarbeiter zugewiesen werden</li>
+            <li>Termine ohne Mitarbeiter werden als "offene Termine" angezeigt</li>
           </ul>
         </AlertDescription>
       </Alert>
