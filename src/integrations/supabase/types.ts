@@ -567,6 +567,10 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      is_authenticated_employee: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       set_limit: {
         Args: { "": number }
         Returns: number
