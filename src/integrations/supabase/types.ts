@@ -235,6 +235,72 @@ export type Database = {
           },
         ]
       }
+      termin_vorlagen: {
+        Row: {
+          created_at: string
+          dauer_minuten: number
+          gueltig_bis: string | null
+          gueltig_von: string
+          id: string
+          intervall: Database["public"]["Enums"]["recurrence_interval"]
+          ist_aktiv: boolean
+          kunden_id: string
+          mitarbeiter_id: string
+          notizen: string | null
+          start_zeit: string
+          titel: string
+          updated_at: string
+          wochentag: number
+        }
+        Insert: {
+          created_at?: string
+          dauer_minuten?: number
+          gueltig_bis?: string | null
+          gueltig_von?: string
+          id?: string
+          intervall?: Database["public"]["Enums"]["recurrence_interval"]
+          ist_aktiv?: boolean
+          kunden_id: string
+          mitarbeiter_id: string
+          notizen?: string | null
+          start_zeit: string
+          titel: string
+          updated_at?: string
+          wochentag: number
+        }
+        Update: {
+          created_at?: string
+          dauer_minuten?: number
+          gueltig_bis?: string | null
+          gueltig_von?: string
+          id?: string
+          intervall?: Database["public"]["Enums"]["recurrence_interval"]
+          ist_aktiv?: boolean
+          kunden_id?: string
+          mitarbeiter_id?: string
+          notizen?: string | null
+          start_zeit?: string
+          titel?: string
+          updated_at?: string
+          wochentag?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "termin_vorlagen_kunden_id_fkey"
+            columns: ["kunden_id"]
+            isOneToOne: false
+            referencedRelation: "kunden"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "termin_vorlagen_mitarbeiter_id_fkey"
+            columns: ["mitarbeiter_id"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       termine: {
         Row: {
           created_at: string | null
@@ -547,6 +613,10 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      generate_termine_from_vorlagen: {
+        Args: { end_date?: string; start_date?: string }
+        Returns: number
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown
@@ -598,6 +668,7 @@ export type Database = {
       }
     }
     Enums: {
+      recurrence_interval: "weekly" | "biweekly" | "monthly" | "quarterly"
       termin_status: "scheduled" | "in_progress" | "completed" | "cancelled"
       user_rolle: "admin" | "manager" | "mitarbeiter"
     }
@@ -727,6 +798,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      recurrence_interval: ["weekly", "biweekly", "monthly", "quarterly"],
       termin_status: ["scheduled", "in_progress", "completed", "cancelled"],
       user_rolle: ["admin", "manager", "mitarbeiter"],
     },
