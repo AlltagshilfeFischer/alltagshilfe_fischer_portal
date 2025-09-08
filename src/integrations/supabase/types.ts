@@ -738,6 +738,10 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      generate_termine_from_vorlagen: {
+        Args: { p_from: string; p_to: string }
+        Returns: number
+      }
       reject_termin_change: {
         Args: { p_reason: string; p_request_id: string }
         Returns: undefined
