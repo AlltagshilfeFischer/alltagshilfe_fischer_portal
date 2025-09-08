@@ -478,7 +478,7 @@ export type Database = {
       }
       approve_termin_change: {
         Args: { p_request_id: string }
-        Returns: undefined
+        Returns: boolean
       }
       citext: {
         Args: { "": boolean } | { "": string } | { "": unknown }
@@ -744,7 +744,7 @@ export type Database = {
       }
       reject_termin_change: {
         Args: { p_reason: string; p_request_id: string }
-        Returns: undefined
+        Returns: boolean
       }
       request_termin_change: {
         Args: {
