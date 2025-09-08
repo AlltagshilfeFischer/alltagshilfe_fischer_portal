@@ -331,6 +331,34 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "termin_aenderungen_new_kunden_id_fkey"
+            columns: ["new_kunden_id"]
+            isOneToOne: false
+            referencedRelation: "kunden"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "termin_aenderungen_new_mitarbeiter_id_fkey"
+            columns: ["new_mitarbeiter_id"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "termin_aenderungen_old_kunden_id_fkey"
+            columns: ["old_kunden_id"]
+            isOneToOne: false
+            referencedRelation: "kunden"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "termin_aenderungen_old_mitarbeiter_id_fkey"
+            columns: ["old_mitarbeiter_id"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "termin_aenderungen_requested_by_fkey"
             columns: ["requested_by"]
             isOneToOne: false
