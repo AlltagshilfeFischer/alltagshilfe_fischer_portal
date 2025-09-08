@@ -748,11 +748,11 @@ export type Database = {
       }
       request_termin_change: {
         Args: {
-          p_new_end: string
-          p_new_kunde: string
-          p_new_mitarbeiter: string
-          p_new_start: string
-          p_reason: string
+          p_new_end?: string
+          p_new_kunde?: string
+          p_new_mitarbeiter?: string
+          p_new_start?: string
+          p_reason?: string
           p_termin_id: string
         }
         Returns: string
