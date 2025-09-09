@@ -271,33 +271,39 @@ const ScheduleBuilder = () => {
 
     // Handle dropping on employee schedule
     if (over.id.toString().startsWith('employee-')) {
-      const [, employeeId, dayIndex] = over.id.toString().split('-');
+      // Parse the drop zone ID correctly
+      const overIdStr = over.id.toString();
+      const parts = overIdStr.split('-');
       
-      try {
-        // Update appointment assignment
-        const { error } = await supabase
-          .from('termine')
-          .update({ 
-            mitarbeiter_id: employeeId,
-            status: 'scheduled'
-          })
-          .eq('id', appointmentId);
-
-        if (error) throw error;
-
-        toast({
-          title: 'Erfolg',
-          description: `Termin "${appointment.titel}" wurde zugewiesen.`,
-        });
+      if (parts.length >= 3 && parts[0] === 'employee') {
+        const employeeId = parts[1];
         
-        loadData(); // Refresh data
-      } catch (error) {
-        console.error('Error updating appointment:', error);
-        toast({
-          title: 'Fehler',
-          description: 'Termin konnte nicht zugewiesen werden.',
-          variant: 'destructive',
-        });
+        try {
+          // Update appointment assignment
+          const { error } = await supabase
+            .from('termine')
+            .update({ 
+              mitarbeiter_id: employeeId,
+              status: 'scheduled'
+            })
+            .eq('id', appointmentId);
+
+          if (error) throw error;
+
+          toast({
+            title: 'Erfolg',
+            description: `Termin "${appointment.titel}" wurde zugewiesen.`,
+          });
+          
+          loadData(); // Refresh data
+        } catch (error) {
+          console.error('Error updating appointment:', error);
+          toast({
+            title: 'Fehler',
+            description: 'Termin konnte nicht zugewiesen werden.',
+            variant: 'destructive',
+          });
+        }
       }
     }
     
@@ -511,7 +517,7 @@ const ScheduleBuilder = () => {
           <CardContent className="p-3 pt-0">
             <DropZone id="unassigned" isEmpty={filteredAppointments.length === 0}>
               <SortableContext items={filteredAppointments.map(app => app.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 max-h-48 overflow-y-auto">
                   {filteredAppointments.map((appointment) => (
                     <DraggableAppointment
                       key={appointment.id}
