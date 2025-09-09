@@ -295,7 +295,10 @@ const ScheduleBuilder = () => {
             description: `Termin "${appointment.titel}" wurde zugewiesen.`,
           });
           
-          loadData(); // Refresh data
+          // Force refresh with a slight delay to ensure database changes are reflected
+          setTimeout(() => {
+            loadData();
+          }, 100);
         } catch (error) {
           console.error('Error updating appointment:', error);
           toast({
@@ -325,7 +328,10 @@ const ScheduleBuilder = () => {
           description: 'Termin wurde zu offenen Schichten verschoben.',
         });
         
-        loadData(); // Refresh data
+        // Force refresh with a slight delay to ensure database changes are reflected
+        setTimeout(() => {
+          loadData();
+        }, 100);
       } catch (error) {
         console.error('Error updating appointment:', error);
         toast({
