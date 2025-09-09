@@ -16,6 +16,7 @@ import { AppointmentApprovalDialog } from '@/components/schedule/AppointmentAppr
 import { DraggableAppointment } from '@/components/schedule/DraggableAppointment';
 import { DropZone } from '@/components/schedule/DropZone';
 import { EmployeeCard } from '@/components/schedule/EmployeeCard';
+import { SortableEmployeeCard } from '@/components/schedule/SortableEmployeeCard';
 import {
   DndContext,
   DragOverlay,
@@ -83,6 +84,7 @@ const ScheduleBuilder = () => {
   const [loading, setLoading] = useState(true);
   const [pendingChanges, setPendingChanges] = useState<any[]>([]);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [employeeOrder, setEmployeeOrder] = useState<string[]>([]);
   
   const { toast } = useToast();
 
@@ -156,6 +158,11 @@ const ScheduleBuilder = () => {
       setEmployees(transformedEmployees);
       setCustomers(customersData || []);
       setAppointments(transformedAppointments);
+      
+      // Initialize employee order if not set
+      if (employeeOrder.length === 0) {
+        setEmployeeOrder(transformedEmployees.map(emp => emp.id));
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -169,20 +176,34 @@ const ScheduleBuilder = () => {
   };
 
   const filteredEmployees = useMemo(() => {
-    return employees
-      .filter(emp => 
-        emp.ist_aktiv && 
-        emp.name.toLowerCase().includes(searchEmployee.toLowerCase())
-      )
-      .sort((a, b) => {
-        switch (sortEmployees) {
-          case 'workload':
-            return b.workload - a.workload;
-          default:
-            return a.name.localeCompare(b.name);
-        }
-      });
-  }, [employees, searchEmployee, sortEmployees]);
+    const filtered = employees.filter(emp => 
+      emp.ist_aktiv && 
+      emp.name.toLowerCase().includes(searchEmployee.toLowerCase())
+    );
+    
+    // Sort by custom order first, then by selected criteria
+    return filtered.sort((a, b) => {
+      const aIndex = employeeOrder.indexOf(a.id);
+      const bIndex = employeeOrder.indexOf(b.id);
+      
+      // If both have custom order, use that
+      if (aIndex !== -1 && bIndex !== -1) {
+        return aIndex - bIndex;
+      }
+      
+      // If only one has custom order, prioritize it
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      
+      // Otherwise use selected sorting criteria
+      switch (sortEmployees) {
+        case 'workload':
+          return b.workload - a.workload;
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
+  }, [employees, searchEmployee, sortEmployees, employeeOrder]);
 
   const openAppointments = useMemo(() => {
     return appointments.filter(app => app.status === 'unassigned');
@@ -205,6 +226,24 @@ const ScheduleBuilder = () => {
     setActiveId(event.active.id as string);
   };
 
+  const handleEmployeeSort = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = employeeOrder.indexOf(active.id as string);
+    const newIndex = employeeOrder.indexOf(over.id as string);
+    
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newOrder = [...employeeOrder];
+      newOrder.splice(oldIndex, 1);
+      newOrder.splice(newIndex, 0, active.id as string);
+      setEmployeeOrder(newOrder);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
@@ -213,7 +252,16 @@ const ScheduleBuilder = () => {
       return;
     }
 
-    const appointmentId = active.id as string;
+    const activeIdStr = active.id as string;
+    
+    // Handle employee sorting
+    if (activeIdStr.startsWith('employee-sort-')) {
+      handleEmployeeSort(event);
+      setActiveId(null);
+      return;
+    }
+
+    const appointmentId = activeIdStr;
     const appointment = appointments.find(app => app.id === appointmentId);
     
     if (!appointment) {
@@ -444,6 +492,39 @@ const ScheduleBuilder = () => {
           </Card>
         </div>
 
+        {/* Open Appointments Section */}
+        <Card className="border shadow-sm bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base text-orange-800">
+              <AlertTriangle className="h-4 w-4" />
+              Offene Termine
+            </CardTitle>
+            <div className="space-y-2">
+              <Input
+                placeholder="Termine suchen..."
+                value={searchAppointment}
+                onChange={(e) => setSearchAppointment(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 pt-0">
+            <DropZone id="unassigned" isEmpty={filteredAppointments.length === 0}>
+              <SortableContext items={filteredAppointments.map(app => app.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {filteredAppointments.map((appointment) => (
+                    <DraggableAppointment
+                      key={appointment.id}
+                      appointment={appointment}
+                      isDragging={activeId === appointment.id}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DropZone>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
           {/* Sidebar */}
           <div className="xl:col-span-1 space-y-4">
@@ -453,6 +534,9 @@ const ScheduleBuilder = () => {
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Users className="h-4 w-4" />
                   Mitarbeiter
+                  <Badge variant="outline" className="text-xs ml-auto">
+                    Drag & Drop
+                  </Badge>
                 </CardTitle>
                 <div className="space-y-2">
                   <Input
@@ -473,52 +557,17 @@ const ScheduleBuilder = () => {
                 </div>
               </CardHeader>
               <CardContent className="p-3 pt-0">
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {filteredEmployees.map((employee) => (
-                    <EmployeeCard
-                      key={employee.id}
-                      employee={employee}
-                      currentAppointments={appointments.filter(app => app.mitarbeiter_id === employee.id).length}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Open Appointments */}
-            <Card className="border shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                  Offene Termine
-                </CardTitle>
-                <Input
-                  placeholder="Suchen..."
-                  value={searchAppointment}
-                  onChange={(e) => setSearchAppointment(e.target.value)}
-                  className="h-8 text-sm"
-                />
-              </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <DropZone id="unassigned" className="max-h-96 overflow-y-auto">
-                  <SortableContext items={filteredAppointments.map(app => app.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-2">
-                      {filteredAppointments.map((appointment) => (
-                        <DraggableAppointment
-                          key={appointment.id}
-                          appointment={appointment}
-                          isAssigned={false}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                  {filteredAppointments.length === 0 && (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <Calendar className="mx-auto h-8 w-8 opacity-50 mb-2" />
-                      <p className="text-sm">Keine offenen Termine</p>
-                    </div>
-                  )}
-                </DropZone>
+                <SortableContext items={filteredEmployees.map(emp => `employee-sort-${emp.id}`)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {filteredEmployees.map((employee) => (
+                      <SortableEmployeeCard
+                        key={employee.id}
+                        employee={employee}
+                        currentAppointments={appointments.filter(app => app.mitarbeiter_id === employee.id).length}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
               </CardContent>
             </Card>
           </div>
