@@ -17,6 +17,7 @@ import { DraggableAppointment } from '@/components/schedule/DraggableAppointment
 import { DropZone } from '@/components/schedule/DropZone';
 import { EmployeeCard } from '@/components/schedule/EmployeeCard';
 import { SortableEmployeeCard } from '@/components/schedule/SortableEmployeeCard';
+import { SmartAssignmentPanel } from '@/components/schedule/SmartAssignmentPanel';
 import {
   DndContext,
   DragOverlay,
@@ -244,6 +245,84 @@ const ScheduleBuilder = () => {
     }
   };
 
+  const assignAppointment = async (appointmentId: string, employeeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('termine')
+        .update({ 
+          mitarbeiter_id: employeeId,
+          status: 'scheduled'
+        })
+        .eq('id', appointmentId);
+
+      if (error) throw error;
+
+      const appointment = appointments.find(app => app.id === appointmentId);
+      const employee = employees.find(emp => emp.id === employeeId);
+      
+      toast({
+        title: 'Erfolg',
+        description: `Termin "${appointment?.titel}" wurde ${employee?.name} zugewiesen.`,
+      });
+      
+      setTimeout(() => {
+        loadData();
+      }, 100);
+    } catch (error) {
+      console.error('Error assigning appointment:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Termin konnte nicht zugewiesen werden.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const autoAssignAppointments = async () => {
+    if (openAppointments.length === 0) return;
+
+    let assignedCount = 0;
+
+    for (const appointment of openAppointments) {
+      // Simple auto-assignment logic: find employee with lowest workload
+      const availableEmployees = employees
+        .filter(emp => emp.ist_aktiv)
+        .map(emp => ({
+          ...emp,
+          currentLoad: appointments.filter(app => app.mitarbeiter_id === emp.id).length
+        }))
+        .filter(emp => emp.currentLoad < (emp.max_termine_pro_tag || 8))
+        .sort((a, b) => a.currentLoad - b.currentLoad);
+
+      if (availableEmployees.length > 0) {
+        try {
+          const { error } = await supabase
+            .from('termine')
+            .update({ 
+              mitarbeiter_id: availableEmployees[0].id,
+              status: 'scheduled'
+            })
+            .eq('id', appointment.id);
+
+          if (!error) {
+            assignedCount++;
+          }
+        } catch (error) {
+          console.error('Error auto-assigning appointment:', error);
+        }
+      }
+    }
+
+    toast({
+      title: 'Auto-Zuweisung abgeschlossen',
+      description: `${assignedCount} von ${openAppointments.length} Terminen wurden zugewiesen.`,
+    });
+
+    setTimeout(() => {
+      loadData();
+    }, 100);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
@@ -277,36 +356,7 @@ const ScheduleBuilder = () => {
       
       if (parts.length >= 3 && parts[0] === 'employee') {
         const employeeId = parts.slice(1, -1).join('-'); // Join all parts except first and last to handle UUIDs with dashes
-        
-        try {
-          // Update appointment assignment
-          const { error } = await supabase
-            .from('termine')
-            .update({ 
-              mitarbeiter_id: employeeId,
-              status: 'scheduled'
-            })
-            .eq('id', appointmentId);
-
-          if (error) throw error;
-
-          toast({
-            title: 'Erfolg',
-            description: `Termin "${appointment.titel}" wurde zugewiesen.`,
-          });
-          
-          // Force refresh with a slight delay to ensure database changes are reflected
-          setTimeout(() => {
-            loadData();
-          }, 100);
-        } catch (error) {
-          console.error('Error updating appointment:', error);
-          toast({
-            title: 'Fehler',
-            description: 'Termin konnte nicht zugewiesen werden.',
-            variant: 'destructive',
-          });
-        }
+        await assignAppointment(appointmentId, employeeId);
       }
     }
     
@@ -328,7 +378,6 @@ const ScheduleBuilder = () => {
           description: 'Termin wurde zu offenen Schichten verschoben.',
         });
         
-        // Force refresh with a slight delay to ensure database changes are reflected
         setTimeout(() => {
           loadData();
         }, 100);
@@ -540,6 +589,15 @@ const ScheduleBuilder = () => {
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
           {/* Sidebar */}
           <div className="xl:col-span-1 space-y-4">
+            {/* Smart Assignment Panel */}
+            <SmartAssignmentPanel
+              employees={employees}
+              appointments={appointments}
+              openAppointments={openAppointments}
+              onAssignAppointment={assignAppointment}
+              onAutoAssign={autoAssignAppointments}
+            />
+
             {/* Employee List */}
             <Card className="border shadow-sm">
               <CardHeader className="pb-3">
@@ -570,7 +628,7 @@ const ScheduleBuilder = () => {
               </CardHeader>
               <CardContent className="p-3 pt-0">
                 <SortableContext items={filteredEmployees.map(emp => `employee-sort-${emp.id}`)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
                     {filteredEmployees.map((employee) => (
                       <SortableEmployeeCard
                         key={employee.id}
