@@ -81,42 +81,42 @@ export function DraggableAppointment({ appointment, isDragging = false, isAssign
       ref={setNodeRef}
       style={style}
       {...attributes}
+      {...listeners}
       className={cn(
-        'p-1.5 border transition-all duration-200 cursor-move hover:shadow-sm text-xs',
+        'p-2 border-2 transition-all duration-200 cursor-grab active:cursor-grabbing hover:shadow-md text-xs group',
         getStatusColor(appointment.status),
-        isDragging && 'opacity-50 scale-105 shadow-lg',
-        isAssigned && 'border-dashed'
+        isDragging && 'opacity-50 scale-105 shadow-xl ring-2 ring-primary/20 z-50',
+        isAssigned && 'border-dashed',
+        'hover:scale-102 hover:shadow-lg active:scale-95',
+        !isDragging && 'hover:border-primary/40'
       )}
     >
-      <div className="flex items-start gap-1.5">
-        <div
-          {...listeners}
-          className="text-muted-foreground hover:text-foreground transition-colors mt-0.5 cursor-grab active:cursor-grabbing flex-shrink-0"
-        >
-          <GripVertical className="h-2.5 w-2.5" />
+      <div className="flex items-start gap-2">
+        <div className="text-muted-foreground group-hover:text-primary transition-colors mt-0.5 flex-shrink-0">
+          <GripVertical className="h-3 w-3" />
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-1 mb-0.5">
-            <h4 className="font-medium text-xs truncate leading-tight">{appointment.titel}</h4>
+          <div className="flex items-start justify-between gap-1 mb-1">
+            <h4 className="font-semibold text-sm truncate leading-tight group-hover:text-primary transition-colors">{appointment.titel}</h4>
             <div className="flex-shrink-0">
               {getStatusBadge(appointment.status)}
             </div>
           </div>
           
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {appointment.customer && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <User className="h-2.5 w-2.5 flex-shrink-0" />
-                <span className="truncate">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <User className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate font-medium">
                   {appointment.customer.vorname} {appointment.customer.nachname}
                 </span>
               </div>
             )}
             
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="h-2.5 w-2.5 flex-shrink-0" />
-              <span className="truncate">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate font-medium">
                 {format(new Date(appointment.start_at), 'HH:mm')} - {format(new Date(appointment.end_at), 'HH:mm')}
               </span>
             </div>

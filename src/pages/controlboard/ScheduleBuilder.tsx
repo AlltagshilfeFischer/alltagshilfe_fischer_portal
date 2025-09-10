@@ -260,14 +260,20 @@ const ScheduleBuilder = () => {
       const appointment = appointments.find(app => app.id === appointmentId);
       const employee = employees.find(emp => emp.id === employeeId);
       
+      // Update local state immediately for instant UI feedback
+      setAppointments(prev => prev.map(app => 
+        app.id === appointmentId 
+          ? { ...app, mitarbeiter_id: employeeId, status: 'scheduled' }
+          : app
+      ));
+
       toast({
         title: 'Erfolg',
         description: `Termin "${appointment?.titel}" wurde ${employee?.name} zugewiesen.`,
       });
       
-      setTimeout(() => {
-        loadData();
-      }, 100);
+      // Also reload data to ensure consistency
+      loadData();
     } catch (error) {
       console.error('Error assigning appointment:', error);
       toast({
@@ -373,14 +379,20 @@ const ScheduleBuilder = () => {
 
         if (error) throw error;
 
+        // Update local state immediately for instant UI feedback
+        setAppointments(prev => prev.map(app => 
+          app.id === appointmentId 
+            ? { ...app, mitarbeiter_id: null, status: 'unassigned' }
+            : app
+        ));
+
         toast({
           title: 'Erfolg',
           description: 'Termin wurde zu offenen Schichten verschoben.',
         });
         
-        setTimeout(() => {
-          loadData();
-        }, 100);
+        // Also reload data to ensure consistency
+        loadData();
       } catch (error) {
         console.error('Error updating appointment:', error);
         toast({
