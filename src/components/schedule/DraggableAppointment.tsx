@@ -84,12 +84,14 @@ export function DraggableAppointment({
           )}
         </div>
 
-        <h4 className={cn(
-          "font-medium leading-tight group-hover:text-primary transition-colors",
-          isUnassigned ? "text-xs text-muted-foreground" : "text-sm"
-        )}>
-          {appointment.titel}
-        </h4>
+        {appointment.titel && appointment.titel !== 'Aktueller Termin' && (
+          <h4 className={cn(
+            "font-medium leading-tight group-hover:text-primary transition-colors",
+            isUnassigned ? "text-xs text-muted-foreground" : "text-sm"
+          )}>
+            {appointment.titel}
+          </h4>
+        )}
         
         {appointment.customer && (
           <div className={cn(
