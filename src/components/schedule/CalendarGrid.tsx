@@ -91,28 +91,28 @@ export function CalendarGrid({
 
   return (
     <div className="calendar-grid">
-      {/* Header Row */}
-      <div className={`grid gap-2 mb-2 bg-muted/20 p-2 rounded-lg ${weekDates.length > 7 ? 'grid-cols-[200px_repeat(28,1fr)]' : 'grid-cols-[200px_repeat(7,1fr)]'}`}>
-        <div className="text-xs font-semibold text-muted-foreground px-2 py-1">
+      {/* Header Row with fixed widths and grid borders */}
+      <div className={`grid gap-1 mb-2 bg-muted/20 p-2 rounded-lg border ${weekDates.length > 7 ? 'grid-cols-[200px_repeat(28,minmax(60px,1fr))]' : 'grid-cols-[200px_repeat(7,minmax(120px,1fr))]'}`}>
+        <div className="text-xs font-semibold text-muted-foreground px-2 py-1 border-r border-muted">
           Mitarbeiter
         </div>
         {weekDates.map((date, index) => (
-          <div key={index} className="text-center px-1 py-1">
+          <div key={index} className="text-center px-1 py-1 border-r border-muted">
             <div className="text-xs font-semibold text-foreground">
-              {format(date, 'EEE', { locale: de })}
+              {format(date, weekDates.length > 7 ? 'dd' : 'EEE', { locale: de })}
             </div>
             <div className="text-xs text-muted-foreground">
-              {format(date, 'dd.MM', { locale: de })}
+              {format(date, weekDates.length > 7 ? 'MM' : 'dd.MM', { locale: de })}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1 border-t border-muted">
         {sortedEmployees.map((employee) => (
-          <div key={employee.id} className={`grid gap-2 ${weekDates.length > 7 ? 'grid-cols-[200px_repeat(28,1fr)]' : 'grid-cols-[200px_repeat(7,1fr)]'}`}>
-            {/* Employee Info */}
-            <div className="bg-card border rounded-lg p-2 shadow-sm">
+          <div key={employee.id} className={`grid gap-1 border-b border-muted/50 ${weekDates.length > 7 ? 'grid-cols-[200px_repeat(28,minmax(60px,1fr))]' : 'grid-cols-[200px_repeat(7,minmax(120px,1fr))]'}`}>
+            {/* Employee Info with border */}
+            <div className="bg-card border-r border-muted rounded-lg p-2 shadow-sm">
               <div className="flex items-center gap-2 mb-1">
                 <div 
                   className="w-3 h-3 rounded-full border border-border flex-shrink-0" 
@@ -123,30 +123,32 @@ export function CalendarGrid({
               <p className="text-xs text-muted-foreground truncate">{employee.email}</p>
             </div>
 
-            {/* Day Slots */}
+            {/* Day Slots with grid borders */}
             {weekDates.map((date, dayIndex) => {
               const dayAppointments = getAppointmentsForDate(employee.id, date);
               const dropZoneId = `employee-${employee.id}-${dayIndex}`;
 
               return (
-                <div key={`${employee.id}-day-${dayIndex}`} className="min-h-[80px]">
+                <div key={`${employee.id}-day-${dayIndex}`} className="min-h-[80px] border-r border-muted p-1">
                   <EnhancedDropZone
                     id={dropZoneId}
                     isEmpty={dayAppointments.length === 0}
                     employeeName={employee.name}
                     date={format(date, 'dd.MM.yyyy')}
                     className={cn(
-                      "transition-all duration-200 rounded-lg min-h-[80px] p-1",
+                      "transition-all duration-200 rounded-lg min-h-[80px] p-1 h-full",
                       dayAppointments.length === 0 
                         ? "border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5" 
-                        : "bg-card border shadow-sm space-y-1"
+                        : "bg-card/50 border border-muted/50 shadow-sm space-y-1"
                     )}
                   >
                     {dayAppointments.length === 0 ? (
                       <div className="h-full flex items-center justify-center">
-                        <div className="text-xs text-muted-foreground/60 text-center">
-                          Termin hier ablegen
-                        </div>
+                        {weekDates.length <= 7 && (
+                          <div className="text-xs text-muted-foreground/60 text-center">
+                            Drop hier
+                          </div>
+                        )}
                       </div>
                     ) : (
                       dayAppointments.map((appointment) => (

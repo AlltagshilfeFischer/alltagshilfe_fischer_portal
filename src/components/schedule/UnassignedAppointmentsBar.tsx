@@ -73,10 +73,10 @@ export function UnassignedAppointmentsBar({
           </Badge>
         </div>
 
-        {/* Grid that exactly matches calendar structure */}
-        <div className={`grid gap-2 ${weekDates.length > 7 ? 'grid-cols-[200px_repeat(28,1fr)]' : 'grid-cols-[200px_repeat(7,1fr)]'}`}>
+        {/* Grid that exactly matches calendar structure - fixed column widths */}
+        <div className={`grid gap-1 ${weekDates.length > 7 ? 'grid-cols-[200px_repeat(28,minmax(60px,1fr))]' : 'grid-cols-[200px_repeat(7,minmax(120px,1fr))]'}`}>
           {/* Empty space for employee column */}
-          <div></div>
+          <div className="border-r border-muted"></div>
           
           {/* Date columns matching calendar */}
           {weekDates.map((date) => {
@@ -84,14 +84,14 @@ export function UnassignedAppointmentsBar({
             const dayAppointments = groupedAppointments[dateKey] || [];
 
             return (
-              <div key={dateKey} className="space-y-2">
-                {/* Date header */}
-                <div className="text-center p-1 bg-muted/30 rounded text-xs font-medium">
-                  {format(date, 'EEE dd.MM', { locale: de })}
+              <div key={dateKey} className="border-r border-muted p-1 min-h-[80px]">
+                {/* Date header with grid border */}
+                <div className="text-center p-1 bg-muted/30 rounded text-xs font-medium border-b border-muted mb-2">
+                  {format(date, weekDates.length > 7 ? 'dd' : 'EEE dd.MM', { locale: de })}
                 </div>
                 
-                {/* Appointments for this day */}
-                <div className="space-y-1 min-h-[60px]">
+                {/* Appointments for this day with grid structure */}
+                <div className="space-y-1">
                   {dayAppointments.map((appointment) => (
                     <DraggableAppointment
                       key={appointment.id}
