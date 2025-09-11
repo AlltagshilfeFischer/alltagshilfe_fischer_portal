@@ -274,7 +274,9 @@ const ScheduleBuilder = () => {
       // Check for conflicts unless forcing assignment
       if (!forceAssign) {
         const conflicts = checkForConflicts(appointmentId, employeeId);
+        console.log('Conflict check result:', conflicts);
         if (conflicts.length > 0) {
+          console.log('Conflicts found, showing warning dialog');
           setConflictWarning({
             show: true,
             appointmentId,
@@ -284,6 +286,8 @@ const ScheduleBuilder = () => {
           return;
         }
       }
+
+      console.log('Assigning appointment:', appointmentId, 'to employee:', employeeId);
 
       // Update local state immediately for instant UI feedback
       setAppointments(prev => prev.map(app => 
@@ -383,7 +387,10 @@ const ScheduleBuilder = () => {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
+    console.log('Drag end event:', { activeId: active.id, overId: over?.id });
+    
     if (!over) {
+      console.log('No drop target detected');
       setActiveId(null);
       return;
     }
@@ -407,13 +414,18 @@ const ScheduleBuilder = () => {
 
     // Handle dropping on employee schedule
     if (over.id.toString().startsWith('employee-')) {
+      console.log('Dropping on employee zone:', over.id);
       // Parse the drop zone ID correctly
       const overIdStr = over.id.toString();
       const parts = overIdStr.split('-');
+      console.log('Drop zone parts:', parts);
       
       if (parts.length >= 3 && parts[0] === 'employee') {
         const employeeId = parts.slice(1, -1).join('-'); // Join all parts except first and last to handle UUIDs with dashes
+        console.log('Extracted employee ID:', employeeId);
         await assignAppointment(appointmentId, employeeId);
+      } else {
+        console.log('Could not parse employee ID from drop zone');
       }
     }
     
