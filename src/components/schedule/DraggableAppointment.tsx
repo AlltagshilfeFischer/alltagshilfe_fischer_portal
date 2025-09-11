@@ -151,14 +151,32 @@ export function DraggableAppointment({
           </div>
         )}
         
-        <div className={cn("flex items-center gap-1", isUnassigned ? "text-xs" : "text-xs")}>
-          <Clock className={cn(
-            "flex-shrink-0 text-muted-foreground",
-            isUnassigned ? "h-2.5 w-2.5" : "h-3 w-3"
-          )} />
-          <span className="font-medium text-muted-foreground">
-            {format(new Date(appointment.start_at), 'HH:mm')} - {format(new Date(appointment.end_at), 'HH:mm')}
-          </span>
+        {/* Appointment Day and Time */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-1">
+            <Calendar className={cn(
+              "flex-shrink-0 text-muted-foreground",
+              isUnassigned ? "h-2.5 w-2.5" : "h-3 w-3"
+            )} />
+            <span className={cn(
+              "font-medium text-muted-foreground",
+              isUnassigned ? "text-xs" : "text-xs"
+            )}>
+              {format(new Date(appointment.start_at), 'EEE, dd.MM.yyyy', { locale: de })}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Clock className={cn(
+              "flex-shrink-0 text-muted-foreground",
+              isUnassigned ? "h-2.5 w-2.5" : "h-3 w-3"
+            )} />
+            <span className={cn(
+              "font-medium text-muted-foreground",
+              isUnassigned ? "text-xs" : "text-xs"
+            )}>
+              {format(new Date(appointment.start_at), 'HH:mm')} - {format(new Date(appointment.end_at), 'HH:mm')}
+            </span>
+          </div>
         </div>
       </div>
     </Card>
