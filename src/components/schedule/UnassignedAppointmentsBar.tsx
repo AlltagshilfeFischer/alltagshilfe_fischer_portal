@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { DraggableAppointment } from './DraggableAppointment';
+import { EnhancedDropZone } from './EnhancedDropZone';
 
 interface Customer {
   id: string;
@@ -57,9 +58,8 @@ export function UnassignedAppointmentsBar({
 
   const totalUnassigned = appointments.filter(app => !app.mitarbeiter_id).length;
 
-  if (totalUnassigned === 0) {
-    return null;
-  }
+  // Always show the bar, even when empty
+  const isEmpty = totalUnassigned === 0;
 
   return (
     <Card className="border border-muted bg-muted/10 mb-4">
@@ -71,6 +71,11 @@ export function UnassignedAppointmentsBar({
           <Badge variant="secondary" className="text-xs">
             {totalUnassigned}
           </Badge>
+          {isEmpty && (
+            <div className="text-xs text-muted-foreground ml-2">
+              (Termine hier ablegen zum Aufheben der Zuordnung)
+            </div>
+          )}
         </div>
 
         {/* Grid that exactly matches calendar structure - fixed column widths */}
@@ -90,18 +95,33 @@ export function UnassignedAppointmentsBar({
                   {format(date, weekDates.length > 7 ? 'dd' : 'EEE dd.MM', { locale: de })}
                 </div>
                 
-                {/* Appointments for this day with grid structure */}
-                <div className="space-y-1">
-                  {dayAppointments.map((appointment) => (
-                    <DraggableAppointment
-                      key={appointment.id}
-                      appointment={appointment}
-                      isDragging={activeId === appointment.id}
-                      isConflicting={false}
-                      onClick={() => onEditAppointment(appointment)}
-                    />
-                  ))}
-                </div>
+                {/* Enhanced drop zone for unassignment */}
+                <EnhancedDropZone
+                  id={`unassigned-${dateKey}`}
+                  isEmpty={dayAppointments.length === 0}
+                  className={cn(
+                    "transition-all duration-200 rounded-lg min-h-[60px] h-full",
+                    dayAppointments.length === 0 
+                      ? "border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5" 
+                      : "space-y-1"
+                  )}
+                >
+                  {dayAppointments.length === 0 && isEmpty ? (
+                    <div className="h-full flex items-center justify-center text-xs text-muted-foreground/60">
+                      Drop hier
+                    </div>
+                  ) : (
+                    dayAppointments.map((appointment) => (
+                      <DraggableAppointment
+                        key={appointment.id}
+                        appointment={appointment}
+                        isDragging={activeId === appointment.id}
+                        isConflicting={false}
+                        onClick={() => onEditAppointment(appointment)}
+                      />
+                    ))
+                  )}
+                </EnhancedDropZone>
               </div>
             );
           })}

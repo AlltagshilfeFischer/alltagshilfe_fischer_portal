@@ -459,7 +459,7 @@ const ScheduleBuilder = () => {
     }
     
     // Case 2: Dropping on unassigned area (unassignment)
-    else if (overIdStr === 'unassigned') {
+    else if (overIdStr === 'unassigned' || overIdStr.startsWith('unassigned-')) {
       console.log('📤 Unassigning appointment');
       try {
         // Update local state immediately for instant UI feedback
