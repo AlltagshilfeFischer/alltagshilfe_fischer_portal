@@ -773,8 +773,8 @@ const ScheduleBuilder = () => {
           appointmentTitle={appointments.find(app => app.id === conflictWarning.appointmentId)?.titel || ''}
           conflictingAppointments={conflictWarning.conflicts}
           newAppointmentTime={{
-            start: appointments.find(app => app.id === conflictWarning.appointmentId)?.start_at || '',
-            end: appointments.find(app => app.id === conflictWarning.appointmentId)?.end_at || ''
+            start: appointments.find(app => app.id === conflictWarning.appointmentId)?.start_at || new Date().toISOString(),
+            end: appointments.find(app => app.id === conflictWarning.appointmentId)?.end_at || new Date().toISOString()
           }}
         />
       </div>

@@ -39,6 +39,15 @@ export function ConflictWarningDialog({
   conflictingAppointments,
   newAppointmentTime
 }: ConflictWarningDialogProps) {
+  // Validate that we have valid date strings
+  const isValidTimeData = newAppointmentTime.start && 
+                         newAppointmentTime.end && 
+                         !isNaN(new Date(newAppointmentTime.start).getTime()) &&
+                         !isNaN(new Date(newAppointmentTime.end).getTime());
+
+  if (!isValidTimeData) {
+    return null; // Don't render if we don't have valid time data
+  }
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -74,7 +83,11 @@ export function ConflictWarningDialog({
                 </div>
               </div>
 
-              {conflictingAppointments.map((conflict) => (
+              {conflictingAppointments
+                .filter(conflict => conflict.start_at && conflict.end_at && 
+                        !isNaN(new Date(conflict.start_at).getTime()) && 
+                        !isNaN(new Date(conflict.end_at).getTime()))
+                .map((conflict) => (
                 <div key={conflict.id} className="bg-white rounded border border-red-200 p-2">
                   <div className="flex items-center gap-2 mb-1">
                     <Badge variant="destructive" className="text-xs">
