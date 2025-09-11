@@ -717,11 +717,12 @@ const ScheduleBuilder = () => {
                 <SortableContext items={filteredEmployees.map(emp => `employee-sort-${emp.id}`)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {filteredEmployees.map((employee) => (
-                      <SortableEmployeeCard
-                        key={employee.id}
-                        employee={employee}
-                        currentAppointments={appointments.filter(app => app.mitarbeiter_id === employee.id).length}
-                      />
+                      <div key={`employee-sort-${employee.id}`}>
+                        <SortableEmployeeCard
+                          employee={employee}
+                          currentAppointments={appointments.filter(app => app.mitarbeiter_id === employee.id).length}
+                        />
+                      </div>
                     ))}
                   </div>
                 </SortableContext>

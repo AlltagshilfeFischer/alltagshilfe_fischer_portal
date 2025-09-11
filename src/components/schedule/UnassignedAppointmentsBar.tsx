@@ -62,33 +62,35 @@ export function UnassignedAppointmentsBar({
   }
 
   return (
-    <Card className="border-2 border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50 shadow-lg">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3 mb-4">
+    <Card className="border-2 border-warning bg-gradient-to-r from-warning/10 to-orange-50 shadow-md">
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3 mb-3">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-600" />
-            <h3 className="font-semibold text-orange-900">Unzugeordnete Termine</h3>
-            <Badge variant="destructive" className="bg-orange-600">
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <h3 className="font-medium text-warning-foreground">Unzugeordnete Termine</h3>
+            <Badge variant="destructive" className="bg-warning text-warning-foreground text-xs">
               {totalUnassigned}
             </Badge>
           </div>
-          <div className="text-sm text-orange-700">
+          <div className="text-sm text-muted-foreground">
             Termine ohne Mitarbeiter - Per Drag & Drop zuordnen
           </div>
         </div>
 
         {/* Grid matching calendar days */}
-        <div className="grid gap-2" style={{ gridTemplateColumns: `120px repeat(${weekDates.length}, 1fr)` }}>
+        <div className="grid gap-1" style={{ gridTemplateColumns: `200px repeat(${weekDates.length}, 1fr)` }}>
           {/* Empty space for employee column */}
-          <div></div>
+          <div className="bg-muted/30 rounded p-2">
+            <div className="text-xs font-medium text-muted-foreground">Mitarbeiter</div>
+          </div>
           
           {/* Date headers */}
           {weekDates.map((date) => (
-            <div key={date.toISOString()} className="text-center">
-              <div className="text-xs font-medium text-muted-foreground mb-1">
+            <div key={date.toISOString()} className="text-center bg-muted/20 rounded p-1">
+              <div className="text-xs font-medium text-muted-foreground">
                 {format(date, 'EEE', { locale: de })}
               </div>
-              <div className="text-sm font-semibold">
+              <div className="text-xs font-semibold text-foreground">
                 {format(date, 'dd.MM')}
               </div>
             </div>
@@ -103,7 +105,7 @@ export function UnassignedAppointmentsBar({
             const dayAppointments = groupedAppointments[dateKey] || [];
 
             return (
-              <div key={dateKey} className="min-h-[60px] space-y-1">
+              <div key={dateKey} className="min-h-[50px] space-y-1">
                 {dayAppointments.length > 0 ? (
                   dayAppointments.map((appointment) => (
                     <div
@@ -112,24 +114,24 @@ export function UnassignedAppointmentsBar({
                     >
                       <Card 
                         className={cn(
-                          "p-2 cursor-pointer border-2 border-orange-200 bg-white hover:bg-orange-50 transition-colors",
-                          "shadow-sm hover:shadow-md",
-                          activeId === appointment.id && "ring-2 ring-orange-400"
+                          "p-2 cursor-pointer border border-warning/30 bg-background hover:bg-warning/5 transition-all duration-200",
+                          "shadow-sm hover:shadow-md hover:border-warning/50",
+                          activeId === appointment.id && "ring-2 ring-warning"
                         )}
                         onClick={() => onEditAppointment(appointment)}
                       >
                         <div className="space-y-1">
                           <div className="flex items-center gap-1">
-                            <User className="h-3 w-3 text-orange-600" />
-                            <span className="text-xs font-medium text-orange-900 truncate">
+                            <User className="h-3 w-3 text-warning" />
+                            <span className="text-xs font-medium text-warning-foreground truncate">
                               Ohne Mitarbeiter
                             </span>
                           </div>
-                          <div className="text-xs font-semibold text-gray-900 truncate">
+                          <div className="text-xs font-semibold text-foreground truncate">
                             {appointment.titel}
                           </div>
                           {appointment.customer && (
-                            <div className="text-xs text-gray-600 truncate">
+                            <div className="text-xs text-muted-foreground truncate">
                               {appointment.customer.vorname} {appointment.customer.nachname}
                             </div>
                           )}
@@ -144,8 +146,8 @@ export function UnassignedAppointmentsBar({
                     </div>
                   ))
                 ) : (
-                  <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
-                    Keine Termine
+                  <div className="h-full flex items-center justify-center text-xs text-muted-foreground opacity-60">
+                    -
                   </div>
                 )}
               </div>
