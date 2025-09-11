@@ -74,7 +74,7 @@ export function UnassignedAppointmentsBar({
         </div>
 
         {/* Grid that exactly matches calendar structure - fixed column widths */}
-        <div className={`grid gap-1 ${weekDates.length > 7 ? 'grid-cols-[200px_repeat(28,minmax(60px,1fr))]' : 'grid-cols-[200px_repeat(7,minmax(120px,1fr))]'}`}>
+        <div className={`grid gap-1 ${weekDates.length > 7 ? 'grid-cols-[200px_repeat(28,minmax(100px,1fr))]' : 'grid-cols-[200px_repeat(7,minmax(180px,1fr))]'}`}>
           {/* Empty space for employee column */}
           <div className="border-r border-muted"></div>
           
