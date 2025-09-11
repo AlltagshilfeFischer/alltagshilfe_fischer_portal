@@ -79,57 +79,54 @@ export function UnassignedAppointmentsBar({
           )}
         </div>
 
-        <ScrollArea className="w-full">
-          {/* Grid that exactly matches calendar structure - fixed column widths */}
-          <div className={`grid gap-1 ${weekDates.length > 7 ? 'grid-cols-[200px_repeat(28,minmax(100px,1fr))]' : 'grid-cols-[200px_repeat(7,minmax(180px,1fr))]'}`} style={{ minWidth: weekDates.length > 7 ? '3000px' : '1560px' }}>
-            {/* Empty space for employee column */}
-            <div className="border-r border-muted"></div>
-            
-            {/* Date columns matching calendar */}
-            {weekDates.map((date) => {
-              const dateKey = format(date, 'yyyy-MM-dd');
-              const dayAppointments = groupedAppointments[dateKey] || [];
+        {/* Grid that exactly matches calendar structure - fixed column widths */}
+        <div className={`grid gap-1 ${weekDates.length > 7 ? 'grid-cols-[200px_repeat(28,minmax(100px,1fr))]' : 'grid-cols-[200px_repeat(7,minmax(180px,1fr))]'}`} style={{ minWidth: weekDates.length > 7 ? '3000px' : '1560px' }}>
+          {/* Empty space for employee column */}
+          <div className="border-r border-muted"></div>
+          
+          {/* Date columns matching calendar */}
+          {weekDates.map((date) => {
+            const dateKey = format(date, 'yyyy-MM-dd');
+            const dayAppointments = groupedAppointments[dateKey] || [];
 
-              return (
-                <div key={dateKey} className="border-r border-muted p-1 min-h-[80px]">
-                  {/* Date header with grid border */}
-                  <div className="text-center p-1 bg-muted/30 rounded text-xs font-medium border-b border-muted mb-2">
-                    {format(date, weekDates.length > 7 ? 'dd' : 'EEE dd.MM', { locale: de })}
-                  </div>
-                  
-                  {/* Enhanced drop zone for unassignment */}
-                  <EnhancedDropZone
-                    id={`unassigned-${dateKey}`}
-                    isEmpty={dayAppointments.length === 0}
-                    className={cn(
-                      "transition-all duration-200 rounded-lg min-h-[60px] h-full",
-                      dayAppointments.length === 0 
-                        ? "border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5" 
-                        : "space-y-1"
-                    )}
-                  >
-                    {dayAppointments.length === 0 && isEmpty ? (
-                      <div className="h-full flex items-center justify-center text-xs text-muted-foreground/60">
-                        Drop hier
-                      </div>
-                    ) : (
-                      dayAppointments.map((appointment) => (
-                        <DraggableAppointment
-                          key={appointment.id}
-                          appointment={appointment}
-                          isDragging={activeId === appointment.id}
-                          isConflicting={false}
-                          onClick={() => onEditAppointment(appointment)}
-                        />
-                      ))
-                    )}
-                  </EnhancedDropZone>
+            return (
+              <div key={dateKey} className="border-r border-muted p-1 min-h-[80px]">
+                {/* Date header with grid border */}
+                <div className="text-center p-1 bg-muted/30 rounded text-xs font-medium border-b border-muted mb-2">
+                  {format(date, weekDates.length > 7 ? 'dd' : 'EEE dd.MM', { locale: de })}
                 </div>
-              );
-            })}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+                
+                {/* Enhanced drop zone for unassignment */}
+                <EnhancedDropZone
+                  id={`unassigned-${dateKey}`}
+                  isEmpty={dayAppointments.length === 0}
+                  className={cn(
+                    "transition-all duration-200 rounded-lg min-h-[60px] h-full",
+                    dayAppointments.length === 0 
+                      ? "border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5" 
+                      : "space-y-1"
+                  )}
+                >
+                  {dayAppointments.length === 0 && isEmpty ? (
+                    <div className="h-full flex items-center justify-center text-xs text-muted-foreground/60">
+                      Drop hier
+                    </div>
+                  ) : (
+                    dayAppointments.map((appointment) => (
+                      <DraggableAppointment
+                        key={appointment.id}
+                        appointment={appointment}
+                        isDragging={activeId === appointment.id}
+                        isConflicting={false}
+                        onClick={() => onEditAppointment(appointment)}
+                      />
+                    ))
+                  )}
+                </EnhancedDropZone>
+              </div>
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );

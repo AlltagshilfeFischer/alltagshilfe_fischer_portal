@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { CalendarDays, ChevronLeft, ChevronRight, User, Clock, AlertTriangle, Users, Calendar, TrendingUp, Filter, Search, Eye, Bell, GripVertical, MapPin, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -752,15 +753,7 @@ const ScheduleBuilder = () => {
           </div>
 
           {/* Schedule Grid */}
-          <div className="xl:col-span-4 space-y-4">
-            {/* Unassigned Appointments Bar */}
-            <UnassignedAppointmentsBar
-              appointments={appointments}
-              weekDates={getWeekDates()}
-              activeId={activeId}
-              onEditAppointment={setEditingAppointment}
-            />
-            
+          <div className="xl:col-span-4">
             <Card className="border shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -769,13 +762,27 @@ const ScheduleBuilder = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <CalendarGrid
-                  employees={filteredEmployees}
-                  appointments={appointments}
-                  weekDates={getWeekDates()}
-                  activeId={activeId}
-                  onEditAppointment={setEditingAppointment}
-                />
+                <ScrollArea className="w-full">
+                  <div className="space-y-4">
+                    {/* Unassigned Appointments Bar */}
+                    <UnassignedAppointmentsBar
+                      appointments={appointments}
+                      weekDates={getWeekDates()}
+                      activeId={activeId}
+                      onEditAppointment={setEditingAppointment}
+                    />
+                    
+                    {/* Calendar Grid */}
+                    <CalendarGrid
+                      employees={filteredEmployees}
+                      appointments={appointments}
+                      weekDates={getWeekDates()}
+                      activeId={activeId}
+                      onEditAppointment={setEditingAppointment}
+                    />
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
               </CardContent>
             </Card>
           </div>
