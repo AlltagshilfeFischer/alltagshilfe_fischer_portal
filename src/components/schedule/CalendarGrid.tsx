@@ -49,18 +49,18 @@ export function CalendarGrid({
   onEditAppointment 
 }: CalendarGridProps) {
   
-  const sortedEmployees = useMemo(() => {
-    return employees
-      .filter(emp => emp.ist_aktiv)
-      .sort((a, b) => a.name.localeCompare(b.name)); // Stable alphabetical sorting
-  }, [employees]);
-
   const getAppointmentsForDate = (employeeId: string, date: Date) => {
     return appointments.filter(app => 
       app.mitarbeiter_id === employeeId && 
       isSameDay(new Date(app.start_at), date)
     ).sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
   };
+
+  const sortedEmployees = useMemo(() => {
+    return employees
+      .filter(emp => emp.ist_aktiv)
+      .sort((a, b) => a.name.localeCompare(b.name)); // Stable alphabetical sorting
+  }, [employees]);
 
   const conflictingAppointments = useMemo(() => {
     const conflicts = new Set<string>();
