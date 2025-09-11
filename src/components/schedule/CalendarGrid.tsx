@@ -87,7 +87,10 @@ export function CalendarGrid({
   return (
     <div className="calendar-grid">
       {/* Compact Header Row */}
-      <div className="grid grid-cols-8 gap-1 mb-2 bg-muted/30 p-2 rounded-lg">
+      <div className={cn(
+        "grid gap-1 mb-2 bg-muted/30 p-2 rounded-lg",
+        weekDates.length > 7 ? "grid-cols-[200px_repeat(28,1fr)]" : "grid-cols-8"
+      )}>
         <div className="text-xs font-semibold text-muted-foreground px-2 py-1">
           Mitarbeiter
         </div>
@@ -103,10 +106,12 @@ export function CalendarGrid({
         ))}
       </div>
 
-      {/* Compact Employee Rows */}
       <div className="space-y-1">
         {employees.filter(emp => emp.ist_aktiv).map((employee) => (
-          <div key={employee.id} className="grid grid-cols-8 gap-1">
+          <div key={employee.id} className={cn(
+            "grid gap-1",
+            weekDates.length > 7 ? "grid-cols-[200px_repeat(28,1fr)]" : "grid-cols-8"
+          )}>
             {/* Compact Employee Info */}
             <div className="bg-card border rounded-lg p-2 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center gap-2 mb-1">
@@ -130,7 +135,10 @@ export function CalendarGrid({
               const hasAppointments = dayAppointments.length > 0;
 
               return (
-                <div key={dayIndex} className="min-h-[60px]">
+                <div key={dayIndex} className={cn(
+                  "min-h-[60px]",
+                  weekDates.length > 7 && "min-h-[40px]" // Smaller height for month view
+                )}>
                   <EnhancedDropZone
                     id={dropZoneId}
                     isEmpty={!hasAppointments}
@@ -138,7 +146,8 @@ export function CalendarGrid({
                     date={format(date, 'dd.MM.yyyy')}
                     workloadInfo={null}
                     className={cn(
-                      "min-h-[60px] rounded-lg transition-all duration-200",
+                      "transition-all duration-200 rounded-lg",
+                      weekDates.length > 7 ? "min-h-[40px]" : "min-h-[60px]",
                       hasAppointments 
                         ? "bg-card border shadow-sm" 
                         : "border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5"
@@ -146,12 +155,17 @@ export function CalendarGrid({
                   >
                     {!hasAppointments ? (
                       <div className="h-full flex items-center justify-center">
-                        <div className="text-xs text-muted-foreground text-center opacity-60">
-                          Termin zuweisen
-                        </div>
+                        {weekDates.length <= 7 && (
+                          <div className="text-xs text-muted-foreground text-center opacity-60">
+                            Termin zuweisen
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <div className="p-1 space-y-1">
+                      <div className={cn(
+                        "space-y-1",
+                        weekDates.length > 7 ? "p-0.5" : "p-1"
+                      )}>
                         {dayAppointments.map((appointment) => (
                           <DraggableAppointment
                             key={appointment.id}

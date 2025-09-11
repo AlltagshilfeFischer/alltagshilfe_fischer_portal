@@ -2,9 +2,10 @@ import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Clock, User, MapPin, GripVertical } from 'lucide-react';
+import { Clock, User, MapPin, GripVertical, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Customer {
@@ -22,7 +23,14 @@ interface DraggableAppointmentProps {
     start_at: string;
     end_at: string;
     mitarbeiter_id: string | null;
-    customer?: Customer;
+    customer?: Customer & {
+      availability?: Array<{
+        wochentag: number;
+        von: string;
+        bis: string;
+        prioritaet: number;
+      }>;
+    };
   };
   isDragging?: boolean;
   isConflicting?: boolean;
@@ -49,6 +57,17 @@ export function DraggableAppointment({
   };
 
   const isUnassigned = !appointment.mitarbeiter_id;
+  
+  const getCustomerAvailabilityDays = () => {
+    if (!appointment.customer?.availability) return [];
+    
+    const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    return appointment.customer.availability.map(avail => ({
+      day: dayNames[avail.wochentag],
+      time: `${avail.von.slice(0,5)}-${avail.bis.slice(0,5)}`,
+      priority: avail.prioritaet
+    }));
+  };
   
   const getCardStyle = () => {
     if (isUnassigned) {
@@ -108,6 +127,27 @@ export function DraggableAppointment({
             )}>
               {appointment.customer.vorname} {appointment.customer.nachname}
             </span>
+          </div>
+        )}
+        
+        {/* Customer availability days */}
+        {appointment.customer?.availability && isUnassigned && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            <Calendar className="h-2.5 w-2.5 text-muted-foreground mt-0.5" />
+            {getCustomerAvailabilityDays().map((avail, idx) => (
+              <Badge 
+                key={idx} 
+                variant="outline" 
+                className={cn(
+                  "text-xs px-1 py-0 h-4",
+                  avail.priority === 1 ? "border-green-300 text-green-700" :
+                  avail.priority === 2 ? "border-yellow-300 text-yellow-700" :
+                  "border-orange-300 text-orange-700"
+                )}
+              >
+                {avail.day}
+              </Badge>
+            ))}
           </div>
         )}
         

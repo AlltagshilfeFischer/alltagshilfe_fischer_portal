@@ -78,12 +78,13 @@ const ScheduleBuilder = () => {
   const [searchAppointment, setSearchAppointment] = useState('');
   const [sortEmployees, setSortEmployees] = useState('name');
   const [filterPriority, setFilterPriority] = useState('all');
-  const [viewMode, setViewMode] = useState('week');
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   
   // Real data from Supabase
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerAvailability, setCustomerAvailability] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [pendingChanges, setPendingChanges] = useState<any[]>([]);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -125,10 +126,13 @@ const ScheduleBuilder = () => {
       
       if (employeesError) throw employeesError;
 
-      // Load customers
+      // Load customers with availability
       const { data: customersData, error: customersError } = await supabase
         .from('kunden')
-        .select('*')
+        .select(`
+          *,
+          availability:kunden_zeitfenster(*)
+        `)
         .eq('aktiv', true)
         .order('vorname');
       
@@ -167,6 +171,15 @@ const ScheduleBuilder = () => {
       setEmployees(transformedEmployees);
       setCustomers(customersData || []);
       setAppointments(transformedAppointments);
+      
+      // Process customer availability
+      const availabilityMap: Record<string, any[]> = {};
+      customersData?.forEach(customer => {
+        if (customer.availability) {
+          availabilityMap[customer.id] = customer.availability;
+        }
+      });
+      setCustomerAvailability(availabilityMap);
       
       // Initialize employee order if not set
       if (employeeOrder.length === 0) {
@@ -227,6 +240,10 @@ const ScheduleBuilder = () => {
 
   const getWeekDates = () => {
     const start = startOfWeek(currentWeek, { weekStartsOn: 1 });
+    if (viewMode === 'month') {
+      // Show 4 weeks for month view
+      return Array.from({ length: 28 }, (_, i) => addDays(start, i));
+    }
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   };
 
@@ -470,8 +487,13 @@ const ScheduleBuilder = () => {
     setActiveId(null);
   };
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    setCurrentWeek(direction === 'prev' ? subWeeks(currentWeek, 1) : addWeeks(currentWeek, 1));
+  const navigateWeek = (direction: number) => {
+    if (viewMode === 'week') {
+      setCurrentWeek(direction > 0 ? addWeeks(currentWeek, 1) : subWeeks(currentWeek, 1));
+    } else {
+      // For month view, navigate by 4 weeks
+      setCurrentWeek(direction > 0 ? addWeeks(currentWeek, 4) : subWeeks(currentWeek, 4));
+    }
   };
 
   const getAppointmentCount = (employeeId: string, dayIndex: number) => {
@@ -531,15 +553,35 @@ const ScheduleBuilder = () => {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Button variant="outline" size="sm" onClick={() => navigateWeek('prev')}>
+                <Button variant="outline" size="sm" onClick={() => navigateWeek(-1)}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <h2 className="text-xl font-semibold">
-                  {format(startOfWeek(currentWeek, { weekStartsOn: 1 }), 'dd. MMMM', { locale: de })} - {format(addDays(startOfWeek(currentWeek, { weekStartsOn: 1 }), 6), 'dd. MMMM yyyy', { locale: de })}
+                  {viewMode === 'week' 
+                    ? `${format(startOfWeek(currentWeek, { weekStartsOn: 1 }), 'dd. MMMM', { locale: de })} - ${format(addDays(startOfWeek(currentWeek, { weekStartsOn: 1 }), 6), 'dd. MMMM yyyy', { locale: de })}`
+                    : `${format(currentWeek, 'MMMM yyyy', { locale: de })}`
+                  }
                 </h2>
-                <Button variant="outline" size="sm" onClick={() => navigateWeek('next')}>
+                <Button variant="outline" size="sm" onClick={() => navigateWeek(1)}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
+                
+                <div className="flex items-center gap-2 ml-4">
+                  <Button
+                    variant={viewMode === 'week' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('week')}
+                  >
+                    Woche
+                  </Button>
+                  <Button
+                    variant={viewMode === 'month' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('month')}
+                  >
+                    Monat
+                  </Button>
+                </div>
               </div>
               <Button variant="outline" onClick={() => setCurrentWeek(new Date())}>
                 Heute
