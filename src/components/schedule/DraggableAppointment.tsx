@@ -52,7 +52,7 @@ export function DraggableAppointment({
       className={cn(
         "cursor-grab active:cursor-grabbing transition-all duration-200",
         "border border-muted bg-card hover:bg-accent/30 rounded-md p-1.5 shadow-sm",
-        "text-xs w-full min-h-[40px] flex-shrink-0",
+        "text-xs w-full min-h-[36px] flex-shrink-0 box-border overflow-hidden",
         isDragging && "opacity-50 scale-95 z-50",
         isConflicting && "border-destructive bg-destructive/5"
       )}

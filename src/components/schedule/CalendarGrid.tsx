@@ -88,15 +88,35 @@ export function CalendarGrid({
     return conflicts;
   }, [appointments]);
 
+  // Fixed grid dimensions
+  const employeeColumnWidth = 200;
+  const dayColumnWidth = 120;
+  const totalWidth = employeeColumnWidth + (weekDates.length * dayColumnWidth);
+
   return (
-    <div className="calendar-grid">
-      {/* Header Row with exact fixed widths */}
-      <div className={`grid bg-muted/20 p-0 border border-muted`} style={{ gridTemplateColumns: `200px repeat(${weekDates.length}, 120px)`, width: `${200 + weekDates.length * 120}px` }}>
-        <div className="text-xs font-semibold text-muted-foreground px-2 py-2 border-r border-muted">
+    <div className="calendar-grid box-border">
+      {/* Header Row with exact fixed dimensions */}
+      <div 
+        className="grid bg-muted/20 border border-muted box-border" 
+        style={{ 
+          gridTemplateColumns: `${employeeColumnWidth}px repeat(${weekDates.length}, ${dayColumnWidth}px)`,
+          width: `${totalWidth}px`,
+          minWidth: `${totalWidth}px`,
+          maxWidth: `${totalWidth}px`
+        }}
+      >
+        <div 
+          className="text-xs font-semibold text-muted-foreground px-2 py-2 border-r border-muted box-border"
+          style={{ width: `${employeeColumnWidth}px`, minWidth: `${employeeColumnWidth}px`, maxWidth: `${employeeColumnWidth}px` }}
+        >
           Mitarbeiter
         </div>
         {weekDates.map((date, index) => (
-          <div key={index} className="text-center px-1 py-2 border-r border-muted last:border-r-0">
+          <div 
+            key={index} 
+            className="text-center px-1 py-2 border-r border-muted last:border-r-0 box-border"
+            style={{ width: `${dayColumnWidth}px`, minWidth: `${dayColumnWidth}px`, maxWidth: `${dayColumnWidth}px` }}
+          >
             <div className="text-xs font-semibold text-foreground">
               {format(date, 'dd', { locale: de })}
             </div>
@@ -107,11 +127,23 @@ export function CalendarGrid({
         ))}
       </div>
 
-      <div className="border-l border-r border-b border-muted">
+      <div className="border-l border-r border-b border-muted box-border">
         {sortedEmployees.map((employee) => (
-          <div key={employee.id} className={`grid border-b border-muted last:border-b-0`} style={{ gridTemplateColumns: `200px repeat(${weekDates.length}, 120px)`, width: `${200 + weekDates.length * 120}px` }}>
+          <div 
+            key={employee.id} 
+            className="grid border-b border-muted last:border-b-0 box-border" 
+            style={{ 
+              gridTemplateColumns: `${employeeColumnWidth}px repeat(${weekDates.length}, ${dayColumnWidth}px)`,
+              width: `${totalWidth}px`,
+              minWidth: `${totalWidth}px`,
+              maxWidth: `${totalWidth}px`
+            }}
+          >
             {/* Employee Info with exact width */}
-            <div className="bg-card border-r border-muted p-2 w-[200px]">
+            <div 
+              className="bg-card border-r border-muted p-2 box-border"
+              style={{ width: `${employeeColumnWidth}px`, minWidth: `${employeeColumnWidth}px`, maxWidth: `${employeeColumnWidth}px` }}
+            >
               <div className="flex items-center gap-2 mb-1">
                 <div 
                   className="w-3 h-3 rounded-full border border-border flex-shrink-0" 
@@ -128,17 +160,22 @@ export function CalendarGrid({
               const dropZoneId = `employee-${employee.id}-${dayIndex}`;
 
               return (
-                <div key={`${employee.id}-day-${dayIndex}`} className="min-h-[80px] border-r border-muted last:border-r-0 p-1 w-[120px]">
+                <div 
+                  key={`${employee.id}-day-${dayIndex}`} 
+                  className="min-h-[80px] border-r border-muted last:border-r-0 p-1 box-border"
+                  style={{ width: `${dayColumnWidth}px`, minWidth: `${dayColumnWidth}px`, maxWidth: `${dayColumnWidth}px` }}
+                >
                   <EnhancedDropZone
                     id={dropZoneId}
                     isEmpty={dayAppointments.length === 0}
                     employeeName={employee.name}
                     date={format(date, 'dd.MM.yyyy')}
                     className={cn(
-                      "transition-all duration-200 rounded-lg min-h-[80px] p-1 h-full w-full",
+                      "transition-all duration-200 rounded-lg min-h-[70px] p-1 box-border",
+                      "w-full h-full overflow-hidden",
                       dayAppointments.length === 0 
                         ? "border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5" 
-                        : "bg-card/50 border border-muted/50 shadow-sm space-y-1"
+                        : "bg-card/50 border border-muted/50 shadow-sm flex flex-col gap-1"
                     )}
                   >
                     {dayAppointments.length === 0 ? (
@@ -148,15 +185,17 @@ export function CalendarGrid({
                         </div>
                       </div>
                     ) : (
-                      dayAppointments.map((appointment) => (
-                        <DraggableAppointment
-                          key={appointment.id}
-                          appointment={appointment}
-                          isDragging={activeId === appointment.id}
-                          isConflicting={conflictingAppointments.has(appointment.id)}
-                          onClick={() => onEditAppointment(appointment)}
-                        />
-                      ))
+                      <div className="flex flex-col gap-1 overflow-y-auto max-h-[70px]">
+                        {dayAppointments.map((appointment) => (
+                          <DraggableAppointment
+                            key={appointment.id}
+                            appointment={appointment}
+                            isDragging={activeId === appointment.id}
+                            isConflicting={conflictingAppointments.has(appointment.id)}
+                            onClick={() => onEditAppointment(appointment)}
+                          />
+                        ))}
+                      </div>
                     )}
                   </EnhancedDropZone>
                 </div>

@@ -62,6 +62,11 @@ export function UnassignedAppointmentsBar({
   // Always show the bar, even when empty
   const isEmpty = totalUnassigned === 0;
 
+  // Fixed grid dimensions - MUST match CalendarGrid exactly
+  const employeeColumnWidth = 200;
+  const dayColumnWidth = 120;
+  const totalWidth = employeeColumnWidth + (weekDates.length * dayColumnWidth);
+
   return (
     <Card className="border border-muted bg-muted/10 mb-4">
       <CardContent className="p-4">
@@ -79,10 +84,21 @@ export function UnassignedAppointmentsBar({
           )}
         </div>
 
-        {/* Grid with exact same dimensions as calendar */}
-        <div className={`grid border border-muted`} style={{ gridTemplateColumns: `200px repeat(${weekDates.length}, 120px)`, width: `${200 + weekDates.length * 120}px` }}>
+        {/* Grid with EXACT same dimensions as calendar */}
+        <div 
+          className="grid border border-muted box-border" 
+          style={{ 
+            gridTemplateColumns: `${employeeColumnWidth}px repeat(${weekDates.length}, ${dayColumnWidth}px)`,
+            width: `${totalWidth}px`,
+            minWidth: `${totalWidth}px`,
+            maxWidth: `${totalWidth}px`
+          }}
+        >
           {/* Employee column space - exact match */}
-          <div className="border-r border-muted w-[200px] px-2 py-1">
+          <div 
+            className="border-r border-muted px-2 py-1 box-border"
+            style={{ width: `${employeeColumnWidth}px`, minWidth: `${employeeColumnWidth}px`, maxWidth: `${employeeColumnWidth}px` }}
+          >
             <div className="text-xs text-muted-foreground text-center">Zuordnung aufheben</div>
           </div>
           
@@ -92,7 +108,11 @@ export function UnassignedAppointmentsBar({
             const dayAppointments = groupedAppointments[dateKey] || [];
 
             return (
-              <div key={dateKey} className="border-r border-muted last:border-r-0 p-1 min-h-[80px] w-[120px]">
+              <div 
+                key={dateKey} 
+                className="border-r border-muted last:border-r-0 p-1 min-h-[80px] box-border"
+                style={{ width: `${dayColumnWidth}px`, minWidth: `${dayColumnWidth}px`, maxWidth: `${dayColumnWidth}px` }}
+              >
                 {/* Date header matching calendar exactly */}
                 <div className="text-center p-1 bg-muted/30 rounded text-xs font-medium border-b border-muted mb-2">
                   {format(date, 'dd', { locale: de })}
@@ -103,27 +123,30 @@ export function UnassignedAppointmentsBar({
                   id={`unassigned-${dateKey}`}
                   isEmpty={dayAppointments.length === 0}
                   className={cn(
-                    "transition-all duration-200 rounded-lg min-h-[60px] h-full w-full",
+                    "transition-all duration-200 rounded-lg min-h-[60px] box-border",
+                    "w-full h-full overflow-hidden",
                     dayAppointments.length === 0 
                       ? "border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5" 
-                      : "flex flex-col gap-1 overflow-y-auto max-h-[120px]"
+                      : "flex flex-col gap-1"
                   )}
                 >
-                  {dayAppointments.length === 0 && isEmpty ? (
+                  {dayAppointments.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-xs text-muted-foreground/60">
                       Drop hier
                     </div>
                   ) : (
-                    dayAppointments.map((appointment) => (
-                      <div key={appointment.id} className="flex-shrink-0">
-                        <DraggableAppointment
-                          appointment={appointment}
-                          isDragging={activeId === appointment.id}
-                          isConflicting={false}
-                          onClick={() => onEditAppointment(appointment)}
-                        />
-                      </div>
-                    ))
+                    <div className="flex flex-col gap-1 overflow-y-auto max-h-[60px]">
+                      {dayAppointments.map((appointment) => (
+                        <div key={appointment.id} className="flex-shrink-0">
+                          <DraggableAppointment
+                            appointment={appointment}
+                            isDragging={activeId === appointment.id}
+                            isConflicting={false}
+                            onClick={() => onEditAppointment(appointment)}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </EnhancedDropZone>
               </div>
