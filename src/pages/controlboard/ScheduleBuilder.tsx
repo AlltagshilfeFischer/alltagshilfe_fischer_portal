@@ -86,6 +86,28 @@ const ScheduleBuilder = () => {
   
   const scrollToToday = () => {
     setCurrentMonth(new Date());
+    
+    // Trigger scroll to center today after month change
+    setTimeout(() => {
+      if (scrollAreaRef.current) {
+        const dates = getMonthDates();
+        const today = new Date();
+        const todayIndex = dates.findIndex(date => 
+          format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
+        );
+        
+        if (todayIndex !== -1) {
+          const cellWidth = DAY_COL_WIDTH;
+          const employeeColumnWidth = EMPLOYEE_COL_WIDTH;
+          const scrollToX = employeeColumnWidth + (todayIndex * cellWidth) - (scrollAreaRef.current.clientWidth / 2) + (cellWidth / 2);
+          
+          scrollAreaRef.current.scrollTo({
+            left: Math.max(0, scrollToX),
+            behavior: 'smooth'
+          });
+        }
+      }
+    }, 200);
   };
   
   const goToPreviousMonth = () => {
