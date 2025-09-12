@@ -70,19 +70,21 @@ export function UnassignedAppointmentsBar({
 
   return (
     <Card className="border border-muted bg-muted/10 mb-4">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="text-sm font-medium text-foreground">
-            Unzugeordnete Termine
-          </div>
-          <Badge variant="secondary" className="text-xs">
-            {totalUnassigned}
-          </Badge>
-          {isEmpty && (
-            <div className="text-xs text-muted-foreground ml-2">
-              (Termine hier ablegen zum Aufheben der Zuordnung)
+      <CardContent className="p-0">
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="text-sm font-medium text-foreground">
+              Unzugeordnete Termine
             </div>
-          )}
+            <Badge variant="secondary" className="text-xs">
+              {totalUnassigned}
+            </Badge>
+            {isEmpty && (
+              <div className="text-xs text-muted-foreground ml-2">
+                (Termine hier ablegen zum Aufheben der Zuordnung)
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Grid with EXACT same dimensions as calendar */}

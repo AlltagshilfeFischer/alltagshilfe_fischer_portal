@@ -9,6 +9,7 @@ import { EnhancedDropZone } from './EnhancedDropZone';
 import { DraggableAppointment } from './DraggableAppointment';
 import { Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EMPLOYEE_COL_WIDTH, DAY_COL_WIDTH } from './gridConfig';
 
 interface Employee {
   id: string;
@@ -88,9 +89,9 @@ export function CalendarGrid({
     return conflicts;
   }, [appointments]);
 
-  // Fixed grid dimensions
-  const employeeColumnWidth = 200;
-  const dayColumnWidth = 120;
+  // Fixed grid dimensions - MUST match UnassignedAppointmentsBar exactly (from shared config)
+  const employeeColumnWidth = EMPLOYEE_COL_WIDTH;
+  const dayColumnWidth = DAY_COL_WIDTH;
   const totalWidth = employeeColumnWidth + (weekDates.length * dayColumnWidth);
 
   return (
