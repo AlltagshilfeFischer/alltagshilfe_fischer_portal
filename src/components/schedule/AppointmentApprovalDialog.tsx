@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AppointmentChange {
   id: string;
@@ -63,12 +64,31 @@ export function AppointmentApprovalDialog({
   const [rejectionReason, setRejectionReason] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const ensureContext = async () => {
+    try {
+      const email = user?.email;
+      if (!email) return;
+      const { data: benutzer, error: benutzerError } = await supabase
+        .from('benutzer')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+      if (benutzerError || !benutzer?.id) return;
+      await supabase.rpc('app_set_context', { p_benutzer_id: benutzer.id });
+    } catch (_) {
+      // ignore; context is best-effort
+    }
+  };
 
   const handleApprove = async (changeId: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('approve_termin_change', {
-        p_request_id: changeId
+      await ensureContext();
+
+      const { error } = await supabase.rpc('approve_termin_change', {
+        p_request_id: changeId,
       });
 
       if (error) throw error;
@@ -77,13 +97,20 @@ export function AppointmentApprovalDialog({
         title: 'Erfolg',
         description: 'Terminänderung wurde genehmigt.',
       });
-      
+
       onApprovalAction();
       setSelectedChange(null);
-    } catch (error) {
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      const isOverlap = /termine_no_overlap|overlap|conflicting key value/i.test(msg);
+      const isContext = /User context not set/i.test(msg);
       toast({
         title: 'Fehler',
-        description: 'Fehler beim Genehmigen der Änderung.',
+        description: isOverlap
+          ? 'Konflikt: Der neue Termin überschneidet sich mit einem bestehenden Termin. Bitte Zeiten anpassen.'
+          : isContext
+          ? 'Sitzungskontext fehlte. Bitte erneut versuchen.'
+          : 'Fehler beim Genehmigen der Änderung.',
         variant: 'destructive',
       });
     } finally {
@@ -94,9 +121,11 @@ export function AppointmentApprovalDialog({
   const handleReject = async (changeId: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('reject_termin_change', {
+      await ensureContext();
+
+      const { error } = await supabase.rpc('reject_termin_change', {
         p_request_id: changeId,
-        p_reason: rejectionReason || 'Keine Begründung angegeben'
+        p_reason: rejectionReason || 'Keine Begründung angegeben',
       });
 
       if (error) throw error;
@@ -105,11 +134,11 @@ export function AppointmentApprovalDialog({
         title: 'Erfolg',
         description: 'Terminänderung wurde abgelehnt.',
       });
-      
+
       onApprovalAction();
       setSelectedChange(null);
       setRejectionReason('');
-    } catch (error) {
+    } catch (err: any) {
       toast({
         title: 'Fehler',
         description: 'Fehler beim Ablehnen der Änderung.',
@@ -125,6 +154,9 @@ export function AppointmentApprovalDialog({
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Terminänderungen genehmigen</DialogTitle>
+          <DialogDescription id="approval-desc">
+            Prüfen Sie die angefragten Änderungen und genehmigen oder lehnen Sie diese ab.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
