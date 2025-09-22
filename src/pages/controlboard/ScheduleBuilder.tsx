@@ -208,6 +208,22 @@ const ScheduleBuilder = () => {
       
       if (appointmentsError) throw appointmentsError;
 
+      // Load pending changes
+      const { data: pendingChangesData, error: changesError } = await supabase
+        .from('termin_aenderungen')
+        .select(`
+          *,
+          requester:benutzer!requested_by(*),
+          old_customer:kunden!old_kunden_id(*),
+          new_customer:kunden!new_kunden_id(*),
+          old_employee:mitarbeiter!old_mitarbeiter_id(*),
+          new_employee:mitarbeiter!new_mitarbeiter_id(*)
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      
+      if (changesError) throw changesError;
+
       // Transform employees data to match our interface
       const transformedEmployees = employeesData?.map(emp => ({
         ...emp,
@@ -238,6 +254,9 @@ const ScheduleBuilder = () => {
         }
       });
       setCustomerAvailability(availabilityMap);
+      
+      // Set pending changes
+      setPendingChanges(pendingChangesData || []);
       
       // Initialize employee order if not set
       if (employeeOrder.length === 0) {
