@@ -110,16 +110,8 @@ export function AppointmentDetailDialog({
     try {
       await onUpdate(editedAppointment);
       setIsEditing(false);
-      toast({
-        title: 'Erfolg',
-        description: 'Termin wurde erfolgreich aktualisiert.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Fehler',
-        description: 'Termin konnte nicht aktualisiert werden.',
-        variant: 'destructive',
-      });
+    } catch (error: any) {
+      // Error handling is done in onUpdate callback
     } finally {
       setLoading(false);
     }
@@ -253,9 +245,30 @@ export function AppointmentDetailDialog({
                 <div className="space-y-2">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Name</Label>
-                    <p className="text-sm font-medium mt-1">
-                      {editedAppointment.customer.vorname} {editedAppointment.customer.nachname}
-                    </p>
+                    {isEditing ? (
+                      <Select
+                        value={editedAppointment.kunden_id}
+                        onValueChange={(value) => setEditedAppointment({
+                          ...editedAppointment,
+                          kunden_id: value
+                        })}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.vorname} {customer.nachname}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-sm font-medium mt-1">
+                        {editedAppointment.customer.vorname} {editedAppointment.customer.nachname}
+                      </p>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>

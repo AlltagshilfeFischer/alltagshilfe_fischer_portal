@@ -959,13 +959,34 @@ const cellWidth = DAY_COL_WIDTH;
                 .update({
                   titel: appointment.titel,
                   status: appointment.status,
-                  mitarbeiter_id: appointment.mitarbeiter_id
+                  mitarbeiter_id: appointment.mitarbeiter_id,
+                  kunden_id: appointment.kunden_id,
+                  start_at: appointment.start_at,
+                  end_at: appointment.end_at
                 })
                 .eq('id', appointment.id);
 
               if (error) throw error;
+              
+              toast({
+                title: 'Erfolg',
+                description: 'Termin wurde erfolgreich aktualisiert.',
+              });
+              
               await loadData();
-            } catch (error) {
+              setEditingAppointment(null);
+            } catch (error: any) {
+              const msg = String(error?.message ?? error);
+              const isOverlap = /termine_no_overlap|overlap|conflicting key value/i.test(msg);
+              
+              toast({
+                title: 'Fehler',
+                description: isOverlap 
+                  ? 'Konflikt: Der Termin überschneidet sich mit einem bestehenden Termin.'
+                  : 'Fehler beim Aktualisieren des Termins.',
+                variant: 'destructive',
+              });
+              
               throw error;
             }
           }}
