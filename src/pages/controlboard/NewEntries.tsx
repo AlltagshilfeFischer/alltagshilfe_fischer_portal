@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Building2, Save, Plus } from 'lucide-react';
+import { UserPlus, Building2, Save, Plus, Upload } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
@@ -31,8 +31,49 @@ export default function NewEntries() {
     notizen: ''
   });
 
+  const [bulkCustomerText, setBulkCustomerText] = useState('');
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Function to parse names from the list
+  const parseCustomerNames = (text: string) => {
+    const lines = text.trim().split('\n').filter(line => line.trim());
+    const customers = [];
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) continue;
+      
+      // Split by spaces and try to identify first and last names
+      const parts = trimmedLine.split(/\s+/);
+      
+      if (parts.length === 1) {
+        // Only one word - use as last name
+        customers.push({
+          vorname: '',
+          nachname: parts[0]
+        });
+      } else if (parts.length === 2) {
+        // Two words - could be "Lastname Firstname" or "Firstname Lastname"
+        // Based on the German convention and the examples, most seem to be "Lastname Firstname"
+        customers.push({
+          vorname: parts[1],
+          nachname: parts[0]
+        });
+      } else {
+        // Multiple words - first word is likely lastname, rest is firstname
+        const lastname = parts[0];
+        const firstname = parts.slice(1).join(' ');
+        customers.push({
+          vorname: firstname,
+          nachname: lastname
+        });
+      }
+    }
+    
+    return customers;
+  };
 
   const createCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
@@ -85,6 +126,32 @@ export default function NewEntries() {
     },
   });
 
+  const bulkImportCustomersMutation = useMutation({
+    mutationFn: async (customersData: any[]) => {
+      const { error } = await (supabase as any)
+        .from('kunden')
+        .insert(customersData);
+      
+      if (error) throw error;
+      return customersData.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['kunden'] });
+      setBulkCustomerText('');
+      toast({
+        title: 'Erfolg',
+        description: `${count} Kunden wurden erfolgreich importiert`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Fehler',
+        description: 'Kunden konnten nicht importiert werden',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleCreateCustomer = (e: React.FormEvent) => {
     e.preventDefault();
     createCustomerMutation.mutate(newCustomer);
@@ -100,6 +167,30 @@ export default function NewEntries() {
     createEmployeeMutation.mutate(employeeData);
   };
 
+  const handleBulkImportCustomers = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bulkCustomerText.trim()) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte geben Sie eine Kundenliste ein',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const customers = parseCustomerNames(bulkCustomerText);
+    if (customers.length === 0) {
+      toast({
+        title: 'Fehler',
+        description: 'Keine gültigen Kundendaten gefunden',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    bulkImportCustomersMutation.mutate(customers);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -111,8 +202,9 @@ export default function NewEntries() {
       </div>
 
       <Tabs defaultValue="customers" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="customers">Neuer Kunde</TabsTrigger>
+          <TabsTrigger value="bulk-import">Bulk Import</TabsTrigger>
           <TabsTrigger value="employees">Neuer Mitarbeiter</TabsTrigger>
         </TabsList>
 
@@ -276,6 +368,64 @@ export default function NewEntries() {
                 >
                   <Save className="h-4 w-4 mr-2" />
                   {createCustomerMutation.isPending ? 'Speichern...' : 'Kunden anlegen'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Bulk Import Tab */}
+        <TabsContent value="bulk-import">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Kunden Bulk Import
+              </CardTitle>
+              <CardDescription>
+                Importieren Sie mehrere Kunden gleichzeitig aus einer Liste
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleBulkImportCustomers} className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Kundenliste</h3>
+                  <div>
+                    <Label htmlFor="bulk_customer_text">Kundennamen (ein Name pro Zeile)</Label>
+                    <Textarea
+                      id="bulk_customer_text"
+                      value={bulkCustomerText}
+                      onChange={(e) => setBulkCustomerText(e.target.value)}
+                      rows={12}
+                      placeholder="Beispiel:&#10;Müller Hans&#10;Schmidt Maria&#10;Weber Klaus"
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Format: "Nachname Vorname" - ein Kunde pro Zeile. Bei mehreren Vornamen werden diese automatisch zusammengefasst.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="text-blue-600">💡</div>
+                    <div>
+                      <h4 className="font-medium text-blue-800">Hinweis zum Import</h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Beim Bulk Import werden nur Vor- und Nachname erfasst. Weitere Details können später 
+                        über die normale Kundenbearbeitung hinzugefügt werden.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={bulkImportCustomersMutation.isPending}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {bulkImportCustomersMutation.isPending ? 'Importiere...' : 'Kunden importieren'}
                 </Button>
               </form>
             </CardContent>
