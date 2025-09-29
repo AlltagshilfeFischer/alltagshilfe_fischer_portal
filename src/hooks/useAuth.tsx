@@ -8,6 +8,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
   loading: boolean;
 }
 
@@ -63,12 +64,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const resetPassword = async (email: string) => {
+    // First check if user exists in benutzer table
+    const { data: existingUser } = await supabase
+      .from('benutzer')
+      .select('email')
+      .eq('email', email)
+      .single();
+    
+    if (!existingUser) {
+      return { error: { message: 'Diese E-Mail-Adresse ist nicht registriert.' } };
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    
+    return { error };
+  };
+
   const value = {
     user,
     session,
     signIn,
     signUp,
     signOut,
+    resetPassword,
     loading,
   };
 

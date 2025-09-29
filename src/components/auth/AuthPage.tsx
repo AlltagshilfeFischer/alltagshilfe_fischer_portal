@@ -11,8 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const [resetLoading, setResetLoading] = useState(false);
+  const { signIn, resetPassword, user } = useAuth();
   const { toast } = useToast();
 
   // Redirect if already authenticated
@@ -44,6 +46,29 @@ export default function AuthPage() {
     setLoading(false);
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+
+    const { error } = await resetPassword(resetEmail);
+
+    if (error) {
+      toast({
+        title: 'Fehler beim Zurücksetzen des Passworts',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'E-Mail versendet',
+        description: 'Falls Ihre E-Mail-Adresse registriert ist, erhalten Sie einen Link zum Zurücksetzen des Passworts.',
+      });
+      setResetEmail('');
+    }
+
+    setResetLoading(false);
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
@@ -59,44 +84,80 @@ export default function AuthPage() {
 
         <Card className="shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle>Willkommen zurück</CardTitle>
+            <CardTitle>Anmeldung</CardTitle>
             <CardDescription>
-              Melden Sie sich an, um Ihren Dienstplan einzusehen
+              Melden Sie sich an oder setzen Sie Ihr Passwort zurück
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">E-Mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="ihre.email@beispiel.de"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Passwort</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full"
-                />
-              </div>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-primary hover:bg-primary-hover"
-              >
-                {loading ? 'Wird angemeldet...' : 'Anmelden'}
-              </Button>
-            </form>
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signin">Anmelden</TabsTrigger>
+                <TabsTrigger value="reset">Passwort vergessen</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="signin" className="space-y-4 mt-4">
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-Mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="ihre.email@beispiel.de"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Passwort</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-primary hover:bg-primary-hover"
+                  >
+                    {loading ? 'Wird angemeldet...' : 'Anmelden'}
+                  </Button>
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="reset" className="space-y-4 mt-4">
+                <form onSubmit={handlePasswordReset} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="resetEmail">E-Mail-Adresse</Label>
+                    <Input
+                      id="resetEmail"
+                      type="email"
+                      placeholder="ihre.email@beispiel.de"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Geben Sie Ihre registrierte E-Mail-Adresse ein, um einen Link zum Zurücksetzen des Passworts zu erhalten.
+                  </p>
+                  <Button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="w-full bg-primary hover:bg-primary-hover"
+                  >
+                    {resetLoading ? 'Wird versendet...' : 'Passwort zurücksetzen'}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
