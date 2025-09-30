@@ -19,16 +19,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Users, Building, Edit, Phone, Mail } from 'lucide-react';
+import { Users, Building, Edit, Phone, Mail, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { importAllCustomers } from '@/scripts/importCustomers';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
+
+type SortKey = 'name' | 'status' | 'telefon' | 'email' | 'notfall_name' | 'created_at';
+type SortDirection = 'asc' | 'desc';
 
 export default function MasterData() {
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [customerSort, setCustomerSort] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'name', direction: 'asc' });
+  const [employeeSort, setEmployeeSort] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'name', direction: 'asc' });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -103,6 +108,125 @@ export default function MasterData() {
     return new Date(dateString).toLocaleDateString('de-DE');
   };
 
+  const handleSort = (key: SortKey, type: 'customer' | 'employee') => {
+    if (type === 'customer') {
+      setCustomerSort(prev => ({
+        key,
+        direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+      }));
+    } else {
+      setEmployeeSort(prev => ({
+        key,
+        direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+      }));
+    }
+  };
+
+  const SortButton = ({ sortKey, currentSort, onClick, children }: {
+    sortKey: SortKey;
+    currentSort: { key: SortKey; direction: SortDirection };
+    onClick: (key: SortKey) => void;
+    children: React.ReactNode;
+  }) => {
+    const isActive = currentSort.key === sortKey;
+    return (
+      <Button
+        variant="ghost"
+        className="h-auto p-0 font-medium hover:bg-transparent"
+        onClick={() => onClick(sortKey)}
+      >
+        <div className="flex items-center gap-1">
+          {children}
+          {isActive ? (
+            currentSort.direction === 'asc' ? 
+              <ChevronUp className="h-4 w-4" /> : 
+              <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ArrowUpDown className="h-4 w-4 opacity-50" />
+          )}
+        </div>
+      </Button>
+    );
+  };
+
+  const sortedCustomers = useMemo(() => {
+    if (!customers) return [];
+    
+    return [...customers].sort((a, b) => {
+      const { key, direction } = customerSort;
+      let aValue: string | number = '';
+      let bValue: string | number = '';
+
+      switch (key) {
+        case 'name':
+          aValue = `${a.vorname || ''} ${a.nachname || ''}`.trim().toLowerCase();
+          bValue = `${b.vorname || ''} ${b.nachname || ''}`.trim().toLowerCase();
+          break;
+        case 'status':
+          aValue = a.aktiv ? 'aktiv' : 'inaktiv';
+          bValue = b.aktiv ? 'aktiv' : 'inaktiv';
+          break;
+        case 'telefon':
+          aValue = (a.telefon || '').toLowerCase();
+          bValue = (b.telefon || '').toLowerCase();
+          break;
+        case 'email':
+          aValue = (a.email || '').toLowerCase();
+          bValue = (b.email || '').toLowerCase();
+          break;
+        case 'notfall_name':
+          aValue = (a.notfall_name || '').toLowerCase();
+          bValue = (b.notfall_name || '').toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [customers, customerSort]);
+
+  const sortedEmployees = useMemo(() => {
+    if (!employees) return [];
+    
+    return [...employees].sort((a, b) => {
+      const { key, direction } = employeeSort;
+      let aValue: string | number = '';
+      let bValue: string | number = '';
+
+      switch (key) {
+        case 'name':
+          aValue = `${a.vorname || ''} ${a.nachname || ''}`.trim().toLowerCase();
+          bValue = `${b.vorname || ''} ${b.nachname || ''}`.trim().toLowerCase();
+          break;
+        case 'email':
+          aValue = (a.email || '').toLowerCase();
+          bValue = (b.email || '').toLowerCase();
+          break;
+        case 'telefon':
+          aValue = (a.telefon || '').toLowerCase();
+          bValue = (b.telefon || '').toLowerCase();
+          break;
+        case 'status':
+          aValue = a.ist_aktiv ? 'aktiv' : 'inaktiv';
+          bValue = b.ist_aktiv ? 'aktiv' : 'inaktiv';
+          break;
+        case 'created_at':
+          aValue = new Date(a.created_at || 0).getTime();
+          bValue = new Date(b.created_at || 0).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [employees, employeeSort]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -136,19 +260,59 @@ export default function MasterData() {
                 <div className="text-center py-4">Lade Kundendaten...</div>
               ) : customers && customers.length > 0 ? (
                 <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Telefon</TableHead>
-                        <TableHead>E-Mail</TableHead>
-                        <TableHead>Notfallkontakt</TableHead>
-                        <TableHead>Aktionen</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {customers.map((customer: any) => (
+                   <Table>
+                     <TableHeader>
+                       <TableRow>
+                         <TableHead>
+                           <SortButton 
+                             sortKey="name" 
+                             currentSort={customerSort} 
+                             onClick={(key) => handleSort(key, 'customer')}
+                           >
+                             Name
+                           </SortButton>
+                         </TableHead>
+                         <TableHead>
+                           <SortButton 
+                             sortKey="status" 
+                             currentSort={customerSort} 
+                             onClick={(key) => handleSort(key, 'customer')}
+                           >
+                             Status
+                           </SortButton>
+                         </TableHead>
+                         <TableHead>
+                           <SortButton 
+                             sortKey="telefon" 
+                             currentSort={customerSort} 
+                             onClick={(key) => handleSort(key, 'customer')}
+                           >
+                             Telefon
+                           </SortButton>
+                         </TableHead>
+                         <TableHead>
+                           <SortButton 
+                             sortKey="email" 
+                             currentSort={customerSort} 
+                             onClick={(key) => handleSort(key, 'customer')}
+                           >
+                             E-Mail
+                           </SortButton>
+                         </TableHead>
+                         <TableHead>
+                           <SortButton 
+                             sortKey="notfall_name" 
+                             currentSort={customerSort} 
+                             onClick={(key) => handleSort(key, 'customer')}
+                           >
+                             Notfallkontakt
+                           </SortButton>
+                         </TableHead>
+                         <TableHead>Aktionen</TableHead>
+                       </TableRow>
+                     </TableHeader>
+                     <TableBody>
+                       {sortedCustomers.map((customer: any) => (
                         <TableRow key={customer.id}>
                           <TableCell className="font-medium">
                             {customer.vorname} {customer.nachname}
@@ -232,18 +396,58 @@ export default function MasterData() {
                 <div className="text-center py-4">Lade Mitarbeiterdaten...</div>
               ) : employees && employees.length > 0 ? (
                 <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>E-Mail</TableHead>
-                        <TableHead>Telefon</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Erstellt am</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {employees.map((employee: any) => (
+                   <Table>
+                     <TableHeader>
+                       <TableRow>
+                         <TableHead>
+                           <SortButton 
+                             sortKey="name" 
+                             currentSort={employeeSort} 
+                             onClick={(key) => handleSort(key, 'employee')}
+                           >
+                             Name
+                           </SortButton>
+                         </TableHead>
+                         <TableHead>
+                           <SortButton 
+                             sortKey="email" 
+                             currentSort={employeeSort} 
+                             onClick={(key) => handleSort(key, 'employee')}
+                           >
+                             E-Mail
+                           </SortButton>
+                         </TableHead>
+                         <TableHead>
+                           <SortButton 
+                             sortKey="telefon" 
+                             currentSort={employeeSort} 
+                             onClick={(key) => handleSort(key, 'employee')}
+                           >
+                             Telefon
+                           </SortButton>
+                         </TableHead>
+                         <TableHead>
+                           <SortButton 
+                             sortKey="status" 
+                             currentSort={employeeSort} 
+                             onClick={(key) => handleSort(key, 'employee')}
+                           >
+                             Status
+                           </SortButton>
+                         </TableHead>
+                         <TableHead>
+                           <SortButton 
+                             sortKey="created_at" 
+                             currentSort={employeeSort} 
+                             onClick={(key) => handleSort(key, 'employee')}
+                           >
+                             Erstellt am
+                           </SortButton>
+                         </TableHead>
+                       </TableRow>
+                     </TableHeader>
+                     <TableBody>
+                       {sortedEmployees.map((employee: any) => (
                         <TableRow key={employee.id}>
                           <TableCell className="font-medium">
                             {employee.vorname} {employee.nachname}
