@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Users, Building, Edit, Phone, Mail, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { Users, Building, Edit, Phone, Mail, ArrowUpDown, ChevronUp, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { importAllCustomers } from '@/scripts/importCustomers';
@@ -43,7 +43,10 @@ export default function MasterData() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('kunden')
-        .select('*')
+        .select(`
+          *,
+          zeitfenster:kunden_zeitfenster(*)
+        `)
         .order('nachname');
       
       if (error) throw error;
@@ -66,12 +69,38 @@ export default function MasterData() {
 
   const updateCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
-      const { error } = await (supabase as any)
-        .from('kunden')
-        .update(customerData)
-        .eq('id', customerData.id);
+      const { zeitfenster, ...kundenData } = customerData;
       
-      if (error) throw error;
+      // Update customer data
+      const { error: kundenError } = await (supabase as any)
+        .from('kunden')
+        .update(kundenData)
+        .eq('id', kundenData.id);
+      
+      if (kundenError) throw kundenError;
+
+      // Delete existing zeitfenster
+      const { error: deleteError } = await (supabase as any)
+        .from('kunden_zeitfenster')
+        .delete()
+        .eq('kunden_id', kundenData.id);
+      
+      if (deleteError) throw deleteError;
+
+      // Insert new zeitfenster if any
+      if (zeitfenster && zeitfenster.length > 0) {
+        const { error: insertError } = await (supabase as any)
+          .from('kunden_zeitfenster')
+          .insert(zeitfenster.map((z: any) => ({
+            kunden_id: kundenData.id,
+            wochentag: z.wochentag,
+            von: z.von,
+            bis: z.bis,
+            prioritaet: z.prioritaet || 3
+          })));
+        
+        if (insertError) throw insertError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -563,6 +592,99 @@ export default function MasterData() {
                     })}
                   />
                 </div>
+              </div>
+
+              {/* Zeitfenster Section */}
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Zeitfenster</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const zeitfenster = editingCustomer.zeitfenster || [];
+                      setEditingCustomer({
+                        ...editingCustomer,
+                        zeitfenster: [...zeitfenster, {
+                          wochentag: 1,
+                          von: '08:00',
+                          bis: '12:00',
+                          prioritaet: 3
+                        }]
+                      });
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Zeitfenster hinzufügen
+                  </Button>
+                </div>
+
+                {(editingCustomer.zeitfenster || []).map((zeitfenster: any, index: number) => (
+                  <div key={index} className="grid grid-cols-[1fr,1fr,1fr,auto] gap-2 items-end p-3 border rounded-lg">
+                    <div>
+                      <Label className="text-xs">Wochentag</Label>
+                      <select
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors"
+                        value={zeitfenster.wochentag}
+                        onChange={(e) => {
+                          const updated = [...(editingCustomer.zeitfenster || [])];
+                          updated[index] = { ...updated[index], wochentag: parseInt(e.target.value) };
+                          setEditingCustomer({ ...editingCustomer, zeitfenster: updated });
+                        }}
+                      >
+                        <option value="0">Sonntag</option>
+                        <option value="1">Montag</option>
+                        <option value="2">Dienstag</option>
+                        <option value="3">Mittwoch</option>
+                        <option value="4">Donnerstag</option>
+                        <option value="5">Freitag</option>
+                        <option value="6">Samstag</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Von</Label>
+                      <Input
+                        type="time"
+                        value={zeitfenster.von || ''}
+                        onChange={(e) => {
+                          const updated = [...(editingCustomer.zeitfenster || [])];
+                          updated[index] = { ...updated[index], von: e.target.value };
+                          setEditingCustomer({ ...editingCustomer, zeitfenster: updated });
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Bis</Label>
+                      <Input
+                        type="time"
+                        value={zeitfenster.bis || ''}
+                        onChange={(e) => {
+                          const updated = [...(editingCustomer.zeitfenster || [])];
+                          updated[index] = { ...updated[index], bis: e.target.value };
+                          setEditingCustomer({ ...editingCustomer, zeitfenster: updated });
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const updated = (editingCustomer.zeitfenster || []).filter((_: any, i: number) => i !== index);
+                        setEditingCustomer({ ...editingCustomer, zeitfenster: updated });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+
+                {(!editingCustomer.zeitfenster || editingCustomer.zeitfenster.length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Keine Zeitfenster definiert
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-end gap-2">
