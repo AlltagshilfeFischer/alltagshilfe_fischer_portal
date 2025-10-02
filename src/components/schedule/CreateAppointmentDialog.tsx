@@ -46,7 +46,7 @@ export function CreateAppointmentDialog({
 }: CreateAppointmentDialogProps) {
   const [titel, setTitel] = useState('');
   const [kundenId, setKundenId] = useState('');
-  const [mitarbeiterId, setMitarbeiterId] = useState<string>('');
+  const [mitarbeiterId, setMitarbeiterId] = useState<string>('unassigned');
   const [date, setDate] = useState<Date>();
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
@@ -69,7 +69,7 @@ export function CreateAppointmentDialog({
       await onSubmit({
         titel,
         kunden_id: kundenId,
-        mitarbeiter_id: mitarbeiterId || null,
+        mitarbeiter_id: mitarbeiterId === 'unassigned' ? null : mitarbeiterId || null,
         start_at: startAt.toISOString(),
         end_at: endAt.toISOString(),
       });
@@ -77,7 +77,7 @@ export function CreateAppointmentDialog({
       // Reset form
       setTitel('');
       setKundenId('');
-      setMitarbeiterId('');
+      setMitarbeiterId('unassigned');
       setDate(undefined);
       setStartTime('09:00');
       setEndTime('10:00');
@@ -125,24 +125,24 @@ export function CreateAppointmentDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="mitarbeiter">Mitarbeiter (optional)</Label>
-            <Select value={mitarbeiterId} onValueChange={setMitarbeiterId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Nicht zugewiesen (später zuweisen)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Nicht zugewiesen</SelectItem>
-                {employees
-                  .filter((emp) => emp)
-                  .map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.vorname} {employee.nachname}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="mitarbeiter">Mitarbeiter (optional)</Label>
+              <Select value={mitarbeiterId} onValueChange={setMitarbeiterId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nicht zugewiesen (später zuweisen)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
+                  {employees
+                    .filter((emp) => emp)
+                    .map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.vorname} {employee.nachname}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
 
           <div className="space-y-2">
             <Label>Datum</Label>

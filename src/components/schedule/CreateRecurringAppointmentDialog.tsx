@@ -68,7 +68,7 @@ export function CreateRecurringAppointmentDialog({
 }: CreateRecurringAppointmentDialogProps) {
   const [titel, setTitel] = useState('');
   const [kundenId, setKundenId] = useState('');
-  const [mitarbeiterId, setMitarbeiterId] = useState<string>('');
+  const [mitarbeiterId, setMitarbeiterId] = useState<string>('unassigned');
   const [wochentag, setWochentag] = useState<number>(1);
   const [startZeit, setStartZeit] = useState('09:00');
   const [dauerMinuten, setDauerMinuten] = useState(60);
@@ -87,7 +87,7 @@ export function CreateRecurringAppointmentDialog({
       await onSubmit({
         titel,
         kunden_id: kundenId,
-        mitarbeiter_id: mitarbeiterId || null,
+        mitarbeiter_id: mitarbeiterId === 'unassigned' ? null : mitarbeiterId || null,
         wochentag,
         start_zeit: startZeit,
         dauer_minuten: dauerMinuten,
@@ -100,7 +100,7 @@ export function CreateRecurringAppointmentDialog({
       // Reset form
       setTitel('');
       setKundenId('');
-      setMitarbeiterId('');
+      setMitarbeiterId('unassigned');
       setWochentag(1);
       setStartZeit('09:00');
       setDauerMinuten(60);
@@ -162,7 +162,7 @@ export function CreateRecurringAppointmentDialog({
                 <SelectValue placeholder="Nicht zugewiesen (später zuweisen)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nicht zugewiesen</SelectItem>
+                <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
                 {employees
                   .filter((emp) => emp)
                   .map((employee) => (
