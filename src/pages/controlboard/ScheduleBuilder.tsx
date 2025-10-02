@@ -24,6 +24,9 @@ import { EmployeeCard } from '@/components/schedule/EmployeeCard';
 import { SortableEmployeeCard } from '@/components/schedule/SortableEmployeeCard';
 import { SmartAssignmentPanel } from '@/components/schedule/SmartAssignmentPanel';
 import { UnassignedAppointmentsBar } from '@/components/schedule/UnassignedAppointmentsBar';
+import { CreateAppointmentDialog } from '@/components/schedule/CreateAppointmentDialog';
+import { CreateRecurringAppointmentDialog } from '@/components/schedule/CreateRecurringAppointmentDialog';
+import { SmartMatchingPanel } from '@/components/schedule/SmartMatchingPanel';
 import {
   DndContext,
   DragOverlay,
@@ -153,6 +156,8 @@ const ScheduleBuilder = () => {
     employeeId: string;
     conflicts: any[];
   }>({ show: false, appointmentId: '', employeeId: '', conflicts: [] });
+  const [showCreateAppointment, setShowCreateAppointment] = useState(false);
+  const [showCreateRecurring, setShowCreateRecurring] = useState(false);
   
   const { toast } = useToast();
 
@@ -475,6 +480,66 @@ const cellWidth = DAY_COL_WIDTH;
     setConflictWarning({ show: false, appointmentId: '', employeeId: '', conflicts: [] });
   };
 
+  const handleCreateAppointment = async (appointmentData: any) => {
+    try {
+      const { error } = await supabase
+        .from('termine')
+        .insert({
+          ...appointmentData,
+          status: appointmentData.mitarbeiter_id ? 'scheduled' : 'unassigned',
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Erfolg',
+        description: 'Termin wurde erstellt.',
+      });
+
+      await loadData();
+    } catch (error: any) {
+      console.error('Error creating appointment:', error);
+      toast({
+        title: 'Fehler',
+        description: error.message || 'Termin konnte nicht erstellt werden.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCreateRecurringAppointment = async (templateData: any) => {
+    try {
+      const { error } = await supabase
+        .from('termin_vorlagen')
+        .insert({
+          ...templateData,
+          ist_aktiv: true,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Erfolg',
+        description: 'Regeltermin wurde erstellt.',
+      });
+
+      await loadData();
+    } catch (error: any) {
+      console.error('Error creating recurring appointment:', error);
+      toast({
+        title: 'Fehler',
+        description: error.message || 'Regeltermin konnte nicht erstellt werden.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSmartMatch = (customerId: string, employeeId: string) => {
+    // Pre-populate the create appointment dialog with customer and employee
+    setShowCreateAppointment(true);
+    // Note: You would need to modify CreateAppointmentDialog to accept initial values
+  };
+
   const autoAssignAppointments = async () => {
     if (openAppointments.length === 0) return;
 
@@ -690,6 +755,14 @@ const cellWidth = DAY_COL_WIDTH;
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button onClick={() => setShowCreateAppointment(true)}>
+              <CalendarDays className="h-4 w-4 mr-2" />
+              Termin erstellen
+            </Button>
+            <Button variant="outline" onClick={() => setShowCreateRecurring(true)}>
+              <Clock className="h-4 w-4 mr-2" />
+              Regeltermin
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setShowApprovalDialog(true)}>
               <Bell className="h-4 w-4 mr-2" />
               Genehmigungen ({pendingChanges.length})
@@ -804,6 +877,15 @@ const cellWidth = DAY_COL_WIDTH;
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* Expanded Sidebar for Better Employee Management */}
           <div className="xl:col-span-1 space-y-4">
+            {/* Smart Matching Panel */}
+            <SmartMatchingPanel
+              customers={customers}
+              employees={employees}
+              appointments={appointments}
+              customerAvailability={customerAvailability}
+              onCreateAppointment={handleSmartMatch}
+            />
+
             {/* Smart Assignment Panel - Compact */}
             <Card className="border shadow-sm">
               <CardHeader className="pb-2">
@@ -1067,6 +1149,22 @@ const cellWidth = DAY_COL_WIDTH;
             start: appointments.find(app => app.id === conflictWarning.appointmentId)?.start_at || new Date().toISOString(),
             end: appointments.find(app => app.id === conflictWarning.appointmentId)?.end_at || new Date().toISOString()
           }}
+        />
+
+        <CreateAppointmentDialog
+          open={showCreateAppointment}
+          onOpenChange={setShowCreateAppointment}
+          customers={customers}
+          employees={employees}
+          onSubmit={handleCreateAppointment}
+        />
+
+        <CreateRecurringAppointmentDialog
+          open={showCreateRecurring}
+          onOpenChange={setShowCreateRecurring}
+          customers={customers}
+          employees={employees}
+          onSubmit={handleCreateRecurringAppointment}
         />
       </div>
 

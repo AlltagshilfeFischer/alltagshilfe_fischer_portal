@@ -1,0 +1,218 @@
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, Clock } from 'lucide-react';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+
+interface Customer {
+  id: string;
+  vorname: string;
+  nachname: string;
+}
+
+interface Employee {
+  id: string;
+  vorname: string;
+  nachname: string;
+}
+
+interface CreateAppointmentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  customers: Customer[];
+  employees: Employee[];
+  onSubmit: (appointment: {
+    titel: string;
+    kunden_id: string;
+    mitarbeiter_id: string | null;
+    start_at: string;
+    end_at: string;
+  }) => Promise<void>;
+}
+
+export function CreateAppointmentDialog({
+  open,
+  onOpenChange,
+  customers,
+  employees,
+  onSubmit,
+}: CreateAppointmentDialogProps) {
+  const [titel, setTitel] = useState('');
+  const [kundenId, setKundenId] = useState('');
+  const [mitarbeiterId, setMitarbeiterId] = useState<string>('');
+  const [date, setDate] = useState<Date>();
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:00');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!date || !kundenId) return;
+
+    setLoading(true);
+    try {
+      const startAt = new Date(date);
+      const [startHours, startMinutes] = startTime.split(':').map(Number);
+      startAt.setHours(startHours, startMinutes, 0, 0);
+
+      const endAt = new Date(date);
+      const [endHours, endMinutes] = endTime.split(':').map(Number);
+      endAt.setHours(endHours, endMinutes, 0, 0);
+
+      await onSubmit({
+        titel,
+        kunden_id: kundenId,
+        mitarbeiter_id: mitarbeiterId || null,
+        start_at: startAt.toISOString(),
+        end_at: endAt.toISOString(),
+      });
+
+      // Reset form
+      setTitel('');
+      setKundenId('');
+      setMitarbeiterId('');
+      setDate(undefined);
+      setStartTime('09:00');
+      setEndTime('10:00');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Neuen Termin erstellen</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="titel">Titel</Label>
+              <Input
+                id="titel"
+                value={titel}
+                onChange={(e) => setTitel(e.target.value)}
+                placeholder="z.B. Hausbesuch"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="kunde">Kunde</Label>
+              <Select value={kundenId} onValueChange={setKundenId} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kunde auswählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.vorname} {customer.nachname}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="mitarbeiter">Mitarbeiter (optional)</Label>
+            <Select value={mitarbeiterId} onValueChange={setMitarbeiterId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Nicht zugewiesen (später zuweisen)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Nicht zugewiesen</SelectItem>
+                {employees
+                  .filter((emp) => emp)
+                  .map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.vorname} {employee.nachname}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Datum</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'w-full justify-start text-left font-normal',
+                    !date && 'text-muted-foreground'
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, 'PPP', { locale: de }) : 'Datum wählen'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startTime">Start-Zeit</Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="endTime">End-Zeit</Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Abbrechen
+            </Button>
+            <Button type="submit" disabled={loading || !date || !kundenId}>
+              {loading ? 'Erstelle...' : 'Termin erstellen'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
