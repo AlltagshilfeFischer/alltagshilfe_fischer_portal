@@ -137,6 +137,53 @@ export default function MasterData() {
     return new Date(dateString).toLocaleDateString('de-DE');
   };
 
+  const getWeekdayName = (day: number): string => {
+    const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    return days[day] || '';
+  };
+
+  const formatTimeSlots = (zeitfenster: any[]) => {
+    if (!zeitfenster || zeitfenster.length === 0) return null;
+    
+    // Group by weekday
+    const grouped = zeitfenster.reduce((acc: any, slot: any) => {
+      if (!acc[slot.wochentag]) {
+        acc[slot.wochentag] = [];
+      }
+      acc[slot.wochentag].push(slot);
+      return acc;
+    }, {});
+
+    // Sort by weekday (Monday first)
+    const sortedDays = Object.keys(grouped)
+      .map(Number)
+      .sort((a, b) => {
+        // Convert Sunday (0) to 7 for sorting
+        const aDay = a === 0 ? 7 : a;
+        const bDay = b === 0 ? 7 : b;
+        return aDay - bDay;
+      });
+
+    return (
+      <div className="flex flex-wrap gap-1">
+        {sortedDays.map((day) => (
+          <Badge key={day} variant="outline" className="text-xs">
+            <span className="font-semibold">{getWeekdayName(day)}</span>
+            <span className="mx-1">·</span>
+            <span className="text-muted-foreground">
+              {grouped[day].map((slot: any, idx: number) => (
+                <span key={idx}>
+                  {slot.von?.substring(0, 5)}-{slot.bis?.substring(0, 5)}
+                  {idx < grouped[day].length - 1 && ', '}
+                </span>
+              ))}
+            </span>
+          </Badge>
+        ))}
+      </div>
+    );
+  };
+
   const handleSort = (key: SortKey, type: 'customer' | 'employee') => {
     if (type === 'customer') {
       setCustomerSort(prev => ({
@@ -328,16 +375,17 @@ export default function MasterData() {
                              E-Mail
                            </SortButton>
                          </TableHead>
-                         <TableHead>
-                           <SortButton 
-                             sortKey="notfall_name" 
-                             currentSort={customerSort} 
-                             onClick={(key) => handleSort(key, 'customer')}
-                           >
-                             Notfallkontakt
-                           </SortButton>
-                         </TableHead>
-                         <TableHead>Aktionen</TableHead>
+                          <TableHead>
+                            <SortButton 
+                              sortKey="notfall_name" 
+                              currentSort={customerSort} 
+                              onClick={(key) => handleSort(key, 'customer')}
+                            >
+                              Notfallkontakt
+                            </SortButton>
+                          </TableHead>
+                          <TableHead>Zeitfenster</TableHead>
+                          <TableHead>Aktionen</TableHead>
                        </TableRow>
                      </TableHeader>
                      <TableBody>
@@ -371,29 +419,36 @@ export default function MasterData() {
                               '-'
                             )}
                           </TableCell>
-                          <TableCell>
-                            {customer.notfall_name ? (
-                              <div>
-                                <div className="font-medium text-sm">
-                                  {customer.notfall_name}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {customer.notfall_telefon}
-                                </div>
-                              </div>
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditCustomer(customer)}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                          </TableCell>
+                           <TableCell>
+                             {customer.notfall_name ? (
+                               <div>
+                                 <div className="font-medium text-sm">
+                                   {customer.notfall_name}
+                                 </div>
+                                 <div className="text-xs text-muted-foreground">
+                                   {customer.notfall_telefon}
+                                 </div>
+                               </div>
+                             ) : (
+                               '-'
+                             )}
+                           </TableCell>
+                           <TableCell>
+                             {formatTimeSlots(customer.zeitfenster) || (
+                               <span className="text-muted-foreground text-sm">
+                                 Keine Zeitfenster
+                               </span>
+                             )}
+                           </TableCell>
+                           <TableCell>
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => handleEditCustomer(customer)}
+                             >
+                               <Edit className="h-3 w-3" />
+                             </Button>
+                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
