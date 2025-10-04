@@ -41,7 +41,7 @@ export function EmployeeCard({ employee, currentAppointments = 0, className }: E
   return (
     <Card className={cn('transition-all duration-200 hover:shadow-sm border', className)}>
       <CardContent className="p-3">
-        <div className="flex items-start gap-2 mb-2">
+        <div className="flex items-start gap-2 mb-3">
           <div 
             className="w-3 h-3 rounded-full border border-white shadow-sm mt-0.5 flex-shrink-0" 
             style={{ backgroundColor: employee.farbe_kalender }}
@@ -58,14 +58,17 @@ export function EmployeeCard({ employee, currentAppointments = 0, className }: E
           </Badge>
         </div>
 
-        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
           <Phone className="h-3 w-3 flex-shrink-0" />
           <span className="truncate">{employee.telefon}</span>
         </div>
 
-        <div className="flex items-center gap-1 text-xs">
-          {getWorkloadIcon(workloadPercentage)}
-          <span className={cn('px-2 py-0.5 rounded-full font-medium text-xs', getWorkloadColor(workloadPercentage))}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 text-xs">
+            {getWorkloadIcon(workloadPercentage)}
+            <span className="text-muted-foreground">Auslastung:</span>
+          </div>
+          <span className={cn('px-2 py-1 rounded-full font-medium text-xs', getWorkloadColor(workloadPercentage))}>
             {currentAppointments}/{employee.max_termine_pro_tag || 8}
           </span>
         </div>
