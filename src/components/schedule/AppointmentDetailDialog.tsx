@@ -25,8 +25,7 @@ interface Employee {
 
 interface Customer {
   id: string;
-  vorname: string;
-  nachname: string;
+  name: string;
   email: string;
   telefon: string;
 }
@@ -259,14 +258,14 @@ export function AppointmentDetailDialog({
                         <SelectContent>
                           {customers.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id}>
-                              {customer.vorname} {customer.nachname}
+                              {customer.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     ) : (
                       <p className="text-sm font-medium mt-1">
-                        {editedAppointment.customer.vorname} {editedAppointment.customer.nachname}
+                        {editedAppointment.customer.name}
                       </p>
                     )}
                   </div>

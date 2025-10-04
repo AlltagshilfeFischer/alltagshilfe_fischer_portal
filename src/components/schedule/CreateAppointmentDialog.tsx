@@ -13,8 +13,7 @@ import { cn } from '@/lib/utils';
 
 interface Customer {
   id: string;
-  vorname: string;
-  nachname: string;
+  name: string;
 }
 
 interface Employee {
@@ -117,7 +116,7 @@ export function CreateAppointmentDialog({
                 <SelectContent>
                   {customers.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
-                      {customer.vorname} {customer.nachname}
+                      {customer.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

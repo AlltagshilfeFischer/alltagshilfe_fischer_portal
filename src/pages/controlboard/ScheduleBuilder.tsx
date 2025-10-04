@@ -59,8 +59,7 @@ interface Employee {
 
 interface Customer {
   id: string;
-  vorname: string;
-  nachname: string;
+  name: string;
   email: string;
   telefon: string;
 }
@@ -197,7 +196,7 @@ const ScheduleBuilder = () => {
           availability:kunden_zeitfenster(*)
         `)
         .eq('aktiv', true)
-        .order('vorname');
+        .order('name');
       
       if (customersError) throw customersError;
 
@@ -239,7 +238,12 @@ const ScheduleBuilder = () => {
       // Transform appointments data to match our interface
       const transformedAppointments = appointmentsData?.map(app => ({
         ...app,
-        customer: app.customer as Customer,
+        customer: app.customer ? {
+          id: app.customer.id,
+          name: (app.customer as any).name || '',
+          email: app.customer.email || '',
+          telefon: app.customer.telefon || '',
+        } as Customer : undefined,
         employee: app.employee ? {
           ...app.employee,
           name: `${app.employee.vorname} ${app.employee.nachname}`,
@@ -247,8 +251,16 @@ const ScheduleBuilder = () => {
         } : undefined,
       })) || [];
 
+      // Transform customers data
+      const transformedCustomers = customersData?.map(cust => ({
+        id: cust.id,
+        name: (cust as any).name || '',
+        email: cust.email || '',
+        telefon: cust.telefon || '',
+      } as Customer)) || [];
+
       setEmployees(transformedEmployees);
-      setCustomers(customersData || []);
+      setCustomers(transformedCustomers);
       setAppointments(transformedAppointments);
       
       // Process customer availability
@@ -455,7 +467,7 @@ const cellWidth = DAY_COL_WIDTH;
       
       toast({
         title: 'Erfolg',
-        description: `${appointment?.customer?.vorname} ${appointment?.customer?.nachname} → ${employee?.name}`,
+        description: `${appointment?.customer?.name} → ${employee?.name}`,
       });
       
     } catch (error: any) {

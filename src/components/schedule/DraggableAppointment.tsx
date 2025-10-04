@@ -6,8 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface Customer {
   id: string;
-  vorname: string;
-  nachname: string;
+  name: string;
   email: string;
   telefon: string;
 }
@@ -64,7 +63,7 @@ export function DraggableAppointment({
       <div className="flex items-center justify-between gap-1">
         <div className="flex-1 min-w-0">
           <div className="font-medium text-foreground truncate text-xs">
-            {appointment.customer?.vorname} {appointment.customer?.nachname}
+            {appointment.customer?.name}
           </div>
         </div>
         <div className="text-muted-foreground text-xs flex-shrink-0">

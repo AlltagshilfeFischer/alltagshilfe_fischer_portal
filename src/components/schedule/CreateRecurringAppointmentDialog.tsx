@@ -14,8 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 interface Customer {
   id: string;
-  vorname: string;
-  nachname: string;
+  name: string;
 }
 
 interface Employee {
@@ -144,13 +143,13 @@ export function CreateRecurringAppointmentDialog({
                 <SelectTrigger>
                   <SelectValue placeholder="Kunde auswählen..." />
                 </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.vorname} {customer.nachname}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <SelectContent>
+                {customers.map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
               </Select>
             </div>
           </div>
