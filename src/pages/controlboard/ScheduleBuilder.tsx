@@ -954,7 +954,7 @@ const cellWidth = DAY_COL_WIDTH;
               </CardHeader>
               <CardContent className="p-3 pt-0">
                 <SortableContext items={filteredEmployees.map(emp => `employee-sort-${emp.id}`)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                  <div className="space-y-2">
                     {filteredEmployees.map((employee) => (
                       <div key={`employee-sort-${employee.id}`}>
                         <SortableEmployeeCard
