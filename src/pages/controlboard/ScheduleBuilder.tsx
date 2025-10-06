@@ -46,8 +46,8 @@ import {
 
 interface Employee {
   id: string;
-  vorname: string;
-  nachname: string;
+  vorname?: string;
+  nachname?: string;
   name: string;
   email: string;
   telefon: string;
@@ -231,7 +231,7 @@ const ScheduleBuilder = () => {
       // Transform employees data to match our interface
       const transformedEmployees = employeesData?.map(emp => ({
         ...emp,
-        name: `${emp.vorname} ${emp.nachname}`,
+        name: emp.email || `Mitarbeiter ${emp.id.slice(0, 8)}`,
         workload: Math.floor(Math.random() * 40) + 60,
       })) || [];
 
@@ -242,11 +242,11 @@ const ScheduleBuilder = () => {
           id: app.customer.id,
           name: (app.customer as any).name || '',
           email: app.customer.email || '',
-          telefon: app.customer.telefon || '',
+          telefon: (app.customer as any).telefonnr || '',
         } as Customer : undefined,
         employee: app.employee ? {
           ...app.employee,
-          name: `${app.employee.vorname} ${app.employee.nachname}`,
+          name: app.employee.email || `Mitarbeiter ${app.employee.id.slice(0, 8)}`,
           workload: Math.floor(Math.random() * 40) + 60,
         } : undefined,
       })) || [];
@@ -256,7 +256,7 @@ const ScheduleBuilder = () => {
         id: cust.id,
         name: (cust as any).name || '',
         email: cust.email || '',
-        telefon: cust.telefon || '',
+        telefon: (cust as any).telefonnr || '',
       } as Customer)) || [];
 
       setEmployees(transformedEmployees);

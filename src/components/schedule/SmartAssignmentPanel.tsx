@@ -9,8 +9,8 @@ import { cn } from '@/lib/utils';
 
 interface Employee {
   id: string;
-  vorname: string;
-  nachname: string;
+  vorname?: string;
+  nachname?: string;
   name: string;
   email: string;
   telefon: string;

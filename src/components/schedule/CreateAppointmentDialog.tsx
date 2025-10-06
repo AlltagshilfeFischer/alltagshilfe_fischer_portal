@@ -18,8 +18,8 @@ interface Customer {
 
 interface Employee {
   id: string;
-  vorname: string;
-  nachname: string;
+  vorname?: string;
+  nachname?: string;
 }
 
 interface CreateAppointmentDialogProps {
