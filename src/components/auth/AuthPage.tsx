@@ -13,8 +13,9 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [signUpLoading, setSignUpLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
-  const { signIn, resetPassword, user } = useAuth();
+  const { signIn, signUp, resetPassword, user } = useAuth();
   const { toast } = useToast();
 
   // Redirect if already authenticated
@@ -44,6 +45,30 @@ export default function AuthPage() {
     }
 
     setLoading(false);
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignUpLoading(true);
+
+    const { error } = await signUp(email, password);
+
+    if (error) {
+      toast({
+        title: 'Registrierung fehlgeschlagen',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Registrierung erfolgreich',
+        description: 'Sie können sich nun anmelden.',
+      });
+      setEmail('');
+      setPassword('');
+    }
+
+    setSignUpLoading(false);
   };
 
   const handlePasswordReset = async (e: React.FormEvent) => {
@@ -90,11 +115,12 @@ export default function AuthPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Anmelden</TabsTrigger>
-                <TabsTrigger value="reset">Passwort vergessen</TabsTrigger>
-              </TabsList>
+          <Tabs defaultValue="signin" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="signin">Anmelden</TabsTrigger>
+              <TabsTrigger value="signup">Registrieren</TabsTrigger>
+              <TabsTrigger value="reset">Passwort zurücksetzen</TabsTrigger>
+            </TabsList>
               
               <TabsContent value="signin" className="space-y-4 mt-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
@@ -127,6 +153,41 @@ export default function AuthPage() {
                     className="w-full bg-primary hover:bg-primary-hover"
                   >
                     {loading ? 'Wird angemeldet...' : 'Anmelden'}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="signup" className="space-y-4 mt-4">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signupEmail">E-Mail</Label>
+                    <Input
+                      id="signupEmail"
+                      type="email"
+                      placeholder="ihre.email@beispiel.de"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signupPassword">Passwort</Label>
+                    <Input
+                      id="signupPassword"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={signUpLoading}
+                    className="w-full bg-primary hover:bg-primary-hover"
+                  >
+                    {signUpLoading ? 'Wird registriert...' : 'Registrieren'}
                   </Button>
                 </form>
               </TabsContent>

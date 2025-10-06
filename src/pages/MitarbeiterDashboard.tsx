@@ -14,8 +14,7 @@ interface Appointment {
   end_at: string;
   status: string;
   customer?: {
-    vorname: string;
-    nachname: string;
+    name: string;
   };
 }
 
@@ -37,7 +36,7 @@ export default function MitarbeiterDashboard() {
             start_at,
             end_at,
             status,
-            customer:kunden(vorname, nachname)
+            customer:kunden(name)
           `)
           .eq('mitarbeiter_id', mitarbeiterId)
           .gte('start_at', new Date().toISOString())
@@ -171,7 +170,7 @@ export default function MitarbeiterDashboard() {
                 <div className="flex-1">
                   <h3 className="font-medium">{appointment.titel}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {(appointment.customer as any)?.vorname} {(appointment.customer as any)?.nachname}
+                    {(appointment.customer as any)?.name}
                   </p>
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
@@ -205,7 +204,7 @@ export default function MitarbeiterDashboard() {
                 <div className="flex-1">
                   <h3 className="font-medium">{appointment.titel}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {(appointment.customer as any)?.vorname} {(appointment.customer as any)?.nachname}
+                    {(appointment.customer as any)?.name}
                   </p>
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3 mr-1" />

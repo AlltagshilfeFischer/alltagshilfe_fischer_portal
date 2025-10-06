@@ -82,67 +82,145 @@ export type Database = {
       }
       kunden: {
         Row: {
+          adresse: string | null
           aktiv: boolean
-          created_at: string
+          angehoerige_ansprechpartner: string | null
+          austritt: string | null
+          begruendung: string | null
+          column1: string | null
+          column2: string | null
+          created_at: string | null
+          eintritt: string | null
           email: string | null
+          geburtsdatum: string | null
+          geburtstdatum: string | null
           id: string
-          nachname: string
+          kasse_privat: string | null
+          kopie_lw_vorhanden: boolean | null
+          mitarbeiter: string | null
+          name: string
           notfall_name: string | null
           notfall_telefon: string | null
-          telefon: string | null
-          updated_at: string
-          vorname: string
+          pflegegrad: number | null
+          pflegekasse: string | null
+          sonstiges: string | null
+          stadtteil: string | null
+          startdatum: string | null
+          status: string | null
+          stunden_kontingent_monat: number | null
+          stunden_kontingent_pro_monat: number | null
+          tage: string | null
+          telefonnr: string | null
+          "telefonnr.": string | null
+          updated_at: string | null
+          verhinderungspflege: string | null
+          verhinderungspflege_status: string | null
+          versichertennr: string | null
+          "versichertennr.": string | null
         }
         Insert: {
+          adresse?: string | null
           aktiv?: boolean
-          created_at?: string
+          angehoerige_ansprechpartner?: string | null
+          austritt?: string | null
+          begruendung?: string | null
+          column1?: string | null
+          column2?: string | null
+          created_at?: string | null
+          eintritt?: string | null
           email?: string | null
+          geburtsdatum?: string | null
+          geburtstdatum?: string | null
           id?: string
-          nachname: string
+          kasse_privat?: string | null
+          kopie_lw_vorhanden?: boolean | null
+          mitarbeiter?: string | null
+          name: string
           notfall_name?: string | null
           notfall_telefon?: string | null
-          telefon?: string | null
-          updated_at?: string
-          vorname: string
+          pflegegrad?: number | null
+          pflegekasse?: string | null
+          sonstiges?: string | null
+          stadtteil?: string | null
+          startdatum?: string | null
+          status?: string | null
+          stunden_kontingent_monat?: number | null
+          stunden_kontingent_pro_monat?: number | null
+          tage?: string | null
+          telefonnr?: string | null
+          "telefonnr."?: string | null
+          updated_at?: string | null
+          verhinderungspflege?: string | null
+          verhinderungspflege_status?: string | null
+          versichertennr?: string | null
+          "versichertennr."?: string | null
         }
         Update: {
+          adresse?: string | null
           aktiv?: boolean
-          created_at?: string
+          angehoerige_ansprechpartner?: string | null
+          austritt?: string | null
+          begruendung?: string | null
+          column1?: string | null
+          column2?: string | null
+          created_at?: string | null
+          eintritt?: string | null
           email?: string | null
+          geburtsdatum?: string | null
+          geburtstdatum?: string | null
           id?: string
-          nachname?: string
+          kasse_privat?: string | null
+          kopie_lw_vorhanden?: boolean | null
+          mitarbeiter?: string | null
+          name?: string
           notfall_name?: string | null
           notfall_telefon?: string | null
-          telefon?: string | null
-          updated_at?: string
-          vorname?: string
+          pflegegrad?: number | null
+          pflegekasse?: string | null
+          sonstiges?: string | null
+          stadtteil?: string | null
+          startdatum?: string | null
+          status?: string | null
+          stunden_kontingent_monat?: number | null
+          stunden_kontingent_pro_monat?: number | null
+          tage?: string | null
+          telefonnr?: string | null
+          "telefonnr."?: string | null
+          updated_at?: string | null
+          verhinderungspflege?: string | null
+          verhinderungspflege_status?: string | null
+          versichertennr?: string | null
+          "versichertennr."?: string | null
         }
         Relationships: []
       }
       kunden_zeitfenster: {
         Row: {
-          bis: string
+          bis: string | null
           id: string
           kunden_id: string
-          prioritaet: number
-          von: string
-          wochentag: number
+          prioritaet: number | null
+          sollstunden: number | null
+          von: string | null
+          wochentag: number | null
         }
         Insert: {
-          bis: string
+          bis?: string | null
           id?: string
           kunden_id: string
-          prioritaet?: number
-          von: string
-          wochentag: number
+          prioritaet?: number | null
+          sollstunden?: number | null
+          von?: string | null
+          wochentag?: number | null
         }
         Update: {
-          bis?: string
+          bis?: string | null
           id?: string
           kunden_id?: string
-          prioritaet?: number
-          von?: string
-          wochentag?: number
+          prioritaet?: number | null
+          sollstunden?: number | null
+          von?: string | null
+          wochentag?: number | null
         }
         Relationships: [
           {
@@ -163,11 +241,9 @@ export type Database = {
           id: string
           ist_aktiv: boolean
           max_termine_pro_tag: number | null
-          nachname: string
           soll_wochenstunden: number | null
           telefon: string | null
           updated_at: string
-          vorname: string
         }
         Insert: {
           benutzer_id?: string | null
@@ -177,11 +253,9 @@ export type Database = {
           id?: string
           ist_aktiv?: boolean
           max_termine_pro_tag?: number | null
-          nachname: string
           soll_wochenstunden?: number | null
           telefon?: string | null
           updated_at?: string
-          vorname: string
         }
         Update: {
           benutzer_id?: string | null
@@ -191,11 +265,9 @@ export type Database = {
           id?: string
           ist_aktiv?: boolean
           max_termine_pro_tag?: number | null
-          nachname?: string
           soll_wochenstunden?: number | null
           telefon?: string | null
           updated_at?: string
-          vorname?: string
         }
         Relationships: [
           {
@@ -445,6 +517,7 @@ export type Database = {
           created_at: string
           end_at: string
           id: string
+          iststunden: number | null
           kunden_id: string
           mitarbeiter_id: string | null
           start_at: string
@@ -456,6 +529,7 @@ export type Database = {
           created_at?: string
           end_at: string
           id?: string
+          iststunden?: number | null
           kunden_id: string
           mitarbeiter_id?: string | null
           start_at: string
@@ -467,6 +541,7 @@ export type Database = {
           created_at?: string
           end_at?: string
           id?: string
+          iststunden?: number | null
           kunden_id?: string
           mitarbeiter_id?: string | null
           start_at?: string
@@ -769,6 +844,10 @@ export type Database = {
       generate_termine_from_vorlagen: {
         Args: { p_from: string; p_to: string }
         Returns: number
+      }
+      is_employee_for_appointment: {
+        Args: { p_termin_id: string }
+        Returns: boolean
       }
       reject_termin_change: {
         Args: { p_reason: string; p_request_id: string }

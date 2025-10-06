@@ -24,7 +24,7 @@ export function useUserRole() {
           .from('benutzer')
           .select('rolle, id')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (benutzerError) throw benutzerError;
 
