@@ -4,6 +4,7 @@ import DashboardHome from './DashboardHome';
 import ScheduleBuilder from './controlboard/ScheduleBuilder';
 import MasterData from './controlboard/MasterData';
 import NewEntries from './controlboard/NewEntries';
+import PendingRegistrations from './controlboard/PendingRegistrations';
 import MitarbeiterDashboard from './MitarbeiterDashboard';
 import { useUserRole } from '@/hooks/useUserRole';
 
@@ -38,6 +39,7 @@ export default function Dashboard() {
         <Route path="/controlboard/schedule-builder" element={<ScheduleBuilder />} />
         <Route path="/controlboard/master-data" element={<MasterData />} />
         <Route path="/controlboard/new-entries" element={<NewEntries />} />
+        <Route path="/controlboard/pending-registrations" element={<PendingRegistrations />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </DashboardLayout>

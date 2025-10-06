@@ -343,6 +343,44 @@ export type Database = {
           },
         ]
       }
+      pending_registrations: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_registrations_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "benutzer"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       termin_aenderungen: {
         Row: {
           approved_at: string | null
@@ -578,6 +616,10 @@ export type Database = {
       app_set_context: {
         Args: { p_benutzer_id: string }
         Returns: undefined
+      }
+      approve_registration: {
+        Args: { p_email: string; p_password: string; p_registration_id: string }
+        Returns: Json
       }
       approve_termin_change: {
         Args: { p_request_id: string }
@@ -845,9 +887,17 @@ export type Database = {
         Args: { p_from: string; p_to: string }
         Returns: number
       }
+      is_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
       is_employee_for_appointment: {
         Args: { p_termin_id: string }
         Returns: boolean
+      }
+      reject_registration: {
+        Args: { p_reason: string; p_registration_id: string }
+        Returns: Json
       }
       reject_termin_change: {
         Args: { p_reason: string; p_request_id: string }

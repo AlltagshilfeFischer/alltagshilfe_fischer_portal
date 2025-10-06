@@ -4,12 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Building2, Save, Plus, Upload } from 'lucide-react';
+import { UserPlus, Building2, Save, Plus } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { parseCustomerData, importCustomers } from '@/utils/customerImport';
 
 export default function NewEntries() {
   const [newCustomer, setNewCustomer] = useState({
@@ -33,10 +32,6 @@ export default function NewEntries() {
   });
 
   const [bulkCustomerText, setBulkCustomerText] = useState(`Aysegül Domke-Schreck		1	Försterkamp 5f, 30539 Hannover	Bemerode	12.12.1963	AOK Niedersachsen	F267085117	Nicht beantragt		Kasse		Aktiv	3	Mo-So				Apr-24	Sep-24	Beidseitiges Einverständnis/ Putzfirma und keine Betreuung sondern Ruhe	
-Ferdinand Ursula	Sabino	1	Friedrich Silcher Str. 3, 30173 Hannover	Südstadt	18.06.1946	AOK Niedersachsen	H815832739		0511 88 26 76	Kasse		Aktiv	3	Do-Fr				Apr-24			
-Steinmann Karin	Jil	2	Wallensteinstraße 108b, 30459 Hannover	Ricklingen	04.05.1944	BIGdirekt	K996486172	Fehlt		Kasse		Aktiv	6	Mo-Fr			Michaela Willicke (Tochter)	Apr-24			
-Rost Insa	Alina	1	Kleestraße 22, 30625 Hannover	Kleefeld	28.06.1963	DAK	F570740469			Kasse		Aktiv	3	Mo-Sa				May-24			
-Vordemann Sigrid 	Nadine	1	Mommsenstraße 10, 30173 Hannover	Südstadt	03.06.1942	DAK-Gesundheit	X195399934			Kasse		Aktiv	3	Mo-Fr		Frau		May-24			
 Brockmann Edelgard	Jil	1	Lauenauer Str 17, 30459 Hannover	Ricklingen	23.07.1938	Barmer	U937118259			Kasse		Aktiv	3	Nicht Mo, Di nur 1-3				Jun-24			
 Dr Walter Neumann	Florian	0	Am Listholze 29B, 30177 Hannover	List	11.10.1947			-		Privat		Aktiv	6	Fr				May-24			
 Hoffmann Vera	Siska	2	Escherstraße 22A, 30159 Hannover	Mitte	8/27/1931	AOK Niedersachsen	R964342919	Ja 		Kasse	Mail an Bruder	Aktiv	6				Herr Tinschert	Jun-24			
@@ -140,58 +135,6 @@ Rademacher Rosemarie	Alina	1	Efeuhof 5, 30655 Hannover	Misburg	1/8/1946	DAK-Gesu
     createEmployeeMutation.mutate(employeeData);
   };
 
-  const handleBulkImportCustomers = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bulkCustomerText.trim()) {
-      toast({
-        title: 'Fehler',
-        description: 'Bitte geben Sie eine Kundenliste ein',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsImporting(true);
-    
-    try {
-      const customers = parseCustomerData(bulkCustomerText);
-      
-      if (customers.length === 0) {
-        toast({
-          title: 'Fehler',
-          description: 'Keine gültigen Kundendaten gefunden',
-          variant: 'destructive',
-        });
-        setIsImporting(false);
-        return;
-      }
-
-      const { success, errors } = await importCustomers(customers);
-      
-      setIsImporting(false);
-      setBulkCustomerText('');
-      
-      toast({
-        title: "Import abgeschlossen",
-        description: `${success} Kunden erfolgreich importiert${errors.length > 0 ? `, ${errors.length} Fehler` : ''}`,
-        variant: success > 0 ? "default" : "destructive",
-      });
-
-      if (errors.length > 0) {
-        console.log('Import Fehler:', errors);
-      }
-
-      // Refresh queries
-      queryClient.invalidateQueries({ queryKey: ['kunden'] });
-    } catch (error) {
-      setIsImporting(false);
-      toast({
-        title: "Import Fehler",
-        description: "Ein unerwarteter Fehler ist aufgetreten",
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -204,9 +147,8 @@ Rademacher Rosemarie	Alina	1	Efeuhof 5, 30655 Hannover	Misburg	1/8/1946	DAK-Gesu
       </div>
 
       <Tabs defaultValue="customers" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="customers">Neuer Kunde</TabsTrigger>
-          <TabsTrigger value="bulk-import">Bulk Import</TabsTrigger>
           <TabsTrigger value="employees">Neuer Mitarbeiter</TabsTrigger>
         </TabsList>
 
@@ -376,63 +318,6 @@ Rademacher Rosemarie	Alina	1	Efeuhof 5, 30655 Hannover	Misburg	1/8/1946	DAK-Gesu
           </Card>
         </TabsContent>
 
-        {/* Bulk Import Tab */}
-        <TabsContent value="bulk-import">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Kunden Bulk Import
-              </CardTitle>
-              <CardDescription>
-                Importieren Sie mehrere Kunden gleichzeitig aus einer Liste
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleBulkImportCustomers} className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Kundenliste</h3>
-                  <div>
-                    <Label htmlFor="bulk_customer_text">Kundenliste (komplette Datensätze)</Label>
-                    <Textarea
-                      id="bulk_customer_text"
-                      value={bulkCustomerText}
-                      onChange={(e) => setBulkCustomerText(e.target.value)}
-                      rows={20}
-                      placeholder="Fügen Sie hier die vollständige Kundenliste ein..."
-                      className="font-mono text-xs"
-                    />
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Die Kundendaten werden automatisch geparst. Namen, Telefonnummern und andere verfügbare Informationen werden extrahiert.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="text-blue-600">💡</div>
-                    <div>
-                      <h4 className="font-medium text-blue-800">Intelligenter Daten-Import</h4>
-                      <p className="text-sm text-blue-700 mt-1">
-                        Das System erkennt automatisch Namen, Telefonnummern, E-Mail-Adressen und Kontaktpersonen 
-                        aus den eingefügten Daten. Weitere Details können später über die Kundenbearbeitung hinzugefügt werden.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  disabled={isImporting}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {isImporting ? 'Importiere...' : 'Kunden importieren'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Neuer Mitarbeiter Tab */}
         <TabsContent value="employees">
