@@ -7,6 +7,7 @@ import {
   FileText,
   Settings,
   UserCheck,
+  UserCog,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -30,6 +31,7 @@ const controlboardItems = [
   { title: 'Stammdaten verwalten', url: '/dashboard/controlboard/master-data', icon: FileText },
   { title: 'Neukunden & Mitarbeiter', url: '/dashboard/controlboard/new-entries', icon: Users },
   { title: 'Registrierungen', url: '/dashboard/controlboard/pending-registrations', icon: UserCheck },
+  { title: 'Mitarbeiter anlegen', url: '/dashboard/controlboard/employee-management', icon: UserCog },
 ];
 
 const settingsItems = [
