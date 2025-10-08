@@ -26,9 +26,9 @@ serve(async (req) => {
       }
     )
 
-    const { registration_id, email, password } = await req.json()
+    const { registration_id } = await req.json()
 
-    console.log('Approving registration:', { registration_id, email })
+    console.log('Approving registration:', { registration_id })
 
     // Check if user is admin
     const authHeader = req.headers.get('Authorization')
@@ -56,7 +56,7 @@ serve(async (req) => {
     // Get registration details
     const { data: registration, error: regError } = await supabaseAdmin
       .from('pending_registrations')
-      .select('vorname, nachname')
+      .select('email, vorname, nachname')
       .eq('id', registration_id)
       .single()
 
@@ -64,19 +64,21 @@ serve(async (req) => {
       throw new Error('Registration not found')
     }
 
-    // Create auth user with admin privileges
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    })
+    // Send Supabase invite email so the user can set their password
+    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      registration.email,
+      {
+        data: { vorname: registration.vorname, nachname: registration.nachname }
+        // redirectTo will use Supabase Auth Site URL; configure it in the dashboard
+      }
+    )
 
-    if (authError) {
-      console.error('Error creating auth user:', authError)
-      throw authError
+    if (inviteError) {
+      console.error('Error inviting user:', inviteError)
+      throw inviteError
     }
 
-    console.log('Auth user created:', authData.user.id)
+    console.log('Invite sent for user:', inviteData?.user?.id)
 
     // Update pending registration status
     const { error: updateError } = await supabaseAdmin
@@ -95,24 +97,22 @@ serve(async (req) => {
 
     console.log('Registration approved successfully')
 
-    // Send welcome email with credentials
+    // Optional: send additional notification email via Resend (no password included)
     try {
       await resend.emails.send({
         from: 'KIT Dienstleistungen <onboarding@resend.dev>',
-        to: [email],
-        subject: 'Willkommen bei KIT Dienstleistungen - Dein Zugang wurde freigeschaltet',
+        to: [registration.email],
+        subject: 'Deine Registrierung wurde genehmigt – Bitte Passwort setzen',
         html: `
-          <h1>Willkommen ${registration.vorname} ${registration.nachname}!</h1>
-          <p>Deine Registrierung wurde genehmigt. Du kannst dich jetzt einloggen:</p>
-          <p><strong>E-Mail:</strong> ${email}<br>
-          <strong>Passwort:</strong> ${password}</p>
-          <p>Bitte ändere dein Passwort nach dem ersten Login.</p>
+          <h1>Hallo ${registration.vorname} ${registration.nachname},</h1>
+          <p>deine Registrierung wurde genehmigt.</p>
+          <p>Du erhältst gleich eine separate Einladung von unserem Auth-System, um dein Passwort festzulegen. Klicke dazu auf den Link in dieser E-Mail.</p>
           <p>Viele Grüße,<br>Dein KIT Team</p>
         `,
       })
-      console.log('Welcome email sent successfully')
+      console.log('Notification email sent successfully')
     } catch (emailError) {
-      console.error('Error sending welcome email:', emailError)
+      console.error('Error sending notification email:', emailError)
       // Don't fail the approval if email fails
     }
 

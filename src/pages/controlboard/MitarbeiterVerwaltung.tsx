@@ -43,7 +43,7 @@ export default function MitarbeiterVerwaltung() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  
   const { toast } = useToast();
 
   // New employee form
@@ -114,21 +114,12 @@ export default function MitarbeiterVerwaltung() {
   };
 
   const handleApprove = async (registrationId: string, email: string) => {
-    if (!newPassword) {
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: 'Bitte Passwort eingeben.',
-      });
-      return;
-    }
-
     setActionLoading(registrationId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       const { data, error } = await supabase.functions.invoke('approve-registration', {
-        body: { registration_id: registrationId, email, password: newPassword },
+        body: { registration_id: registrationId },
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
         },
@@ -138,10 +129,9 @@ export default function MitarbeiterVerwaltung() {
 
       toast({
         title: 'Erfolgreich',
-        description: 'Registrierung wurde genehmigt.',
+        description: 'Registrierung wurde genehmigt. Einladung zum Setzen des Passworts gesendet.',
       });
 
-      setNewPassword('');
       loadData();
     } catch (error: any) {
       console.error('Error approving:', error);
@@ -298,25 +288,14 @@ export default function MitarbeiterVerwaltung() {
                           </p>
                         </div>
                         <div className="space-y-2 min-w-[300px]">
-                          <div className="space-y-2">
-                            <Label htmlFor={`password-${reg.id}`}>Passwort für {reg.vorname}</Label>
-                            <Input
-                              id={`password-${reg.id}`}
-                              type="password"
-                              placeholder="Passwort eingeben"
-                              value={actionLoading === reg.id ? '' : newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              disabled={actionLoading === reg.id}
-                            />
-                          </div>
                           <div className="flex gap-2">
                             <Button
                               onClick={() => handleApprove(reg.id, reg.email)}
-                              disabled={actionLoading === reg.id || !newPassword}
+                              disabled={actionLoading === reg.id}
                               className="flex-1"
                             >
                               {actionLoading === reg.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                              Genehmigen
+                              Genehmigen & Einladung senden
                             </Button>
                             <Button
                               variant="destructive"
