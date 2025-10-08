@@ -46,7 +46,7 @@ export default function MasterData() {
           *,
           zeitfenster:kunden_zeitfenster(*)
         `)
-        .order('nachname');
+        .order('name');
       
       if (error) throw error;
       return data;

@@ -28,7 +28,7 @@ export default function DashboardHome() {
       const { data, error } = await (supabase as any)
         .from('kunden')
         .select('*')
-        .order('nachname');
+        .order('name');
       
       if (error) throw error;
       return data;
@@ -184,7 +184,7 @@ export default function DashboardHome() {
                             <div>
                               <div className="font-medium">{appointment.titel}</div>
                               <div className="text-sm text-muted-foreground">
-                                 {appointment.kunden?.vorname} {appointment.kunden?.nachname}
+                                 {appointment.kunden?.name}
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
                                  Mitarbeiter: {appointment.mitarbeiter?.vorname} {appointment.mitarbeiter?.nachname}
@@ -225,7 +225,7 @@ export default function DashboardHome() {
                             <div>
                               <div className="font-medium">{appointment.titel}</div>
                               <div className="text-sm text-muted-foreground">
-                                 {appointment.kunden?.vorname} {appointment.kunden?.nachname}
+                                 {appointment.kunden?.name}
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
                                  Mitarbeiter: {appointment.mitarbeiter?.vorname} {appointment.mitarbeiter?.nachname}
