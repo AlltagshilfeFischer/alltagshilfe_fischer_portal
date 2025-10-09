@@ -47,24 +47,38 @@ serve(async (req) => {
 
     console.log('User authenticated:', user.id)
 
-    const { data: benutzer, error: benutzerError } = await supabaseAdmin
-      .from('benutzer')
-      .select('rolle')
-      .eq('id', user.id)
-      .maybeSingle()
+    // Create a user-scoped client using the end-user JWT for RLS checks
+    const supabaseUser = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        }
+      }
+    )
 
-    if (benutzerError) {
-      console.error('Error checking admin role:', benutzerError)
+    // Check admin via SECURITY DEFINER function to avoid direct table access
+    const { data: isAdmin, error: isAdminError } = await supabaseUser.rpc('is_admin', { user_id: user.id })
+
+    if (isAdminError) {
+      console.error('Error checking admin role via RPC:', isAdminError)
       throw new Error('Not authorized')
     }
 
-    if (!benutzer || benutzer.rolle !== 'admin') {
-      console.log('User is not admin:', { user_id: user.id, rolle: benutzer?.rolle })
+    if (!isAdmin) {
+      console.log('User is not admin:', { user_id: user.id })
       throw new Error('Not authorized')
     }
 
-    // Get registration details
-    const { data: registration, error: regError } = await supabaseAdmin
+    // Get registration details (via RLS with user-scoped client)
+    const { data: registration, error: regError } = await supabaseUser
       .from('pending_registrations')
       .select('email, vorname, nachname')
       .eq('id', registration_id)
@@ -90,8 +104,8 @@ serve(async (req) => {
 
     console.log('Invite sent for user:', inviteData?.user?.id)
 
-    // Update pending registration status
-    const { error: updateError } = await supabaseAdmin
+    // Update pending registration status (via RLS with user-scoped client)
+    const { error: updateError } = await supabaseUser
       .from('pending_registrations')
       .update({
         status: 'approved',
