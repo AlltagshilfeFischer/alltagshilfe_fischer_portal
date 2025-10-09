@@ -78,7 +78,7 @@ serve(async (req) => {
     }
 
     // Get registration details (via RLS with user-scoped client)
-    const { data: registration, error: regError } = await supabaseUser
+    const { data: registration, error: regError } = await supabaseAdmin
       .from('pending_registrations')
       .select('email, vorname, nachname')
       .eq('id', registration_id)
@@ -105,7 +105,7 @@ serve(async (req) => {
     console.log('Invite sent for user:', inviteData?.user?.id)
 
     // Update pending registration status (via RLS with user-scoped client)
-    const { error: updateError } = await supabaseUser
+    const { error: updateError } = await supabaseAdmin
       .from('pending_registrations')
       .update({
         status: 'approved',
