@@ -27,11 +27,13 @@ export default function AuthPage() {
   const { toast } = useToast();
   
   // Check if this is an invitation link
-  const isInvite = searchParams.get('type') === 'invite';
-  const isRecovery = searchParams.get('type') === 'recovery';
+  const hashString = typeof window !== 'undefined' ? (window.location.hash?.startsWith('#') ? window.location.hash.slice(1) : window.location.hash) : '';
+  const hashParams = new URLSearchParams(hashString || '');
+  const isInvite = searchParams.get('type') === 'invite' || hashParams.get('type') === 'invite';
+  const isRecovery = searchParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
 
-  // Redirect if already authenticated
-  if (user) {
+  // Redirect if already authenticated (but allow invite/recovery to show password setup)
+  if (user && !(isInvite || isRecovery)) {
     return <Navigate to="/dashboard" replace />;
   }
 
