@@ -7,8 +7,6 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RegistrationRequestForm } from './RegistrationRequestForm';
 import { PasswordResetForm } from './PasswordResetForm';
 
 export default function AuthPage() {
@@ -246,14 +244,7 @@ export default function AuthPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Anmelden</TabsTrigger>
-              <TabsTrigger value="register">Registrieren</TabsTrigger>
-            </TabsList>
-              
-              <TabsContent value="signin" className="space-y-4 mt-4">
-                <form onSubmit={handleSignIn} className="space-y-4">
+            <form onSubmit={handleSignIn} className="space-y-4 mt-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">E-Mail</Label>
                     <Input
@@ -332,12 +323,6 @@ export default function AuthPage() {
                     </form>
                   </div>
                 )}
-              </TabsContent>
-
-              <TabsContent value="register" className="space-y-4 mt-4">
-                <RegistrationRequestForm />
-              </TabsContent>
-            </Tabs>
           </CardContent>
         </Card>
       </div>
