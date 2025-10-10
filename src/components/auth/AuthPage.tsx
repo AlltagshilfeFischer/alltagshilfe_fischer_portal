@@ -151,15 +151,17 @@ export default function AuthPage() {
         description: error.message,
         variant: 'destructive',
       });
+      setSetupLoading(false);
     } else {
       toast({
         title: 'Passwort erfolgreich gesetzt',
-        description: 'Sie werden jetzt angemeldet...',
+        description: 'Sie werden zur Anmeldung weitergeleitet...',
       });
-      // User wird automatisch eingeloggt
+      // Redirect to auth page after short delay
+      setTimeout(() => {
+        window.location.href = '/auth';
+      }, 1500);
     }
-
-    setSetupLoading(false);
   };
 
 
