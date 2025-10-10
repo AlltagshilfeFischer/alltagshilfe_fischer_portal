@@ -119,7 +119,7 @@ export default function MitarbeiterVerwaltung() {
       const { data: { session } } = await supabase.auth.getSession();
 
       const { data, error } = await supabase.functions.invoke('approve-registration', {
-        body: { registration_id: registrationId },
+        body: { registration_id: registrationId, email },
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
         },

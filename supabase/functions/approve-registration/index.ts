@@ -26,7 +26,7 @@ serve(async (req) => {
       }
     )
 
-    const { registration_id } = await req.json()
+    const { registration_id, email } = await req.json()
 
     console.log('Approving registration:', { registration_id })
 
@@ -77,14 +77,35 @@ serve(async (req) => {
       throw new Error('Not authorized')
     }
 
-    // Get registration details (via RLS with user-scoped client)
-    const { data: registration, error: regError } = await supabaseAdmin
+    // Get registration details (try by id first, then fallback to email)
+    const { data: registrationById, error: regErrorById } = await supabaseAdmin
       .from('pending_registrations')
       .select('email, vorname, nachname')
       .eq('id', registration_id)
-      .single()
+      .maybeSingle()
 
-    if (regError || !registration) {
+    if (regErrorById) {
+      console.error('Error fetching registration by id:', regErrorById)
+    }
+
+    let registration = registrationById
+
+    if (!registration && email) {
+      const { data: regByEmail, error: regErrorByEmail } = await supabaseAdmin
+        .from('pending_registrations')
+        .select('email, vorname, nachname')
+        .eq('email', email)
+        .maybeSingle()
+
+      if (regErrorByEmail) {
+        console.error('Error fetching registration by email:', regErrorByEmail)
+      }
+
+      if (regByEmail) registration = regByEmail
+    }
+
+    if (!registration) {
+      console.error('Registration not found for', { registration_id, email })
       throw new Error('Registration not found')
     }
 
