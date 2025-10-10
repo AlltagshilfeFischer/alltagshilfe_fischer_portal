@@ -235,10 +235,9 @@ export default function AuthPage() {
           </CardHeader>
           <CardContent>
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Anmelden</TabsTrigger>
               <TabsTrigger value="register">Registrieren</TabsTrigger>
-              <TabsTrigger value="reset">Passwort zurücksetzen</TabsTrigger>
             </TabsList>
               
               <TabsContent value="signin" className="space-y-4 mt-4">
@@ -277,47 +276,54 @@ export default function AuthPage() {
                 <div className="text-center">
                   <button
                     type="button"
-                    onClick={() => {
-                      const tabs = document.querySelector('[role="tablist"]');
-                      const resetTab = tabs?.querySelector('[value="reset"]') as HTMLButtonElement;
-                      resetTab?.click();
-                    }}
+                    onClick={() => setShowPasswordReset(true)}
                     className="text-sm text-primary hover:underline"
                   >
                     Passwort vergessen?
                   </button>
                 </div>
+                {showPasswordReset && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <form onSubmit={handlePasswordReset} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="resetEmail">E-Mail-Adresse</Label>
+                        <Input
+                          id="resetEmail"
+                          type="email"
+                          placeholder="ihre.email@beispiel.de"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                          required
+                          className="w-full"
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Geben Sie Ihre registrierte E-Mail-Adresse ein, um einen Link zum Zurücksetzen des Passworts zu erhalten.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowPasswordReset(false)}
+                          className="flex-1"
+                        >
+                          Abbrechen
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={resetLoading}
+                          className="flex-1 bg-primary hover:bg-primary-hover"
+                        >
+                          {resetLoading ? 'Wird versendet...' : 'Senden'}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="register" className="space-y-4 mt-4">
                 <RegistrationRequestForm />
-              </TabsContent>
-              
-              <TabsContent value="reset" className="space-y-4 mt-4">
-                <form onSubmit={handlePasswordReset} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="resetEmail">E-Mail-Adresse</Label>
-                    <Input
-                      id="resetEmail"
-                      type="email"
-                      placeholder="ihre.email@beispiel.de"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      required
-                      className="w-full"
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Geben Sie Ihre registrierte E-Mail-Adresse ein, um einen Link zum Zurücksetzen des Passworts zu erhalten.
-                  </p>
-                  <Button
-                    type="submit"
-                    disabled={resetLoading}
-                    className="w-full bg-primary hover:bg-primary-hover"
-                  >
-                    {resetLoading ? 'Wird versendet...' : 'Passwort zurücksetzen'}
-                  </Button>
-                </form>
               </TabsContent>
             </Tabs>
           </CardContent>
