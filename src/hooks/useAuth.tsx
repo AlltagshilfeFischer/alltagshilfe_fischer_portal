@@ -61,9 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      // Redirect to login page after successful logout
+    // Robust logout: redirect regardless of server response (handles 403 session_not_found)
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('signOut warning (ignored):', e);
+    } finally {
+      setSession(null);
+      setUser(null);
       window.location.href = '/';
     }
   };
