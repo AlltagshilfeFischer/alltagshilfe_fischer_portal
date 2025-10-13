@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { LogOut, User } from 'lucide-react';
 import {
   DropdownMenu,
@@ -14,6 +15,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export function DashboardHeader() {
   const { user, signOut } = useAuth();
+  const { role } = useUserRole();
 
   const handleSignOut = async () => {
     await signOut();
@@ -52,7 +54,9 @@ export function DashboardHeader() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">Mitarbeiter</p>
+                <p className="text-sm font-medium leading-none">
+                  {role === 'admin' ? 'Administrator' : 'Mitarbeiter'}
+                </p>
                 <p className="text-xs leading-none text-muted-foreground">
                   {user?.email}
                 </p>
