@@ -4,45 +4,16 @@ import DashboardHome from './DashboardHome';
 import ScheduleBuilder from './controlboard/ScheduleBuilder';
 import MasterData from './controlboard/MasterData';
 import NewEntries from './controlboard/NewEntries';
-import MitarbeiterVerwaltung from './controlboard/MitarbeiterVerwaltung';
-import MitarbeiterDashboard from './MitarbeiterDashboard';
+import AdminDashboard from './AdminDashboard';
+import MitarbeiterStart from './MitarbeiterStart';
 import PendingApproval from './PendingApproval';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Dashboard() {
   const { role, loading } = useUserRole();
-  const { user } = useAuth();
-  const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
-  const [checkingApproval, setCheckingApproval] = useState(true);
 
-  useEffect(() => {
-    async function checkApprovalStatus() {
-      if (!user) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('pending_registrations')
-          .select('status')
-          .eq('email', user.email)
-          .maybeSingle();
-
-        if (!error && data) {
-          setApprovalStatus(data.status);
-        }
-      } catch (error) {
-        console.error('Error checking approval status:', error);
-      } finally {
-        setCheckingApproval(false);
-      }
-    }
-
-    checkApprovalStatus();
-  }, [user]);
-
-  if (loading || checkingApproval) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -50,17 +21,17 @@ export default function Dashboard() {
     );
   }
 
-  // Check if user is pending approval
-  if (approvalStatus === 'pending') {
+  // Wenn kein Rolle → nicht in benutzer Tabelle → redirect zu status-wartet
+  if (role === null) {
     return <PendingApproval />;
   }
 
-  // Mitarbeiter sehen nur ihre eigene Dashboard-Ansicht
+  // Mitarbeiter sehen ihre Startseite
   if (role === 'mitarbeiter') {
     return (
       <DashboardLayout>
         <Routes>
-          <Route path="/" element={<MitarbeiterDashboard />} />
+          <Route path="/" element={<MitarbeiterStart />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </DashboardLayout>
@@ -75,7 +46,7 @@ export default function Dashboard() {
         <Route path="/controlboard/schedule-builder" element={<ScheduleBuilder />} />
         <Route path="/controlboard/master-data" element={<MasterData />} />
         <Route path="/controlboard/new-entries" element={<NewEntries />} />
-        <Route path="/controlboard/mitarbeiter-verwaltung" element={<MitarbeiterVerwaltung />} />
+        <Route path="/controlboard/admin" element={<AdminDashboard />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </DashboardLayout>

@@ -665,6 +665,10 @@ export type Database = {
           vorname: string
         }[]
       }
+      freischalte_mitarbeiter: {
+        Args: { p_email: string; p_user_id: string }
+        Returns: undefined
+      }
       gbt_bit_compress: {
         Args: { "": unknown }
         Returns: unknown
@@ -899,6 +903,14 @@ export type Database = {
           email: string
           nachname: string
           vorname: string
+        }[]
+      }
+      get_unactivated_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          user_email: string
+          user_id: string
         }[]
       }
       is_admin: {

@@ -1,348 +1,228 @@
-import { useState, useEffect } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { PasswordResetForm } from './PasswordResetForm';
-import { RegistrationRequestForm } from './RegistrationRequestForm';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
-export default function AuthPage() {
-  const [searchParams] = useSearchParams();
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
+const AuthPage = () => {
+  const { signIn, signUp, resetPassword } = useAuth();
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [resetEmail, setResetEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [vorname, setVorname] = useState('');
+  const [nachname, setNachname] = useState('');
   const [loading, setLoading] = useState(false);
-  const [signUpLoading, setSignUpLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
-  const [setupLoading, setSetupLoading] = useState(false);
-  const { signIn, signUp, resetPassword, user } = useAuth();
-  const { toast } = useToast();
-  
-  // Check if this is an invitation link
-  const hashString = typeof window !== 'undefined' ? (window.location.hash?.startsWith('#') ? window.location.hash.slice(1) : window.location.hash) : '';
-  const hashParams = new URLSearchParams(hashString || '');
-  const isInvite = ['invite','signup'].includes(searchParams.get('type') || '') || ['invite','signup'].includes(hashParams.get('type') || '');
-  const isRecovery = ['recovery'].includes(searchParams.get('type') || '') || ['recovery'].includes(hashParams.get('type') || '');
-
-  useEffect(() => {
-    const errorCode = hashParams.get('error_code');
-    const error = hashParams.get('error');
-    if (errorCode === 'otp_expired' || error === 'access_denied') {
-      setShowPasswordReset(true);
-    }
-  // run once on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Redirect if already authenticated (but allow invite/recovery to show password setup)
-  if (user && !(isInvite || isRecovery)) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'reset'>('login');
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
+    
     const { error } = await signIn(email, password);
-
+    
     if (error) {
       toast({
-        title: 'Anmeldung fehlgeschlagen',
-        description: error.message === 'Invalid login credentials' 
-          ? 'Ungültige E-Mail oder Passwort'
-          : error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Erfolgreich angemeldet',
-        description: 'Willkommen zurück!',
+        title: "Fehler beim Anmelden",
+        description: error.message,
+        variant: "destructive",
       });
     }
-
+    
     setLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSignUpLoading(true);
-
+    
+    if (password !== confirmPassword) {
+      toast({
+        title: "Fehler",
+        description: "Passwörter stimmen nicht überein",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setLoading(true);
+    
     const { error } = await signUp(email, password);
-
+    
     if (error) {
       toast({
-        title: 'Registrierung fehlgeschlagen',
+        title: "Fehler bei der Registrierung",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } else {
       toast({
-        title: 'Registrierung erfolgreich',
-        description: 'Sie können sich nun anmelden.',
+        title: "Registrierung erfolgreich",
+        description: "Du kannst dich jetzt anmelden.",
       });
-      setEmail('');
+      setActiveTab('login');
       setPassword('');
+      setConfirmPassword('');
     }
-
-    setSignUpLoading(false);
+    
+    setLoading(false);
   };
 
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    setResetLoading(true);
-
-    const { error } = await resetPassword(resetEmail);
-
-    if (error) {
-      toast({
-        title: 'Fehler beim Zurücksetzen des Passworts',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'E-Mail versendet',
-        description: 'Falls Ihre E-Mail-Adresse registriert ist, erhalten Sie einen Link zum Zurücksetzen des Passworts.',
-      });
-      setResetEmail('');
-    }
-
-    setResetLoading(false);
-  };
-
-  const handleSetupPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+    setLoading(true);
     
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: 'Passwörter stimmen nicht überein',
-        description: 'Bitte stellen Sie sicher, dass beide Passwörter identisch sind.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      toast({
-        title: 'Passwort zu kurz',
-        description: 'Das Passwort muss mindestens 6 Zeichen lang sein.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSetupLoading(true);
-
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    });
-
+    const { error } = await resetPassword(email);
+    
     if (error) {
       toast({
-        title: 'Fehler beim Setzen des Passworts',
+        title: "Fehler",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
-      setSetupLoading(false);
     } else {
       toast({
-        title: 'Passwort erfolgreich gesetzt',
-        description: 'Sie werden nun zum Dashboard weitergeleitet...',
+        title: "E-Mail versendet",
+        description: "Prüfe deinen Posteingang für den Passwort-Reset-Link.",
       });
-      // User is automatically logged in after password update
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 1500);
     }
+    
+    setLoading(false);
   };
 
-
-  // Show password setup form if this is an invite or recovery link
-  if (isInvite || isRecovery) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white mb-4">
-              <img src="/lovable-uploads/891b224f-e6be-40c4-bfcb-acf04320f118.png" alt="Alltagshilfe Fischer Logo" className="w-12 h-12" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">Alltagshilfe Fischer</h1>
-            <p className="text-muted-foreground">Controlboard</p>
-          </div>
-
-          <Card className="shadow-xl">
-            <CardHeader className="text-center">
-              <CardTitle>{isInvite ? 'Passwort einrichten' : 'Neues Passwort setzen'}</CardTitle>
-              <CardDescription>
-                {isInvite ? 'Willkommen! Bitte richten Sie Ihr Passwort ein.' : 'Bitte setzen Sie ein neues Passwort.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSetupPassword} className="space-y-4">
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Alltagshilfe Fischer Portal</CardTitle>
+          <CardDescription>
+            Melden Sie sich an oder registrieren Sie sich
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="login">Anmelden</TabsTrigger>
+              <TabsTrigger value="register">Registrieren</TabsTrigger>
+              <TabsTrigger value="reset">Passwort</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="login">
+              <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword">Neues Passwort</Label>
+                  <Label htmlFor="email">E-Mail</Label>
                   <Input
-                    id="newPassword"
-                    type="password"
-                    placeholder="Mindestens 6 Zeichen"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="ihre@email.de"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
+                  <Label htmlFor="password">Passwort</Label>
                   <Input
-                    id="confirmPassword"
+                    id="password"
                     type="password"
-                    placeholder="Passwort wiederholen"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Wird angemeldet..." : "Anmelden"}
+                </Button>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="register">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reg-vorname">Vorname</Label>
+                  <Input
+                    id="reg-vorname"
+                    type="text"
+                    placeholder="Max"
+                    value={vorname}
+                    onChange={(e) => setVorname(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-nachname">Nachname</Label>
+                  <Input
+                    id="reg-nachname"
+                    type="text"
+                    placeholder="Mustermann"
+                    value={nachname}
+                    onChange={(e) => setNachname(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-email">E-Mail</Label>
+                  <Input
+                    id="reg-email"
+                    type="email"
+                    placeholder="ihre@email.de"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-password">Passwort</Label>
+                  <Input
+                    id="reg-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-confirm">Passwort bestätigen</Label>
+                  <Input
+                    id="reg-confirm"
+                    type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="w-full"
                   />
                 </div>
-                <Button
-                  type="submit"
-                  disabled={setupLoading}
-                  className="w-full bg-primary hover:bg-primary-hover"
-                >
-                  {setupLoading ? 'Wird gespeichert...' : 'Passwort speichern'}
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Wird registriert..." : "Registrieren"}
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <div className="w-full max-w-md">
-        {/* Logo and Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white mb-4">
-            <img src="/lovable-uploads/891b224f-e6be-40c4-bfcb-acf04320f118.png" alt="Alltagshilfe Fischer Logo" className="w-12 h-12" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Alltagshilfe Fischer</h1>
-          <p className="text-muted-foreground">Controlboard</p>
-        </div>
-
-        <Card className="shadow-xl">
-          <CardHeader className="text-center">
-            <CardTitle>Willkommen</CardTitle>
-            <CardDescription>
-              Melden Sie sich an oder beantragen Sie einen Zugang
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Anmelden</TabsTrigger>
-                <TabsTrigger value="register">Registrieren</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login">
-                <form onSubmit={handleSignIn} className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">E-Mail</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="ihre.email@beispiel.de"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Passwort</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="w-full"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-primary hover:bg-primary-hover"
-                  >
-                    {loading ? 'Wird angemeldet...' : 'Anmelden'}
-                  </Button>
-                </form>
-                <div className="text-center mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswordReset(true)}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Passwort vergessen?
-                  </button>
+            </TabsContent>
+            
+            <TabsContent value="reset">
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">E-Mail</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="ihre@email.de"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
                 </div>
-                {showPasswordReset && (
-                  <div className="space-y-4 pt-4 border-t mt-4">
-                    <form onSubmit={handlePasswordReset} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="resetEmail">E-Mail-Adresse</Label>
-                        <Input
-                          id="resetEmail"
-                          type="email"
-                          placeholder="ihre.email@beispiel.de"
-                          value={resetEmail}
-                          onChange={(e) => setResetEmail(e.target.value)}
-                          required
-                          className="w-full"
-                        />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Geben Sie Ihre registrierte E-Mail-Adresse ein, um einen Link zum Zurücksetzen des Passworts zu erhalten.
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setShowPasswordReset(false)}
-                          className="flex-1"
-                        >
-                          Abbrechen
-                        </Button>
-                        <Button
-                          type="submit"
-                          disabled={resetLoading}
-                          className="flex-1 bg-primary hover:bg-primary-hover"
-                        >
-                          {resetLoading ? 'Wird versendet...' : 'Senden'}
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="register">
-                <div className="mt-4">
-                  <RegistrationRequestForm />
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Wird gesendet..." : "Passwort zurücksetzen"}
+                </Button>
+                <p className="text-sm text-muted-foreground text-center">
+                  Sie erhalten eine E-Mail mit einem Link zum Zurücksetzen Ihres Passworts.
+                </p>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
+
+export default AuthPage;

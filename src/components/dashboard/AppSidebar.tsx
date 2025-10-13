@@ -30,7 +30,7 @@ const controlboardItems = [
   { title: 'Dienstplan erstellen', url: '/dashboard/controlboard/schedule-builder', icon: Calendar },
   { title: 'Stammdaten verwalten', url: '/dashboard/controlboard/master-data', icon: FileText },
   { title: 'Neukunden & Mitarbeiter', url: '/dashboard/controlboard/new-entries', icon: Users },
-  { title: 'Mitarbeiterverwaltung', url: '/dashboard/controlboard/mitarbeiter-verwaltung', icon: UserCheck },
+  { title: 'Mitarbeiterverwaltung', url: '/dashboard/controlboard/admin', icon: UserCog },
 ];
 
 const settingsItems = [
