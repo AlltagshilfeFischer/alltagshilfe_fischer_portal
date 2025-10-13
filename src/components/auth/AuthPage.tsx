@@ -8,6 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetForm } from './PasswordResetForm';
+import { RegistrationRequestForm } from './RegistrationRequestForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AuthPage() {
   const [searchParams] = useSearchParams();
@@ -238,13 +240,20 @@ export default function AuthPage() {
 
         <Card className="shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle>Anmeldung</CardTitle>
+            <CardTitle>Willkommen</CardTitle>
             <CardDescription>
-              Melden Sie sich an oder setzen Sie Ihr Passwort zurück
+              Melden Sie sich an oder beantragen Sie einen Zugang
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignIn} className="space-y-4 mt-4">
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Anmelden</TabsTrigger>
+                <TabsTrigger value="register">Registrieren</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="login">
+                <form onSubmit={handleSignIn} className="space-y-4 mt-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">E-Mail</Label>
                     <Input
@@ -276,7 +285,7 @@ export default function AuthPage() {
                     {loading ? 'Wird angemeldet...' : 'Anmelden'}
                   </Button>
                 </form>
-                <div className="text-center">
+                <div className="text-center mt-4">
                   <button
                     type="button"
                     onClick={() => setShowPasswordReset(true)}
@@ -286,7 +295,7 @@ export default function AuthPage() {
                   </button>
                 </div>
                 {showPasswordReset && (
-                  <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-4 pt-4 border-t mt-4">
                     <form onSubmit={handlePasswordReset} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="resetEmail">E-Mail-Adresse</Label>
@@ -323,6 +332,14 @@ export default function AuthPage() {
                     </form>
                   </div>
                 )}
+              </TabsContent>
+              
+              <TabsContent value="register">
+                <div className="mt-4">
+                  <RegistrationRequestForm />
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
