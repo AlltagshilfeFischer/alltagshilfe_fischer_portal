@@ -51,6 +51,7 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          geburtsdatum: string | null
           id: string
           nachname: string | null
           passwort_hash: string | null
@@ -61,6 +62,7 @@ export type Database = {
         Insert: {
           created_at?: string
           email: string
+          geburtsdatum?: string | null
           id?: string
           nachname?: string | null
           passwort_hash?: string | null
@@ -71,6 +73,7 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string
+          geburtsdatum?: string | null
           id?: string
           nachname?: string | null
           passwort_hash?: string | null
@@ -666,7 +669,15 @@ export type Database = {
         }[]
       }
       freischalte_mitarbeiter: {
-        Args: { p_email: string; p_user_id: string }
+        Args:
+          | {
+              p_email: string
+              p_geburtsdatum?: string
+              p_nachname?: string
+              p_user_id: string
+              p_vorname?: string
+            }
+          | { p_email: string; p_user_id: string }
         Returns: undefined
       }
       gbt_bit_compress: {

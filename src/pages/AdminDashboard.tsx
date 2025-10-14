@@ -5,6 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserCheck, Users } from 'lucide-react';
 
@@ -27,6 +30,13 @@ const AdminDashboard = () => {
   const [mitarbeiter, setMitarbeiter] = useState<Mitarbeiter[]>([]);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState<string | null>(null);
+  const [activationDialogOpen, setActivationDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UnactivatedUser | null>(null);
+  const [formData, setFormData] = useState({
+    vorname: '',
+    nachname: '',
+    geburtsdatum: ''
+  });
 
   useEffect(() => {
     loadData();
@@ -76,22 +86,38 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleActivate = async (userId: string, email: string) => {
-    setActivating(userId);
+  const openActivationDialog = (user: UnactivatedUser) => {
+    setSelectedUser(user);
+    setFormData({
+      vorname: '',
+      nachname: '',
+      geburtsdatum: ''
+    });
+    setActivationDialogOpen(true);
+  };
+
+  const handleActivate = async () => {
+    if (!selectedUser) return;
+    
+    setActivating(selectedUser.user_id);
     
     try {
       const { error } = await supabase.rpc('freischalte_mitarbeiter', {
-        p_user_id: userId,
-        p_email: email,
+        p_user_id: selectedUser.user_id,
+        p_email: selectedUser.user_email,
+        p_vorname: formData.vorname || null,
+        p_nachname: formData.nachname || null,
+        p_geburtsdatum: formData.geburtsdatum || null,
       });
       
       if (error) throw error;
       
       toast({
         title: 'Erfolgreich',
-        description: `${email} wurde als Mitarbeiter freigeschaltet.`,
+        description: `${selectedUser.user_email} wurde als Mitarbeiter freigeschaltet.`,
       });
       
+      setActivationDialogOpen(false);
       await loadData();
     } catch (error: any) {
       console.error('Fehler beim Freischalten:', error);
@@ -164,7 +190,7 @@ const AdminDashboard = () => {
                         <TableCell className="text-right">
                           <Button
                             size="sm"
-                            onClick={() => handleActivate(user.user_id, user.user_email)}
+                            onClick={() => openActivationDialog(user)}
                             disabled={activating === user.user_id}
                           >
                             {activating === user.user_id ? (
@@ -231,6 +257,54 @@ const AdminDashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={activationDialogOpen} onOpenChange={setActivationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mitarbeiter freischalten</DialogTitle>
+            <DialogDescription>
+              Bitte geben Sie die Informationen für {selectedUser?.user_email} ein.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="vorname">Vorname</Label>
+              <Input
+                id="vorname"
+                value={formData.vorname}
+                onChange={(e) => setFormData({ ...formData, vorname: e.target.value })}
+                placeholder="Vorname eingeben"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="nachname">Nachname</Label>
+              <Input
+                id="nachname"
+                value={formData.nachname}
+                onChange={(e) => setFormData({ ...formData, nachname: e.target.value })}
+                placeholder="Nachname eingeben"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="geburtsdatum">Geburtsdatum</Label>
+              <Input
+                id="geburtsdatum"
+                type="date"
+                value={formData.geburtsdatum}
+                onChange={(e) => setFormData({ ...formData, geburtsdatum: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActivationDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleActivate} disabled={!!activating}>
+              {activating ? "Wird freigeschaltet..." : "Freischalten"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
