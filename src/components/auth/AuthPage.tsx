@@ -25,9 +25,18 @@ const AuthPage = () => {
     const { error } = await signIn(email, password);
     
     if (error) {
+      let errorMessage = error.message;
+      
+      // Benutzerfreundliche Fehlermeldungen auf Deutsch
+      if (error.message.includes('Email not confirmed')) {
+        errorMessage = 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse. Prüfen Sie Ihren Posteingang und klicken Sie auf den Bestätigungslink.';
+      } else if (error.message.includes('Invalid login credentials')) {
+        errorMessage = 'E-Mail oder Passwort ist falsch.';
+      }
+      
       toast({
         title: "Fehler beim Anmelden",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -52,15 +61,22 @@ const AuthPage = () => {
     const { error } = await signUp(email, password);
     
     if (error) {
+      let errorMessage = error.message;
+      
+      if (error.message.includes('User already registered')) {
+        errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.';
+      }
+      
       toast({
         title: "Fehler bei der Registrierung",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } else {
       toast({
         title: "Registrierung erfolgreich",
-        description: "Du kannst dich jetzt anmelden.",
+        description: "Prüfen Sie Ihren Posteingang und bestätigen Sie Ihre E-Mail-Adresse. Danach muss ein Administrator Ihr Konto freischalten.",
+        duration: 8000,
       });
       setActiveTab('login');
       setPassword('');
