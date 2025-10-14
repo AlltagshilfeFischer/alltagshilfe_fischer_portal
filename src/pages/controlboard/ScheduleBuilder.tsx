@@ -233,11 +233,18 @@ const ScheduleBuilder = () => {
       if (changesError) throw changesError;
 
       // Transform employees data to match our interface
-      const transformedEmployees = employeesData?.map(emp => ({
-        ...emp,
-        name: (emp as any).benutzer?.email || `Mitarbeiter ${emp.id.slice(0, 8)}`,
-        workload: Math.floor(Math.random() * 40) + 60,
-      })) || [];
+      const transformedEmployees = employeesData?.map(emp => {
+        const benutzer = (emp as any).benutzer;
+        const fullName = benutzer?.vorname && benutzer?.nachname 
+          ? `${benutzer.vorname} ${benutzer.nachname}`
+          : `Mitarbeiter ${emp.id.slice(0, 8)}`;
+        
+        return {
+          ...emp,
+          name: fullName,
+          workload: Math.floor(Math.random() * 40) + 60,
+        };
+      }) || [];
 
       // Transform appointments data to match our interface
       const transformedAppointments = appointmentsData?.map(app => ({
