@@ -16,7 +16,8 @@ const AuthPage = () => {
   const [vorname, setVorname] = useState('');
   const [nachname, setNachname] = useState('');
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'reset'>('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,8 +102,10 @@ const AuthPage = () => {
     } else {
       toast({
         title: "E-Mail versendet",
-        description: "Prüfe deinen Posteingang für den Passwort-Reset-Link.",
+        description: "Prüfen Sie Ihren Posteingang für den Passwort-Reset-Link.",
       });
+      setShowPasswordReset(false);
+      setActiveTab('login');
     }
     
     setLoading(false);
@@ -118,19 +121,23 @@ const AuthPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="login">Anmelden</TabsTrigger>
-              <TabsTrigger value="register">Registrieren</TabsTrigger>
-              <TabsTrigger value="reset">Passwort</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <form onSubmit={handleSignIn} className="space-y-4">
+          {showPasswordReset ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Passwort zurücksetzen</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowPasswordReset(false)}
+                >
+                  Zurück
+                </Button>
+              </div>
+              <form onSubmit={handlePasswordReset} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">E-Mail</Label>
+                  <Label htmlFor="reset-email">E-Mail</Label>
                   <Input
-                    id="email"
+                    id="reset-email"
                     type="email"
                     placeholder="ihre@email.de"
                     value={email}
@@ -138,21 +145,56 @@ const AuthPage = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Passwort</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Wird angemeldet..." : "Anmelden"}
+                  {loading ? "Wird gesendet..." : "Passwort zurücksetzen"}
                 </Button>
+                <p className="text-sm text-muted-foreground text-center">
+                  Sie erhalten eine E-Mail mit einem Link zum Zurücksetzen Ihres Passworts.
+                </p>
               </form>
-            </TabsContent>
+            </div>
+          ) : (
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Anmelden</TabsTrigger>
+                <TabsTrigger value="register">Registrieren</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="login">
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-Mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="ihre@email.de"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Passwort</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Wird angemeldet..." : "Anmelden"}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordReset(true)}
+                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
+                  >
+                    Passwort vergessen?
+                  </button>
+                </form>
+              </TabsContent>
             
             <TabsContent value="register">
               <form onSubmit={handleSignUp} className="space-y-4">
@@ -212,29 +254,8 @@ const AuthPage = () => {
                 </Button>
               </form>
             </TabsContent>
-            
-            <TabsContent value="reset">
-              <form onSubmit={handlePasswordReset} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reset-email">E-Mail</Label>
-                  <Input
-                    id="reset-email"
-                    type="email"
-                    placeholder="ihre@email.de"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Wird gesendet..." : "Passwort zurücksetzen"}
-                </Button>
-                <p className="text-sm text-muted-foreground text-center">
-                  Sie erhalten eine E-Mail mit einem Link zum Zurücksetzen Ihres Passworts.
-                </p>
-              </form>
-            </TabsContent>
-          </Tabs>
+            </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>
