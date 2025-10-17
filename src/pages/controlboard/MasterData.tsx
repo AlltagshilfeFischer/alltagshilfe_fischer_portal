@@ -561,98 +561,350 @@ export default function MasterData() {
 
       {/* Edit Customer Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Kundendaten bearbeiten</DialogTitle>
             <DialogDescription>
-              Bearbeiten Sie die Informationen für {editingCustomer?.vorname} {editingCustomer?.nachname}
+              Bearbeiten Sie alle Informationen für {editingCustomer?.name}
             </DialogDescription>
           </DialogHeader>
           
           {editingCustomer && (
-            <form onSubmit={handleSaveCustomer} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="first_name">Vorname</Label>
-                  <Input
-                    id="first_name"
-                    value={editingCustomer.vorname || ''}
-                    onChange={(e) => setEditingCustomer({
-                      ...editingCustomer,
-                      vorname: e.target.value
-                    })}
-                    required
-                  />
+            <form onSubmit={handleSaveCustomer} className="space-y-6">
+              {/* Persönliche Daten */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Persönliche Daten</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      value={editingCustomer.name || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        name: e.target.value
+                      })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="geburtsdatum">Geburtsdatum</Label>
+                    <Input
+                      id="geburtsdatum"
+                      type="date"
+                      value={editingCustomer.geburtsdatum || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        geburtsdatum: e.target.value
+                      })}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="last_name">Nachname</Label>
-                  <Input
-                    id="last_name"
-                    value={editingCustomer.nachname || ''}
-                    onChange={(e) => setEditingCustomer({
-                      ...editingCustomer,
-                      nachname: e.target.value
-                    })}
-                    required
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="adresse">Adresse</Label>
+                    <Input
+                      id="adresse"
+                      value={editingCustomer.adresse || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        adresse: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="stadtteil">Stadtteil</Label>
+                    <Input
+                      id="stadtteil"
+                      value={editingCustomer.stadtteil || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        stadtteil: e.target.value
+                      })}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="phone">Telefon</Label>
-                  <Input
-                    id="phone"
-                    value={editingCustomer.telefon || ''}
-                    onChange={(e) => setEditingCustomer({
-                      ...editingCustomer,
-                      telefon: e.target.value
-                    })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">E-Mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={editingCustomer.email || ''}
-                    onChange={(e) => setEditingCustomer({
-                      ...editingCustomer,
-                      email: e.target.value
-                    })}
-                  />
+              {/* Kontaktdaten */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-lg font-semibold">Kontaktdaten</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="telefonnr">Telefon</Label>
+                    <Input
+                      id="telefonnr"
+                      value={editingCustomer.telefonnr || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        telefonnr: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">E-Mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={editingCustomer.email || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        email: e.target.value
+                      })}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Notfallkontakt */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-lg font-semibold">Notfallkontakt</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="notfall_name">Name</Label>
+                    <Input
+                      id="notfall_name"
+                      value={editingCustomer.notfall_name || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        notfall_name: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="notfall_telefon">Telefon</Label>
+                    <Input
+                      id="notfall_telefon"
+                      value={editingCustomer.notfall_telefon || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        notfall_telefon: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Pflegedaten */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-lg font-semibold">Pflegedaten</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="pflegegrad">Pflegegrad</Label>
+                    <Input
+                      id="pflegegrad"
+                      type="number"
+                      min="0"
+                      max="5"
+                      value={editingCustomer.pflegegrad || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        pflegegrad: e.target.value ? parseInt(e.target.value) : null
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="stunden_kontingent_monat">Stunden Kontingent/Monat</Label>
+                    <Input
+                      id="stunden_kontingent_monat"
+                      type="number"
+                      step="0.5"
+                      value={editingCustomer.stunden_kontingent_monat || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        stunden_kontingent_monat: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="pflegekasse">Pflegekasse</Label>
+                    <Input
+                      id="pflegekasse"
+                      value={editingCustomer.pflegekasse || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        pflegekasse: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="versichertennummer">Versichertennummer</Label>
+                    <Input
+                      id="versichertennummer"
+                      value={editingCustomer.versichertennummer || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        versichertennummer: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="kasse_privat">Kasse Privat</Label>
+                    <Input
+                      id="kasse_privat"
+                      value={editingCustomer.kasse_privat || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        kasse_privat: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="verhinderungspflege_status">Verhinderungspflege Status</Label>
+                    <Input
+                      id="verhinderungspflege_status"
+                      value={editingCustomer.verhinderungspflege_status || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        verhinderungspflege_status: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Weitere Informationen */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-lg font-semibold">Weitere Informationen</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="eintritt">Eintrittsdatum</Label>
+                    <Input
+                      id="eintritt"
+                      type="date"
+                      value={editingCustomer.eintritt || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        eintritt: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="austritt">Austrittsdatum</Label>
+                    <Input
+                      id="austritt"
+                      type="date"
+                      value={editingCustomer.austritt || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        austritt: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Input
+                      id="status"
+                      value={editingCustomer.status || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        status: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="tage">Tage</Label>
+                    <Input
+                      id="tage"
+                      value={editingCustomer.tage || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        tage: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="mitarbeiter">Mitarbeiter</Label>
+                    <Input
+                      id="mitarbeiter"
+                      value={editingCustomer.mitarbeiter || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        mitarbeiter: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="kopie_lw_vorhanden">Kopie LW vorhanden</Label>
+                    <Input
+                      id="kopie_lw_vorhanden"
+                      value={editingCustomer.kopie_lw_vorhanden || ''}
+                      onChange={(e) => setEditingCustomer({
+                        ...editingCustomer,
+                        kopie_lw_vorhanden: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <Label htmlFor="emergency_contact_name">Notfallkontakt Name</Label>
+                  <Label htmlFor="angehoerige_ansprechpartner">Angehörige/Ansprechpartner</Label>
                   <Input
-                    id="emergency_contact_name"
-                    value={editingCustomer.notfall_name || ''}
+                    id="angehoerige_ansprechpartner"
+                    value={editingCustomer.angehoerige_ansprechpartner || ''}
                     onChange={(e) => setEditingCustomer({
                       ...editingCustomer,
-                      notfall_name: e.target.value
+                      angehoerige_ansprechpartner: e.target.value
                     })}
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="emergency_contact_phone">Notfallkontakt Telefon</Label>
+                  <Label htmlFor="begruendung">Begründung</Label>
                   <Input
-                    id="emergency_contact_phone"
-                    value={editingCustomer.notfall_telefon || ''}
+                    id="begruendung"
+                    value={editingCustomer.begruendung || ''}
                     onChange={(e) => setEditingCustomer({
                       ...editingCustomer,
-                      notfall_telefon: e.target.value
+                      begruendung: e.target.value
                     })}
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="sonstiges">Sonstiges</Label>
+                  <Input
+                    id="sonstiges"
+                    value={editingCustomer.sonstiges || ''}
+                    onChange={(e) => setEditingCustomer({
+                      ...editingCustomer,
+                      sonstiges: e.target.value
+                    })}
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="aktiv"
+                    checked={editingCustomer.aktiv || false}
+                    onChange={(e) => setEditingCustomer({
+                      ...editingCustomer,
+                      aktiv: e.target.checked
+                    })}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  <Label htmlFor="aktiv" className="cursor-pointer">Aktiv</Label>
                 </div>
               </div>
 
               {/* Zeitfenster Section */}
               <div className="space-y-3 border-t pt-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">Zeitfenster</Label>
+                  <Label className="text-lg font-semibold">Zeitfenster</Label>
                   <Button
                     type="button"
                     variant="outline"
@@ -742,7 +994,7 @@ export default function MasterData() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 border-t pt-4">
                 <Button 
                   type="button" 
                   variant="outline" 
