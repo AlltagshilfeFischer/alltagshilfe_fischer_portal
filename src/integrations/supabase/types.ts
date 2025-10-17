@@ -93,11 +93,11 @@ export type Database = {
           eintritt: string | null
           email: string | null
           geburtsdatum: string | null
-          geburtstdatum: string | null
           id: string
           kasse_privat: string | null
-          kopie_lw_vorhanden: boolean | null
+          kopie_lw_vorhanden: string | null
           mitarbeiter: string | null
+          mitarbeiters: string | null
           name: string
           notfall_name: string | null
           notfall_telefon: string | null
@@ -108,15 +108,11 @@ export type Database = {
           startdatum: string | null
           status: string | null
           stunden_kontingent_monat: number | null
-          stunden_kontingent_pro_monat: number | null
           tage: string | null
           telefonnr: string | null
-          "telefonnr.": string | null
           updated_at: string | null
-          verhinderungspflege: string | null
           verhinderungspflege_status: string | null
-          versichertennr: string | null
-          "versichertennr.": string | null
+          versichertennummer: string | null
         }
         Insert: {
           adresse?: string | null
@@ -130,11 +126,11 @@ export type Database = {
           eintritt?: string | null
           email?: string | null
           geburtsdatum?: string | null
-          geburtstdatum?: string | null
           id?: string
           kasse_privat?: string | null
-          kopie_lw_vorhanden?: boolean | null
+          kopie_lw_vorhanden?: string | null
           mitarbeiter?: string | null
+          mitarbeiters?: string | null
           name: string
           notfall_name?: string | null
           notfall_telefon?: string | null
@@ -145,15 +141,11 @@ export type Database = {
           startdatum?: string | null
           status?: string | null
           stunden_kontingent_monat?: number | null
-          stunden_kontingent_pro_monat?: number | null
           tage?: string | null
           telefonnr?: string | null
-          "telefonnr."?: string | null
           updated_at?: string | null
-          verhinderungspflege?: string | null
           verhinderungspflege_status?: string | null
-          versichertennr?: string | null
-          "versichertennr."?: string | null
+          versichertennummer?: string | null
         }
         Update: {
           adresse?: string | null
@@ -167,11 +159,11 @@ export type Database = {
           eintritt?: string | null
           email?: string | null
           geburtsdatum?: string | null
-          geburtstdatum?: string | null
           id?: string
           kasse_privat?: string | null
-          kopie_lw_vorhanden?: boolean | null
+          kopie_lw_vorhanden?: string | null
           mitarbeiter?: string | null
+          mitarbeiters?: string | null
           name?: string
           notfall_name?: string | null
           notfall_telefon?: string | null
@@ -182,17 +174,21 @@ export type Database = {
           startdatum?: string | null
           status?: string | null
           stunden_kontingent_monat?: number | null
-          stunden_kontingent_pro_monat?: number | null
           tage?: string | null
           telefonnr?: string | null
-          "telefonnr."?: string | null
           updated_at?: string | null
-          verhinderungspflege?: string | null
           verhinderungspflege_status?: string | null
-          versichertennr?: string | null
-          "versichertennr."?: string | null
+          versichertennummer?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kunden_mitarbeiter_fkey"
+            columns: ["mitarbeiter"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kunden_zeitfenster: {
         Row: {
@@ -240,9 +236,11 @@ export type Database = {
           id: string
           ist_aktiv: boolean
           max_termine_pro_tag: number | null
+          nachname: string | null
           soll_wochenstunden: number | null
           telefon: string | null
           updated_at: string
+          vorname: string | null
         }
         Insert: {
           benutzer_id?: string | null
@@ -251,9 +249,11 @@ export type Database = {
           id?: string
           ist_aktiv?: boolean
           max_termine_pro_tag?: number | null
+          nachname?: string | null
           soll_wochenstunden?: number | null
           telefon?: string | null
           updated_at?: string
+          vorname?: string | null
         }
         Update: {
           benutzer_id?: string | null
@@ -262,9 +262,11 @@ export type Database = {
           id?: string
           ist_aktiv?: boolean
           max_termine_pro_tag?: number | null
+          nachname?: string | null
           soll_wochenstunden?: number | null
           telefon?: string | null
           updated_at?: string
+          vorname?: string | null
         }
         Relationships: [
           {
