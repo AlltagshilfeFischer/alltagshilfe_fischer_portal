@@ -35,7 +35,7 @@ export function DashboardHeader() {
         <div>
           <h1 className="text-lg font-semibold">Alltagshilfe Control Board</h1>
           <p className="text-sm text-muted-foreground">
-            Willkommen, {user?.email?.split('@')[0]}
+            Willkommen
           </p>
         </div>
       </div>
