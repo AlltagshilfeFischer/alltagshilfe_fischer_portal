@@ -618,25 +618,25 @@ export default function MasterData() {
                  <div className="grid grid-cols-2 gap-4">
                    <div>
                      <Label htmlFor="hauptbetreuer">Hauptbetreuer</Label>
-                     <Select
-                       value={editingCustomer.mitarbeiter || ''}
-                       onValueChange={(value) => setEditingCustomer({
-                         ...editingCustomer,
-                         mitarbeiter: value || null
-                       })}
-                     >
-                       <SelectTrigger id="hauptbetreuer">
-                         <SelectValue placeholder="Hauptbetreuer auswählen" />
-                       </SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="">Kein Hauptbetreuer</SelectItem>
-                         {employees?.filter((e: any) => e.ist_aktiv).map((mitarbeiter: any) => (
-                           <SelectItem key={mitarbeiter.id} value={mitarbeiter.id}>
-                             {`${mitarbeiter.vorname || ''} ${mitarbeiter.nachname || ''}`.trim() || mitarbeiter.email || 'Unbenannter Mitarbeiter'}
-                           </SelectItem>
-                         ))}
-                       </SelectContent>
-                     </Select>
+                      <Select
+                        value={editingCustomer.mitarbeiter || '__none__'}
+                        onValueChange={(value) => setEditingCustomer({
+                          ...editingCustomer,
+                          mitarbeiter: value === '__none__' ? null : value
+                        })}
+                      >
+                        <SelectTrigger id="hauptbetreuer">
+                          <SelectValue placeholder="Hauptbetreuer auswählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Kein Hauptbetreuer</SelectItem>
+                          {employees?.filter((e: any) => e.ist_aktiv).map((mitarbeiter: any) => (
+                            <SelectItem key={mitarbeiter.id} value={mitarbeiter.id}>
+                              {`${mitarbeiter.vorname || ''} ${mitarbeiter.nachname || ''}`.trim() || mitarbeiter.email || 'Unbenannter Mitarbeiter'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                    </div>
                  </div>
 
