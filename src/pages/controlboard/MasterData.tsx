@@ -45,6 +45,8 @@ export default function MasterData() {
   const [employeeSort, setEmployeeSort] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'name', direction: 'asc' });
   const [searchQuery, setSearchQuery] = useState('');
   const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
+  const [customerStatusFilter, setCustomerStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [employeeStatusFilter, setEmployeeStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -298,6 +300,13 @@ export default function MasterData() {
       });
     }
     
+    // Filter by status
+    if (customerStatusFilter === 'active') {
+      filtered = filtered.filter((customer: any) => customer.aktiv === true);
+    } else if (customerStatusFilter === 'inactive') {
+      filtered = filtered.filter((customer: any) => customer.aktiv === false);
+    }
+    
     // Then sort
     return [...filtered].sort((a, b) => {
       const { key, direction } = customerSort;
@@ -349,7 +358,7 @@ export default function MasterData() {
       if (aValue > bValue) return direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [customers, customerSort, searchQuery]);
+  }, [customers, customerSort, searchQuery, customerStatusFilter]);
 
   const sortedEmployees = useMemo(() => {
     if (!employees) return [];
@@ -368,6 +377,13 @@ export default function MasterData() {
         
         return searchableFields.some(field => field.includes(query));
       });
+    }
+    
+    // Filter by status
+    if (employeeStatusFilter === 'active') {
+      filtered = filtered.filter((employee: any) => employee.ist_aktiv === true);
+    } else if (employeeStatusFilter === 'inactive') {
+      filtered = filtered.filter((employee: any) => employee.ist_aktiv === false);
     }
     
     // Then sort
@@ -405,7 +421,7 @@ export default function MasterData() {
       if (aValue > bValue) return direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [employees, employeeSort, employeeSearchQuery]);
+  }, [employees, employeeSort, employeeSearchQuery, employeeStatusFilter]);
 
   return (
     <div className="space-y-6">
@@ -436,9 +452,9 @@ export default function MasterData() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Search Bar */}
-              <div className="mb-4">
-                <div className="relative">
+              {/* Search and Filter Bar */}
+              <div className="mb-4 flex gap-3">
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Kunden suchen (Name, Telefon, E-Mail, Adresse, Notfallkontakt...)"
@@ -447,6 +463,16 @@ export default function MasterData() {
                     className="pl-10"
                   />
                 </div>
+                <Select value={customerStatusFilter} onValueChange={(value: any) => setCustomerStatusFilter(value)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle anzeigen</SelectItem>
+                    <SelectItem value="active">Nur Aktive</SelectItem>
+                    <SelectItem value="inactive">Nur Inaktive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               {customersLoading ? (
                 <div className="text-center py-4">Lade Kundendaten...</div>
@@ -597,9 +623,9 @@ export default function MasterData() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Search Bar */}
-              <div className="mb-4">
-                <div className="relative">
+              {/* Search and Filter Bar */}
+              <div className="mb-4 flex gap-3">
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Mitarbeiter suchen (Name, E-Mail, Telefon...)"
@@ -608,6 +634,16 @@ export default function MasterData() {
                     className="pl-10"
                   />
                 </div>
+                <Select value={employeeStatusFilter} onValueChange={(value: any) => setEmployeeStatusFilter(value)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle anzeigen</SelectItem>
+                    <SelectItem value="active">Nur Aktive</SelectItem>
+                    <SelectItem value="inactive">Nur Inaktive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               {employeesLoading ? (
                 <div className="text-center py-4">Lade Mitarbeiterdaten...</div>
