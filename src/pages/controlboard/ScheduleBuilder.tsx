@@ -1039,8 +1039,9 @@ const cellWidth = DAY_COL_WIDTH;
               </div>
 
               {/* Employee List */}
-              <ScrollArea className="flex-1 px-6 py-4">
-                <div className="space-y-3">
+              <div className="flex-1 overflow-hidden px-6 py-4">
+                <ScrollArea className="h-full">
+                  <div className="space-y-3 pr-4">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                     <GripVertical className="h-4 w-4" />
                     <span>Zum Sortieren ziehen</span>
@@ -1115,7 +1116,8 @@ const cellWidth = DAY_COL_WIDTH;
                     })}
                   </SortableContext>
                 </div>
-              </ScrollArea>
+                </ScrollArea>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
