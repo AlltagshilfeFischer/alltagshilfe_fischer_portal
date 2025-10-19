@@ -940,116 +940,114 @@ const cellWidth = DAY_COL_WIDTH;
         </div>
 
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          {/* Expanded Sidebar for Better Employee Management */}
-          <div className="xl:col-span-1 space-y-4">
-            {/* Enhanced Employee List */}
+        <div className="grid grid-cols-1 gap-6">
+          {/* Filter and Sort Button */}
+          <div className="flex justify-start">
+            <Button
+              variant="outline"
+              onClick={() => setShowEmployeeFilters(!showEmployeeFilters)}
+              className="h-10"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtern und Sortieren
+            </Button>
+          </div>
+
+          {/* Employee Filter Section - Only visible when button clicked */}
+          {showEmployeeFilters && (
             <Card className="border shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Users className="h-4 w-4" />
                   Mitarbeiter ({filteredEmployees.length})
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowEmployeeFilters(!showEmployeeFilters)}
-                    className="ml-auto h-8 text-xs"
-                  >
-                    <Filter className="h-3 w-3 mr-1" />
-                    Filtern und Sortieren
-                  </Button>
                 </CardTitle>
-                
-                {showEmployeeFilters && (
-                  <div className="space-y-3 pt-3 border-t mt-3">
-                    <Input
-                      placeholder="Mitarbeiter suchen..."
-                      value={searchEmployee}
-                      onChange={(e) => setSearchEmployee(e.target.value)}
-                      className="h-8 text-sm"
-                    />
-                    <div className="flex gap-2">
-                      <Select value={sortEmployees} onValueChange={setSortEmployees}>
-                        <SelectTrigger className="h-8 text-sm flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="name">Name</SelectItem>
-                          <SelectItem value="workload">Auslastung</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
-                          setEmployeeOrder(employees.map(emp => emp.id));
-                          setHiddenEmployeeIds(new Set());
-                        }}
-                        className="h-8 px-2 text-xs"
-                      >
-                        Reset
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Sichtbarkeit:</p>
-                      <ScrollArea className="h-48 border rounded-md p-2">
-                        {employees.filter(emp => emp.ist_aktiv).map((employee) => (
-                          <label
-                            key={employee.id}
-                            className="flex items-center gap-2 py-1.5 px-2 hover:bg-muted rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={!hiddenEmployeeIds.has(employee.id)}
-                              onChange={(e) => {
-                                const newHidden = new Set(hiddenEmployeeIds);
-                                if (e.target.checked) {
-                                  newHidden.delete(employee.id);
-                                } else {
-                                  newHidden.add(employee.id);
-                                }
-                                setHiddenEmployeeIds(newHidden);
-                              }}
-                              className="h-4 w-4"
-                            />
-                            <span className="text-sm">{employee.name}</span>
-                          </label>
-                        ))}
-                      </ScrollArea>
-                    </div>
-                    
-                    <div className="pt-2 border-t">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">
-                        Reihenfolge anpassen:
-                      </p>
-                      <Badge variant="outline" className="text-xs">
-                        <GripVertical className="h-3 w-3 mr-1" />
-                        Drag & Drop unten
-                      </Badge>
-                    </div>
-                  </div>
-                )}
               </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <SortableContext items={filteredEmployees.map(emp => `employee-sort-${emp.id}`)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2">
-                    {filteredEmployees.map((employee) => (
-                      <div key={`employee-sort-${employee.id}`}>
-                        <SortableEmployeeCard
-                          employee={employee}
-                          currentAppointments={appointments.filter(app => app.mitarbeiter_id === employee.id).length}
+              <CardContent className="p-4 space-y-4">
+                <Input
+                  placeholder="Mitarbeiter suchen..."
+                  value={searchEmployee}
+                  onChange={(e) => setSearchEmployee(e.target.value)}
+                  className="h-9"
+                />
+                
+                <div className="flex gap-2">
+                  <Select value={sortEmployees} onValueChange={setSortEmployees}>
+                    <SelectTrigger className="h-9 flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="workload">Auslastung</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setEmployeeOrder(employees.map(emp => emp.id));
+                      setHiddenEmployeeIds(new Set());
+                    }}
+                    className="h-9 px-3"
+                  >
+                    Reset
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Sichtbarkeit:</p>
+                  <ScrollArea className="h-64 border rounded-md p-2">
+                    {employees.filter(emp => emp.ist_aktiv).map((employee) => (
+                      <label
+                        key={employee.id}
+                        className="flex items-center gap-2 py-2 px-2 hover:bg-muted rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!hiddenEmployeeIds.has(employee.id)}
+                          onChange={(e) => {
+                            const newHidden = new Set(hiddenEmployeeIds);
+                            if (e.target.checked) {
+                              newHidden.delete(employee.id);
+                            } else {
+                              newHidden.add(employee.id);
+                            }
+                            setHiddenEmployeeIds(newHidden);
+                          }}
+                          className="h-4 w-4"
                         />
-                      </div>
+                        <span className="text-sm">{employee.name}</span>
+                      </label>
                     ))}
-                  </div>
-                </SortableContext>
+                  </ScrollArea>
+                </div>
+                
+                <div className="pt-2 border-t space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Reihenfolge anpassen:
+                  </p>
+                  <Badge variant="outline" className="text-xs">
+                    <GripVertical className="h-3 w-3 mr-1" />
+                    Drag & Drop zum Sortieren
+                  </Badge>
+                  
+                  <SortableContext items={filteredEmployees.map(emp => `employee-sort-${emp.id}`)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-2 pt-2">
+                      {filteredEmployees.map((employee) => (
+                        <div key={`employee-sort-${employee.id}`}>
+                          <SortableEmployeeCard
+                            employee={employee}
+                            currentAppointments={appointments.filter(app => app.mitarbeiter_id === employee.id).length}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </SortableContext>
+                </div>
               </CardContent>
             </Card>
-          </div>
+          )}
 
           {/* Main Schedule Grid */}
-          <div className="xl:col-span-3">
+          <div>
             <Card className="border shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
