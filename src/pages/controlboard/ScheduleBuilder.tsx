@@ -1047,8 +1047,8 @@ const cellWidth = DAY_COL_WIDTH;
                 </div>
 
                 {/* Employee List */}
-                <ScrollArea className="flex-1">
-                  <div className="px-6 py-4 space-y-3">
+                <ScrollArea className="flex-1 px-6 py-4">
+                  <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                       <GripVertical className="h-4 w-4" />
                       <span>Zum Sortieren ziehen</span>
@@ -1064,74 +1064,82 @@ const cellWidth = DAY_COL_WIDTH;
                         const workloadPercentage = (appointmentCount / (employee.max_termine_pro_tag || 8)) * 100;
                         
                         return (
-                          <div key={`employee-sort-${employee.id}`} className={cn(
-                            "transition-opacity duration-200",
-                            !isVisible && "opacity-40"
-                          )}>
-                            <Card className={cn(
-                              "border-2 transition-all duration-200",
-                              isVisible ? "border-primary/20 bg-card" : "border-muted bg-muted/50"
+                          <SortableEmployeeCard
+                            key={`employee-sort-${employee.id}`}
+                            id={`employee-sort-${employee.id}`}
+                            employee={employee}
+                            currentAppointments={appointments}
+                          >
+                            <div className={cn(
+                              "transition-opacity duration-200",
+                              !isVisible && "opacity-40"
                             )}>
-                              <CardContent className="p-4">
-                                <div className="flex items-center gap-3">
-                                  {/* Drag Handle */}
-                                  <div className="cursor-grab active:cursor-grabbing flex-shrink-0">
-                                    <GripVertical className="h-5 w-5 text-muted-foreground" />
-                                  </div>
+                              <Card className={cn(
+                                "border-2 transition-all duration-200 cursor-grab active:cursor-grabbing",
+                                isVisible ? "border-primary/20 bg-card hover:border-primary/40" : "border-muted bg-muted/50"
+                              )}>
+                                <CardContent className="p-4">
+                                  <div className="flex items-center gap-3">
+                                    {/* Drag Handle */}
+                                    <div className="flex-shrink-0">
+                                      <GripVertical className="h-5 w-5 text-muted-foreground" />
+                                    </div>
 
-                                  {/* Checkbox */}
-                                  <Checkbox
-                                    checked={isVisible}
-                                    onCheckedChange={(checked) => {
-                                      const newHidden = new Set(hiddenEmployeeIds);
-                                      if (checked) {
-                                        newHidden.delete(employee.id);
-                                      } else {
-                                        newHidden.add(employee.id);
-                                      }
-                                      setHiddenEmployeeIds(newHidden);
-                                    }}
-                                    className="flex-shrink-0"
-                                  />
+                                    {/* Checkbox */}
+                                    <Checkbox
+                                      checked={isVisible}
+                                      onCheckedChange={(checked) => {
+                                        const newHidden = new Set(hiddenEmployeeIds);
+                                        if (checked) {
+                                          newHidden.delete(employee.id);
+                                        } else {
+                                          newHidden.add(employee.id);
+                                        }
+                                        setHiddenEmployeeIds(newHidden);
+                                      }}
+                                      className="flex-shrink-0"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
 
-                                  {/* Color Indicator */}
-                                  <div 
-                                    className="w-4 h-4 rounded-full border-2 border-white shadow-sm flex-shrink-0" 
-                                    style={{ backgroundColor: employee.farbe_kalender }}
-                                  />
+                                    {/* Color Indicator */}
+                                    <div 
+                                      className="w-4 h-4 rounded-full border-2 border-white shadow-sm flex-shrink-0" 
+                                      style={{ backgroundColor: employee.farbe_kalender }}
+                                    />
 
-                                  {/* Employee Info */}
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-sm truncate">{employee.name}</h4>
-                                    {employee.telefon && (
-                                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                        <Phone className="h-3 w-3" />
-                                        {employee.telefon}
-                                      </p>
-                                    )}
-                                  </div>
-
-                                  {/* Stats */}
-                                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                    <Badge 
-                                      variant="outline"
-                                      className={cn(
-                                        "text-xs px-2 py-0 h-5",
-                                        workloadPercentage >= 100 && "bg-red-50 text-red-700 border-red-200",
-                                        workloadPercentage >= 80 && workloadPercentage < 100 && "bg-orange-50 text-orange-700 border-orange-200",
-                                        workloadPercentage < 80 && "bg-green-50 text-green-700 border-green-200"
+                                    {/* Employee Info */}
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-medium text-sm truncate">{employee.name}</h4>
+                                      {employee.telefon && (
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                          <Phone className="h-3 w-3" />
+                                          {employee.telefon}
+                                        </p>
                                       )}
-                                    >
-                                      {appointmentCount} Termine
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {Math.round(workloadPercentage)}% Auslastung
-                                    </span>
+                                    </div>
+
+                                    {/* Stats */}
+                                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                      <Badge 
+                                        variant="outline"
+                                        className={cn(
+                                          "text-xs px-2 py-0 h-5",
+                                          workloadPercentage >= 100 && "bg-red-50 text-red-700 border-red-200",
+                                          workloadPercentage >= 80 && workloadPercentage < 100 && "bg-orange-50 text-orange-700 border-orange-200",
+                                          workloadPercentage < 80 && "bg-green-50 text-green-700 border-green-200"
+                                        )}
+                                      >
+                                        {appointmentCount} Termine
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">
+                                        {Math.round(workloadPercentage)}% Auslastung
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </div>
+                                </CardContent>
+                              </Card>
+                            </div>
+                          </SortableEmployeeCard>
                         );
                       })}
                     </SortableContext>
