@@ -996,36 +996,25 @@ const ScheduleBuilder = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="relative">
-                  {/* Week Navigation Buttons */}
-                  <div className="absolute left-0 top-0 bottom-0 z-20 flex items-center">
-                    <Button variant="outline" size="sm" onClick={scrollToPreviousWeek} className="ml-2 h-8 w-8 p-0 rounded-full bg-background/90 backdrop-blur-sm shadow-lg hover:bg-background border-border/50">
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="absolute right-0 top-0 bottom-0 z-20 flex items-center">
-                    <Button variant="outline" size="sm" onClick={scrollToNextWeek} className="mr-2 h-8 w-8 p-0 rounded-full bg-background/90 backdrop-blur-sm shadow-lg hover:bg-background border-border/50">
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
                 <ScrollArea className="w-full" ref={scrollAreaRef}>
                   <div className="space-y-3">
                     {/* Quick Actions Bar */}
-                    <div className="flex items-center justify-between gap-2 px-2">
+                    <div className="flex items-center justify-between gap-2 px-2 bg-muted/30 rounded-lg p-2">
                       <div className="flex items-center gap-2">
-                        <Button onClick={scrollToPreviousWeek} variant="outline" size="sm" className="text-xs h-8">
-                          <ChevronLeft className="h-3 w-3" />
+                        <Button onClick={scrollToPreviousWeek} variant="outline" size="sm" className="h-9 px-3">
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Vorherige Woche
                         </Button>
-                        <Button onClick={scrollToNextWeek} variant="outline" size="sm" className="text-xs h-8">
-                          <ChevronRight className="h-3 w-3" />
+                        <Button onClick={scrollToNextWeek} variant="outline" size="sm" className="h-9 px-3">
+                          Nächste Woche
+                          <ChevronRight className="h-4 w-4 ml-1" />
                         </Button>
-                        <Button onClick={scrollToToday} variant="outline" size="sm" className="text-xs h-8">
+                        <Button onClick={scrollToToday} variant="default" size="sm" className="h-9 px-3">
                           Heute
                         </Button>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Input placeholder="Termine suchen..." value={searchAppointment} onChange={e => setSearchAppointment(e.target.value)} className="w-48 text-xs h-8" />
+                        <Input placeholder="Termine suchen..." value={searchAppointment} onChange={e => setSearchAppointment(e.target.value)} className="w-48 h-9" />
                       </div>
                     </div>
                     {/* Unassigned Appointments Bar */}
