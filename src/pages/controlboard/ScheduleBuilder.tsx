@@ -22,11 +22,9 @@ import { DraggableAppointment } from '@/components/schedule/DraggableAppointment
 import { DropZone } from '@/components/schedule/DropZone';
 import { EmployeeCard } from '@/components/schedule/EmployeeCard';
 import { SortableEmployeeCard } from '@/components/schedule/SortableEmployeeCard';
-import { SmartAssignmentPanel } from '@/components/schedule/SmartAssignmentPanel';
 import { UnassignedAppointmentsBar } from '@/components/schedule/UnassignedAppointmentsBar';
 import { CreateAppointmentDialog } from '@/components/schedule/CreateAppointmentDialog';
 import { CreateRecurringAppointmentDialog } from '@/components/schedule/CreateRecurringAppointmentDialog';
-import { SmartMatchingPanel } from '@/components/schedule/SmartMatchingPanel';
 import {
   DndContext,
   DragOverlay,
@@ -942,31 +940,6 @@ const cellWidth = DAY_COL_WIDTH;
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* Expanded Sidebar for Better Employee Management */}
           <div className="xl:col-span-1 space-y-4">
-            {/* Smart Matching Panel */}
-            <SmartMatchingPanel
-              customers={customers}
-              employees={employees}
-              appointments={appointments}
-              customerAvailability={customerAvailability}
-              onCreateAppointment={handleSmartMatch}
-            />
-
-            {/* Smart Assignment Panel - Compact */}
-            <Card className="border shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold">Smart Assignment</CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <SmartAssignmentPanel
-                  employees={employees}
-                  appointments={appointments}
-                  openAppointments={openAppointments}
-                  onAssignAppointment={assignAppointment}
-                  onAutoAssign={autoAssignAppointments}
-                />
-              </CardContent>
-            </Card>
-
             {/* Enhanced Employee List */}
             <Card className="border shadow-sm">
               <CardHeader className="pb-3">
