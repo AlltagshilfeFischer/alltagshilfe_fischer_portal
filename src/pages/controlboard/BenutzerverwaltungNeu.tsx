@@ -31,7 +31,6 @@ interface Mitarbeiter {
 
 export default function BenutzerverwaltungNeu() {
   const [pendingBenutzer, setPendingBenutzer] = useState<PendingBenutzer[]>([]);
-  const [processedBenutzer, setProcessedBenutzer] = useState<PendingBenutzer[]>([]);
   const [mitarbeiter, setMitarbeiter] = useState<Mitarbeiter[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -86,7 +85,6 @@ export default function BenutzerverwaltungNeu() {
 
       const allBenutzer = benutzerResponse.data || [];
       setPendingBenutzer(allBenutzer.filter(b => b.status === 'pending'));
-      setProcessedBenutzer(allBenutzer.filter(b => b.status !== 'pending'));
       setMitarbeiter(mitarbeiterResponse.data || []);
     } catch (error: any) {
       console.error('Error loading data:', error);
@@ -213,7 +211,6 @@ export default function BenutzerverwaltungNeu() {
           <TabsTrigger value="pending">
             Ausstehend {pendingBenutzer.length > 0 && `(${pendingBenutzer.length})`}
           </TabsTrigger>
-          <TabsTrigger value="processed">Verlauf ({processedBenutzer.length})</TabsTrigger>
           <TabsTrigger value="mitarbeiter">Mitarbeiter ({mitarbeiter.length})</TabsTrigger>
         </TabsList>
 
@@ -277,36 +274,6 @@ export default function BenutzerverwaltungNeu() {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-
-        <TabsContent value="processed">
-          <Card>
-            <CardHeader>
-              <CardTitle>Verlauf</CardTitle>
-              <CardDescription>Historie aller genehmigten und abgelehnten Registrierungen</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {processedBenutzer.length > 0 ? (
-                processedBenutzer.map((benutzer) => (
-                  <div key={benutzer.id} className="flex justify-between items-center p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">
-                        {benutzer.vorname || benutzer.nachname
-                          ? `${benutzer.vorname || ''} ${benutzer.nachname || ''}`.trim()
-                          : 'Kein Name'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{benutzer.email}</p>
-                    </div>
-                    {getStatusBadge(benutzer.status)}
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-muted-foreground py-8">
-                  Kein Verlauf vorhanden
-                </p>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="mitarbeiter">
