@@ -4,7 +4,7 @@ import DashboardHome from './DashboardHome';
 import ScheduleBuilder from './controlboard/ScheduleBuilder';
 import MasterData from './controlboard/MasterData';
 import NewEntries from './controlboard/NewEntries';
-import AdminDashboard from './AdminDashboard';
+import BenutzerverwaltungNeu from './controlboard/BenutzerverwaltungNeu';
 import Billing from './controlboard/Billing';
 import MitarbeiterStart from './MitarbeiterStart';
 import PendingApproval from './PendingApproval';
@@ -47,7 +47,7 @@ export default function Dashboard() {
         <Route path="/controlboard/schedule-builder" element={<ScheduleBuilder />} />
         <Route path="/controlboard/master-data" element={<MasterData />} />
         <Route path="/controlboard/new-entries" element={<NewEntries />} />
-        <Route path="/controlboard/admin" element={<AdminDashboard />} />
+        <Route path="/controlboard/admin" element={<BenutzerverwaltungNeu />} />
         <Route path="/controlboard/billing" element={<Billing />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

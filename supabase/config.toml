@@ -1,1 +1,7 @@
 project_id = "nabodbmvfrhhrjeiiimm"
+
+[functions.approve-benutzer]
+verify_jwt = true
+
+[functions.reject-benutzer]
+verify_jwt = true

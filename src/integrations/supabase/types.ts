@@ -55,6 +55,7 @@ export type Database = {
           id: string
           nachname: string | null
           rolle: Database["public"]["Enums"]["user_rolle"]
+          status: Database["public"]["Enums"]["benutzer_status"]
           updated_at: string
           vorname: string | null
         }
@@ -65,6 +66,7 @@ export type Database = {
           id?: string
           nachname?: string | null
           rolle: Database["public"]["Enums"]["user_rolle"]
+          status?: Database["public"]["Enums"]["benutzer_status"]
           updated_at?: string
           vorname?: string | null
         }
@@ -75,6 +77,7 @@ export type Database = {
           id?: string
           nachname?: string | null
           rolle?: Database["public"]["Enums"]["user_rolle"]
+          status?: Database["public"]["Enums"]["benutzer_status"]
           updated_at?: string
           vorname?: string | null
         }
@@ -347,6 +350,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          ignored: boolean
           nachname: string | null
           rejection_reason: string | null
           reviewed_at: string | null
@@ -358,6 +362,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          ignored?: boolean
           nachname?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -369,6 +374,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          ignored?: boolean
           nachname?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -973,6 +979,7 @@ export type Database = {
     }
     Enums: {
       approval_status: "pending" | "approved" | "rejected"
+      benutzer_status: "pending" | "approved" | "rejected"
       recurrence_interval: "none" | "weekly" | "biweekly" | "monthly"
       standort: "Hannover"
       termin_status:
@@ -1110,6 +1117,7 @@ export const Constants = {
   public: {
     Enums: {
       approval_status: ["pending", "approved", "rejected"],
+      benutzer_status: ["pending", "approved", "rejected"],
       recurrence_interval: ["none", "weekly", "biweekly", "monthly"],
       standort: ["Hannover"],
       termin_status: [
