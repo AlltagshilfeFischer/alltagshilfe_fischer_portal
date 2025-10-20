@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserCheck, Users } from 'lucide-react';
+import { Loader2, UserCheck, Users, EyeOff } from 'lucide-react';
 
 interface UnactivatedUser {
   user_id: string;
@@ -131,6 +131,42 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleIgnore = async (userId: string) => {
+    setActivating(userId);
+    
+    try {
+      // Create a pending_registrations entry with ignored=true
+      const user = unactivatedUsers.find(u => u.user_id === userId);
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('pending_registrations')
+        .insert({
+          email: user.user_email,
+          ignored: true,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Erfolgreich',
+        description: 'Benutzer wurde ausgeblendet.',
+      });
+
+      await loadData();
+    } catch (error: any) {
+      console.error('Fehler beim Ignorieren:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Ausblenden: ' + error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setActivating(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -188,20 +224,30 @@ const AdminDashboard = () => {
                           {new Date(user.created_at).toLocaleDateString('de-DE')}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={() => openActivationDialog(user)}
-                            disabled={activating === user.user_id}
-                          >
-                            {activating === user.user_id ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Wird freigeschaltet...
-                              </>
-                            ) : (
-                              'Als Mitarbeiter freischalten'
-                            )}
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => openActivationDialog(user)}
+                              disabled={activating === user.user_id}
+                            >
+                              {activating === user.user_id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Wird freigeschaltet...
+                                </>
+                              ) : (
+                                'Als Mitarbeiter freischalten'
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleIgnore(user.user_id)}
+                              disabled={activating === user.user_id}
+                            >
+                              <EyeOff className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
