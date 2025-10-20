@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, XCircle, Clock, UserPlus, EyeOff } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, UserPlus } from 'lucide-react';
 
 interface PendingRegistration {
   id: string;
@@ -143,34 +143,6 @@ export default function MitarbeiterVerwaltung() {
         variant: 'destructive',
         title: 'Fehler',
         description: error.message || 'Genehmigung fehlgeschlagen.',
-      });
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleIgnore = async (registrationId: string) => {
-    setActionLoading(registrationId);
-    try {
-      const { error } = await supabase
-        .from('pending_registrations')
-        .update({ ignored: true })
-        .eq('id', registrationId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Erfolgreich',
-        description: 'Benutzer wurde ausgeblendet.',
-      });
-
-      loadData();
-    } catch (error: any) {
-      console.error('Error ignoring:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: error.message || 'Ausblenden fehlgeschlagen.',
       });
     } finally {
       setActionLoading(null);
@@ -340,19 +312,6 @@ export default function MitarbeiterVerwaltung() {
                               Ablehnen
                             </Button>
                           </div>
-                          <Button
-                            variant="outline"
-                            onClick={() => handleIgnore(reg.id)}
-                            disabled={actionLoading === reg.id}
-                            className="w-full"
-                          >
-                            {actionLoading === reg.id ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <EyeOff className="mr-2 h-4 w-4" />
-                            )}
-                            Ignorieren
-                          </Button>
                         </div>
                       </div>
                     </CardContent>

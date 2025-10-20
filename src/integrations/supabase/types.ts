@@ -347,7 +347,6 @@ export type Database = {
           created_at: string
           email: string
           id: string
-          ignored: boolean
           nachname: string | null
           rejection_reason: string | null
           reviewed_at: string | null
@@ -359,7 +358,6 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
-          ignored?: boolean
           nachname?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -371,7 +369,6 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
-          ignored?: boolean
           nachname?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
