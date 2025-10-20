@@ -27,8 +27,12 @@ Deno.serve(async (req) => {
     );
 
     // Verify admin role
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError || !user) {
+      console.error('Auth getUser error:', userError);
       throw new Error('Not authenticated');
     }
 
