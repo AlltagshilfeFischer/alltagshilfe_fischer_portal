@@ -31,6 +31,7 @@ const controlboardItems = [
   { title: 'Stammdaten verwalten', url: '/dashboard/controlboard/master-data', icon: FileText },
   { title: 'Neukunden & Mitarbeiter', url: '/dashboard/controlboard/new-entries', icon: Users },
   { title: 'Mitarbeiterverwaltung', url: '/dashboard/controlboard/admin', icon: UserCog },
+  { title: 'Leistungen & Abrechnungen', url: '/dashboard/controlboard/billing', icon: FileText },
 ];
 
 const settingsItems = [
