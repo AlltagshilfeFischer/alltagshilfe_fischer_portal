@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, XCircle, Clock, UserPlus } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Trash2, UserX, UserCheck } from 'lucide-react';
 
 interface PendingRegistration {
   id: string;
@@ -37,6 +37,8 @@ export default function BenutzerverwaltungNeu() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedBenutzer, setSelectedBenutzer] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedMitarbeiter, setSelectedMitarbeiter] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -168,6 +170,83 @@ export default function BenutzerverwaltungNeu() {
     }
   };
 
+  const handleToggleActive = async (mitarbeiterId: string, currentStatus: boolean) => {
+    setActionLoading(mitarbeiterId);
+    try {
+      const { error } = await supabase
+        .from('mitarbeiter')
+        .update({ ist_aktiv: !currentStatus })
+        .eq('id', mitarbeiterId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Erfolgreich',
+        description: `Mitarbeiter wurde ${!currentStatus ? 'aktiviert' : 'deaktiviert'}.`,
+      });
+
+      loadData();
+    } catch (error: any) {
+      console.error('Error toggling employee status:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Fehler',
+        description: error.message || 'Status konnte nicht geändert werden.',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!selectedMitarbeiter) return;
+
+    setActionLoading(selectedMitarbeiter);
+    try {
+      const { data: mitarbeiterData } = await supabase
+        .from('mitarbeiter')
+        .select('benutzer_id')
+        .eq('id', selectedMitarbeiter)
+        .single();
+
+      const { error: mitError } = await supabase
+        .from('mitarbeiter')
+        .delete()
+        .eq('id', selectedMitarbeiter);
+
+      if (mitError) throw mitError;
+
+      if (mitarbeiterData?.benutzer_id) {
+        const { error: benError } = await supabase
+          .from('benutzer')
+          .delete()
+          .eq('id', mitarbeiterData.benutzer_id);
+
+        if (benError) {
+          console.error('Error deleting benutzer:', benError);
+        }
+      }
+
+      toast({
+        title: 'Erfolgreich',
+        description: 'Mitarbeiter wurde gelöscht.',
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedMitarbeiter(null);
+      loadData();
+    } catch (error: any) {
+      console.error('Error deleting employee:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Fehler',
+        description: error.message || 'Löschen fehlgeschlagen.',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -277,7 +356,7 @@ export default function BenutzerverwaltungNeu() {
                 {mitarbeiter.length > 0 ? (
                   mitarbeiter.map((m) => (
                     <div key={m.id} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium">
                           {m.vorname || m.nachname
                             ? `${m.vorname || ''} ${m.nachname || ''}`.trim()
@@ -285,9 +364,36 @@ export default function BenutzerverwaltungNeu() {
                         </p>
                         <p className="text-sm text-muted-foreground">{m.benutzer?.email || 'Keine E-Mail'}</p>
                       </div>
-                      <Badge variant={m.ist_aktiv ? 'default' : 'secondary'}>
-                        {m.ist_aktiv ? 'Aktiv' : 'Inaktiv'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={m.ist_aktiv ? 'default' : 'secondary'}>
+                          {m.ist_aktiv ? 'Aktiv' : 'Inaktiv'}
+                        </Badge>
+                        <Button
+                          variant={m.ist_aktiv ? 'outline' : 'default'}
+                          size="sm"
+                          onClick={() => handleToggleActive(m.id, m.ist_aktiv)}
+                          disabled={actionLoading === m.id}
+                        >
+                          {actionLoading === m.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : m.ist_aktiv ? (
+                            <UserX className="h-4 w-4" />
+                          ) : (
+                            <UserCheck className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedMitarbeiter(m.id);
+                            setDeleteDialogOpen(true);
+                          }}
+                          disabled={actionLoading === m.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -322,6 +428,29 @@ export default function BenutzerverwaltungNeu() {
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction onClick={handleReject} className="bg-destructive text-destructive-foreground">
               Ablehnen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mitarbeiter löschen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sind Sie sicher, dass Sie diesen Mitarbeiter dauerhaft löschen möchten? 
+              Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteEmployee} 
+              className="bg-destructive text-destructive-foreground"
+              disabled={actionLoading === selectedMitarbeiter}
+            >
+              {actionLoading === selectedMitarbeiter && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Endgültig löschen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
