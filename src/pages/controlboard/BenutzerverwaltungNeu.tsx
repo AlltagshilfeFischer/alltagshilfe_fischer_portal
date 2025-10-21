@@ -203,33 +203,18 @@ export default function BenutzerverwaltungNeu() {
 
     setActionLoading(selectedMitarbeiter);
     try {
-      const { data: mitarbeiterData } = await supabase
-        .from('mitarbeiter')
-        .select('benutzer_id')
-        .eq('id', selectedMitarbeiter)
-        .single();
+      const { data, error } = await supabase.functions.invoke('delete-mitarbeiter', {
+        body: { mitarbeiterId: selectedMitarbeiter },
+      });
 
-      const { error: mitError } = await supabase
-        .from('mitarbeiter')
-        .delete()
-        .eq('id', selectedMitarbeiter);
-
-      if (mitError) throw mitError;
-
-      if (mitarbeiterData?.benutzer_id) {
-        const { error: benError } = await supabase
-          .from('benutzer')
-          .delete()
-          .eq('id', mitarbeiterData.benutzer_id);
-
-        if (benError) {
-          console.error('Error deleting benutzer:', benError);
-        }
+      if (error) {
+        const serverMsg = (data as any)?.error || (typeof data === 'string' ? data : null);
+        throw new Error(serverMsg || error.message);
       }
 
       toast({
         title: 'Erfolgreich',
-        description: 'Mitarbeiter wurde gelöscht.',
+        description: 'Mitarbeiter wurde komplett gelöscht (inkl. Auth-User, Termine, Änderungsanträge).',
       });
 
       setDeleteDialogOpen(false);
@@ -436,9 +421,10 @@ export default function BenutzerverwaltungNeu() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mitarbeiter löschen</AlertDialogTitle>
+            <AlertDialogTitle>Mitarbeiter komplett löschen</AlertDialogTitle>
             <AlertDialogDescription>
               Sind Sie sicher, dass Sie diesen Mitarbeiter dauerhaft löschen möchten? 
+              Dabei werden gelöscht: Auth-User, Benutzer-Eintrag, Mitarbeiter-Eintrag, alle Termine und Änderungsanträge.
               Diese Aktion kann nicht rückgängig gemacht werden.
             </AlertDialogDescription>
           </AlertDialogHeader>
