@@ -29,7 +29,7 @@ const dashboardItems = [
 const controlboardItems = [
   { title: 'Dienstplan erstellen', url: '/dashboard/controlboard/schedule-builder', icon: Calendar },
   { title: 'Stammdaten verwalten', url: '/dashboard/controlboard/master-data', icon: FileText },
-  { title: 'Neukunden & Mitarbeiter', url: '/dashboard/controlboard/new-entries', icon: Users },
+  { title: 'Neukunden', url: '/dashboard/controlboard/new-entries', icon: Users },
   { title: 'Mitarbeiterverwaltung', url: '/dashboard/controlboard/admin', icon: UserCog },
   { title: 'Leistungen & Abrechnungen', url: '/dashboard/controlboard/billing', icon: FileText },
 ];
