@@ -22,7 +22,7 @@ function DashboardContent({ children }: DashboardLayoutProps) {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return (
