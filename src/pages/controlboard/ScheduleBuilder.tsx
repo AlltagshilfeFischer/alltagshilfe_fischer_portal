@@ -10,11 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { CalendarDays, ChevronLeft, ChevronRight, User, Clock, AlertTriangle, Users, Calendar, TrendingUp, Filter, Search, Eye, Bell, GripVertical, MapPin, Phone, Settings2 } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, User, Clock, AlertTriangle, Users, Calendar, TrendingUp, Filter, Search, Eye, Bell, GripVertical, MapPin, Phone, Settings2, Sparkles } from 'lucide-react';
 import { EMPLOYEE_COL_WIDTH, DAY_COL_WIDTH } from '@/components/schedule/gridConfig';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
 import { AppointmentApprovalDialog } from '@/components/schedule/AppointmentApprovalDialog';
 import { ConflictWarningDialog } from '@/components/schedule/ConflictWarningDialog';
 import { CalendarGrid } from '@/components/schedule/CalendarGrid';
@@ -87,6 +88,8 @@ const ScheduleBuilder = () => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [showEmployeeManager, setShowEmployeeManager] = useState(false);
   const [hiddenEmployeeIds, setHiddenEmployeeIds] = useState<Set<string>>(new Set());
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const scrollToToday = () => {
     const today = new Date();
@@ -736,6 +739,62 @@ const ScheduleBuilder = () => {
     const date = getCurrentDates()[dayIndex];
     return appointments.filter(app => app.mitarbeiter_id === employeeId && format(new Date(app.start_at), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
   };
+
+  const handleAiRequest = async () => {
+    if (!aiPrompt.trim()) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte geben Sie eine Anfrage ein',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const response = await fetch('https://k01-2025-u36730.vm.elestio.app/webhook/020c0892-ebaf-4746-bfa1-3ead30e499c2', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Webhook-Anfrage fehlgeschlagen');
+      }
+
+      toast({
+        title: 'Erfolg',
+        description: 'Termine werden erstellt...'
+      });
+      setAiPrompt('');
+      
+      // Reload data after a short delay to show new appointments
+      setTimeout(() => {
+        loadData();
+      }, 2000);
+    } catch (error) {
+      console.error('AI Request Error:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Erstellen der Termine',
+        variant: 'destructive'
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const examplePrompts = [
+    'Erstelle einen Termin für Max Mustermann am Montag um 14:00 Uhr',
+    'Plane einen wöchentlichen Termin für Firma ABC jeden Mittwoch um 10:00 Uhr',
+    'Füge einen Notfalltermin für heute um 16:00 Uhr hinzu'
+  ];
+
   const draggedAppointment = activeId ? appointments.find(app => app.id === activeId) : null;
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">
@@ -773,6 +832,67 @@ const ScheduleBuilder = () => {
           </div>
         </div>
 
+
+        {/* AI Agent Section */}
+        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">KI-Assistent für Terminplanung</h3>
+                  <p className="text-sm text-muted-foreground">Beschreiben Sie, welche Termine erstellt werden sollen</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Textarea
+                  placeholder="z.B. 'Erstelle einen Termin für Max Mustermann am Montag um 14:00 Uhr'"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  className="min-h-[100px] resize-none"
+                  disabled={aiLoading}
+                />
+
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs text-muted-foreground">Beispiele:</span>
+                  {examplePrompts.map((prompt, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAiPrompt(prompt)}
+                      disabled={aiLoading}
+                      className="text-xs h-7"
+                    >
+                      {prompt}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button 
+                  onClick={handleAiRequest}
+                  disabled={aiLoading || !aiPrompt.trim()}
+                  className="w-full"
+                >
+                  {aiLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Termine werden erstellt...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Termine mit KI erstellen
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
