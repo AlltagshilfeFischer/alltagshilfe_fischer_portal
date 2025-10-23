@@ -792,8 +792,8 @@ const ScheduleBuilder = () => {
   };
 
   const examplePrompts = [
-    'Erstelle einen Termin für Max Mustermann am Montag um 14:00 Uhr',
-    'Plane einen wöchentlichen Termin für Firma ABC jeden Mittwoch um 10:00 Uhr',
+    'Erstelle einen Einzeltermin am Montag um 14:00 Uhr',
+    'Erstelle einen Serientermin jeden Mittwoch um 10:00 Uhr',
     'Füge einen Notfalltermin für heute um 16:00 Uhr hinzu'
   ];
 
@@ -862,7 +862,7 @@ const ScheduleBuilder = () => {
               <CardContent className="p-6 pt-0">
                 <div className="space-y-3">
                   <Textarea
-                    placeholder="z.B. 'Erstelle einen Termin für Max Mustermann am Montag um 14:00 Uhr'"
+                    placeholder="z.B. 'Erstelle einen Einzeltermin am Montag um 14:00 Uhr'"
                     value={aiPrompt}
                     onChange={(e) => setAiPrompt(e.target.value)}
                     className="min-h-[100px] resize-none"
