@@ -94,6 +94,7 @@ export type Database = {
           created_at: string | null
           eintritt: string | null
           email: string | null
+          farbe_kalender: string | null
           geburtsdatum: string | null
           id: string
           kasse_privat: string | null
@@ -127,6 +128,7 @@ export type Database = {
           created_at?: string | null
           eintritt?: string | null
           email?: string | null
+          farbe_kalender?: string | null
           geburtsdatum?: string | null
           id?: string
           kasse_privat?: string | null
@@ -160,6 +162,7 @@ export type Database = {
           created_at?: string | null
           eintritt?: string | null
           email?: string | null
+          farbe_kalender?: string | null
           geburtsdatum?: string | null
           id?: string
           kasse_privat?: string | null

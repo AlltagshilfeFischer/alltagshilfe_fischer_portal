@@ -9,6 +9,7 @@ interface Customer {
   name: string;
   email: string | null;
   telefonnr: string | null;
+  farbe_kalender?: string;
 }
 
 interface DraggableAppointmentProps {
@@ -44,16 +45,22 @@ export function DraggableAppointment({
     transition,
   };
 
+  const customerColor = appointment.customer?.farbe_kalender || '#10B981';
+
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        backgroundColor: customerColor,
+        opacity: isDragging ? 0.5 : 1
+      }}
       className={cn(
         "cursor-grab active:cursor-grabbing transition-all duration-200",
-        "border border-muted bg-card hover:bg-accent/30 rounded-md p-1 shadow-sm",
-        "text-xs w-full min-h-[28px] flex-shrink-0 box-border overflow-hidden",
-        isDragging && "opacity-50 scale-95 z-50",
-        isConflicting && "border-destructive bg-destructive/5"
+        "border border-white/20 rounded-md p-1.5 shadow-sm",
+        "text-xs w-full min-h-[32px] flex-shrink-0 box-border overflow-hidden",
+        isDragging && "scale-95 z-50",
+        isConflicting && "border-destructive border-2"
       )}
       {...attributes}
       {...listeners}
@@ -62,18 +69,18 @@ export function DraggableAppointment({
       {/* Compact layout for more appointments */}
       <div className="flex items-center justify-between gap-1">
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-foreground truncate text-xs">
+          <div className="font-semibold text-white truncate text-xs drop-shadow-sm">
             {appointment.customer?.name}
           </div>
         </div>
-        <div className="text-muted-foreground text-xs flex-shrink-0">
+        <div className="text-white/90 text-xs flex-shrink-0 font-medium drop-shadow-sm">
           {format(new Date(appointment.start_at), 'HH:mm')}
         </div>
       </div>
 
       {/* Title if meaningful - optional second line */}
       {appointment.titel && appointment.titel !== 'Aktueller Termin' && (
-        <div className="text-muted-foreground/70 mt-0.5 truncate text-xs">
+        <div className="text-white/80 mt-0.5 truncate text-xs drop-shadow-sm">
           {appointment.titel}
         </div>
       )}

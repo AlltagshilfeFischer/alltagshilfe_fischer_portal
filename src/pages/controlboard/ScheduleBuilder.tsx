@@ -66,6 +66,7 @@ interface Customer {
   tage: string | null;
   mitarbeiter: string | null;
   angehoerige_ansprechpartner: string | null;
+  farbe_kalender?: string;
 }
 interface Appointment {
   id: string;
@@ -278,7 +279,8 @@ const ScheduleBuilder = () => {
           stunden_kontingent_monat: (app.customer as any).stunden_kontingent_monat || null,
           tage: (app.customer as any).tage || null,
           mitarbeiter: (app.customer as any).mitarbeiter || null,
-          angehoerige_ansprechpartner: (app.customer as any).angehoerige_ansprechpartner || null
+          angehoerige_ansprechpartner: (app.customer as any).angehoerige_ansprechpartner || null,
+          farbe_kalender: (app.customer as any).farbe_kalender || '#10B981'
         } as Customer : undefined,
         employee: app.employee ? {
           ...app.employee,
