@@ -87,42 +87,63 @@ export function AppointmentApprovalBar() {
     };
   }, []);
 
-  if (loading || pendingChanges.length === 0) return null;
+  const hasChanges = pendingChanges.length > 0;
 
   return (
     <>
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800 rounded-lg shadow-sm">
+      <div className={cn(
+        "rounded-lg shadow-sm border transition-colors",
+        hasChanges 
+          ? "bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800"
+          : "bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800"
+      )}>
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <Bell className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
-                  {pendingChanges.length}
-                </span>
+                <Bell className={cn(
+                  "h-5 w-5",
+                  hasChanges ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"
+                )} />
+                {hasChanges && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
+                    {pendingChanges.length}
+                  </span>
+                )}
               </div>
               <div>
-                <h3 className="font-semibold text-amber-900 dark:text-amber-100">
-                  Genehmigungen ausstehend
+                <h3 className={cn(
+                  "font-semibold",
+                  hasChanges ? "text-amber-900 dark:text-amber-100" : "text-green-900 dark:text-green-100"
+                )}>
+                  {hasChanges ? "Genehmigungen ausstehend" : "Keine ausstehenden Genehmigungen"}
                 </h3>
-                <p className="text-sm text-amber-700 dark:text-amber-300">
-                  {pendingChanges.length} {pendingChanges.length === 1 ? 'Terminänderung wartet' : 'Terminänderungen warten'} auf Genehmigung
+                <p className={cn(
+                  "text-sm",
+                  hasChanges ? "text-amber-700 dark:text-amber-300" : "text-green-700 dark:text-green-300"
+                )}>
+                  {hasChanges 
+                    ? `${pendingChanges.length} ${pendingChanges.length === 1 ? 'Terminänderung wartet' : 'Terminänderungen warten'} auf Genehmigung`
+                    : "Alle Änderungsanträge wurden bearbeitet"
+                  }
                 </p>
               </div>
             </div>
             
             <div className="flex items-center gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setShowDialog(true)}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                Jetzt prüfen
-                <Badge variant="secondary" className="ml-2 bg-white text-amber-900">
-                  {pendingChanges.length}
-                </Badge>
-              </Button>
+              {hasChanges && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowDialog(true)}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  Jetzt prüfen
+                  <Badge variant="secondary" className="ml-2 bg-white text-amber-900">
+                    {pendingChanges.length}
+                  </Badge>
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
