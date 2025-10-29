@@ -940,28 +940,32 @@ const ScheduleBuilderModern = () => {
           </div>
 
           {/* Calendar */}
-          <div className="flex-1 flex flex-col gap-3 min-w-0 overflow-hidden">
-            {/* Unassigned Bar */}
-            <UnassignedAppointmentsBar
-              appointments={appointments}
-              weekDates={getWeekDates()}
-              activeId={activeId}
-              onEditAppointment={setEditingAppointment}
-            />
-
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
             {/* Calendar Grid - Fixed Height */}
-            <Card className="flex-1 shadow-lg overflow-auto">
-              <CardContent className="p-0">
-                <ModernWeekCalendar
-                  employees={filteredEmployees}
+            <Card className="flex-1 shadow-lg overflow-hidden flex flex-col">
+              <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
+                {/* Unassigned Bar - Above Calendar */}
+                <UnassignedAppointmentsBar
                   appointments={appointments}
                   weekDates={getWeekDates()}
-                  activeAppointmentId={activeId}
+                  activeId={activeId}
                   onEditAppointment={setEditingAppointment}
-                  onSlotClick={handleSlotClick}
-                  conflictingAppointments={conflictingAppointments}
                   onCut={handleCutAppointment}
                 />
+                
+                {/* Calendar with scroll */}
+                <div className="flex-1 overflow-auto">
+                  <ModernWeekCalendar
+                    employees={filteredEmployees}
+                    appointments={appointments}
+                    weekDates={getWeekDates()}
+                    activeAppointmentId={activeId}
+                    onEditAppointment={setEditingAppointment}
+                    onSlotClick={handleSlotClick}
+                    conflictingAppointments={conflictingAppointments}
+                    onCut={handleCutAppointment}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
