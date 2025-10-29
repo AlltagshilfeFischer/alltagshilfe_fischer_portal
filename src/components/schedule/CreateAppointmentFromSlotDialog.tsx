@@ -13,6 +13,7 @@ import { de } from 'date-fns/locale';
 import { CalendarIcon, Clock, Repeat, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CustomerSearchCombobox } from './CustomerSearchCombobox';
 
 interface Customer {
   id: string;
@@ -215,18 +216,12 @@ export function CreateAppointmentFromSlotDialog({
 
             <div className="space-y-2">
               <Label htmlFor="single-kunde">Kunde *</Label>
-              <Select value={kundenId} onValueChange={setKundenId}>
-                <SelectTrigger id="single-kunde">
-                  <SelectValue placeholder="Kunde auswählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CustomerSearchCombobox
+                customers={customers}
+                value={kundenId}
+                onValueChange={setKundenId}
+                placeholder="Kunde suchen..."
+              />
             </div>
 
             <div className="space-y-2">
@@ -334,18 +329,12 @@ export function CreateAppointmentFromSlotDialog({
 
             <div className="space-y-2">
               <Label htmlFor="recurring-kunde">Kunde *</Label>
-              <Select value={recurringKundenId} onValueChange={setRecurringKundenId}>
-                <SelectTrigger id="recurring-kunde">
-                  <SelectValue placeholder="Kunde auswählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CustomerSearchCombobox
+                customers={customers}
+                value={recurringKundenId}
+                onValueChange={setRecurringKundenId}
+                placeholder="Kunde suchen..."
+              />
             </div>
 
             <div className="space-y-2">

@@ -10,6 +10,7 @@ import { CalendarIcon, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { CustomerSearchCombobox } from './CustomerSearchCombobox';
 
 interface Customer {
   id: string;
@@ -151,18 +152,12 @@ export function CreateAppointmentDialog({
                 </Button>
               </div>
               {!isNewInteressent ? (
-                <Select value={kundenId} onValueChange={setKundenId} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Kunde auswählen..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CustomerSearchCombobox
+                  customers={customers}
+                  value={kundenId}
+                  onValueChange={setKundenId}
+                  placeholder="Kunde suchen..."
+                />
               ) : (
                 <Input
                   value={newInteressentName}

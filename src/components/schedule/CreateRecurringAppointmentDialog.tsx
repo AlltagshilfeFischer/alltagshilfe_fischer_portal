@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
+import { CustomerSearchCombobox } from './CustomerSearchCombobox';
 
 interface Customer {
   id: string;
@@ -139,18 +140,12 @@ export function CreateRecurringAppointmentDialog({
 
             <div className="space-y-2">
               <Label htmlFor="kunde">Kunde</Label>
-              <Select value={kundenId} onValueChange={setKundenId} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Kunde auswählen..." />
-                </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-              </Select>
+              <CustomerSearchCombobox
+                customers={customers}
+                value={kundenId}
+                onValueChange={setKundenId}
+                placeholder="Kunde suchen..."
+              />
             </div>
           </div>
 
