@@ -30,6 +30,7 @@ interface UnassignedAppointmentsBarProps {
   activeId: string | null;
   onEditAppointment: (appointment: Appointment) => void;
   onCut?: (appointment: Appointment) => void;
+  onSlotClick?: (date: Date) => void;
 }
 
 export function UnassignedAppointmentsBar({
@@ -37,7 +38,8 @@ export function UnassignedAppointmentsBar({
   weekDates,
   activeId,
   onEditAppointment,
-  onCut
+  onCut,
+  onSlotClick
 }: UnassignedAppointmentsBarProps) {
   // Group unassigned appointments by date
   const groupedAppointments = React.useMemo(() => {
@@ -98,9 +100,10 @@ export function UnassignedAppointmentsBar({
               <EnhancedDropZone
                 id={`unassigned-${dateKey}`}
                 isEmpty={dayAppointments.length === 0}
+                onClick={() => onSlotClick?.(date)}
                 className={cn(
                   "min-h-[80px] space-y-1",
-                  dayAppointments.length === 0 && "border-2 border-dashed border-muted-foreground/30 rounded-lg flex items-center justify-center hover:border-primary/50 hover:bg-primary/5"
+                  dayAppointments.length === 0 && "border-2 border-dashed border-muted-foreground/30 rounded-lg flex items-center justify-center hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
                 )}
               >
                 {dayAppointments.length === 0 ? (
@@ -141,9 +144,10 @@ export function UnassignedAppointmentsBar({
               <EnhancedDropZone
                 id={`unassigned-${dateKey}`}
                 isEmpty={dayAppointments.length === 0}
+                onClick={() => onSlotClick?.(date)}
                 className={cn(
                   "min-h-[80px] space-y-1",
-                  dayAppointments.length === 0 && "border border-dashed border-muted-foreground/20 rounded flex items-center justify-center"
+                  dayAppointments.length === 0 && "border border-dashed border-muted-foreground/20 rounded flex items-center justify-center cursor-pointer"
                 )}
               >
                 {dayAppointments.length === 0 ? (

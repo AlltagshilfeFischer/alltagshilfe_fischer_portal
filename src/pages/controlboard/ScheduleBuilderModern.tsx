@@ -467,27 +467,55 @@ const ScheduleBuilderModern = () => {
 
     const appointmentId = active.id as string;
     const overId = over.id as string;
+    const appointment = appointments.find(app => app.id === appointmentId);
+    if (!appointment) return;
 
     // Handle drop into "Unassigned" bar (ids like "unassigned-YYYY-MM-DD")
     if (overId.startsWith('unassigned-')) {
       try {
+        const dateStr = overId.replace('unassigned-', '');
+        const targetDate = new Date(dateStr);
+        
+        const originalStart = new Date(appointment.start_at);
+        const originalEnd = new Date(appointment.end_at);
+        
+        // Create new dates with target date but original times
+        const newStart = new Date(targetDate);
+        newStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+        
+        const newEnd = new Date(targetDate);
+        newEnd.setHours(originalEnd.getHours(), originalEnd.getMinutes(), 0, 0);
+
+        const updateData: any = {
+          mitarbeiter_id: null,
+          status: 'unassigned',
+          start_at: newStart.toISOString(),
+          end_at: newEnd.toISOString()
+        };
+
+        // Mark as exception if it's a recurring appointment
+        if (appointment.vorlage_id && !appointment.ist_ausnahme) {
+          updateData.ist_ausnahme = true;
+          updateData.ausnahme_grund = 'Verschoben per Drag & Drop';
+        }
+
         const { error } = await supabase
           .from('termine')
-          .update({ mitarbeiter_id: null, status: 'unassigned' })
+          .update(updateData)
           .eq('id', appointmentId);
 
         if (error) throw error;
 
         toast({
           title: 'Erfolg',
-          description: 'Termin wurde nicht zugewiesen.'
+          description: `Termin nicht zugewiesen am ${format(targetDate, 'dd.MM.yyyy')}`
         });
 
         await loadData();
       } catch (error) {
         toast({
           title: 'Fehler',
-          description: 'Fehler beim Nicht-Zuweisen des Termins.',
+          description: 'Fehler beim Verschieben des Termins.',
           variant: 'destructive'
         });
       }
@@ -530,11 +558,7 @@ const ScheduleBuilderModern = () => {
       return;
     }
 
-    // Get the appointment to check if it's a recurring appointment
-    const appointment = appointments.find(app => app.id === appointmentId);
-    if (!appointment) return;
-
-    // Check if this is a recurring appointment that hasn't been marked as exception
+    // Check if this is a recurring appointment that hasn't been marked as exception (appointment already defined at function start)
     if (appointment.vorlage_id && !appointment.ist_ausnahme) {
       // Show dialog to ask if user wants to move just this appointment or the series
       setSeriesMoveDialog({ 
@@ -808,7 +832,7 @@ const ScheduleBuilderModern = () => {
     });
   };
 
-  const handlePasteAppointment = async (employeeId: string, targetDate: Date) => {
+  const handlePasteAppointment = async (employeeId: string | null, targetDate: Date) => {
     if (!cutAppointment) return;
 
     try {
@@ -828,16 +852,18 @@ const ScheduleBuilderModern = () => {
           mitarbeiter_id: employeeId,
           start_at: newStart.toISOString(),
           end_at: newEnd.toISOString(),
-          status: 'scheduled'
+          status: employeeId ? 'scheduled' : 'unassigned'
         })
         .eq('id', cutAppointment.id);
 
       if (error) throw error;
 
-      const employee = employees.find(emp => emp.id === employeeId);
+      const employee = employeeId ? employees.find(emp => emp.id === employeeId) : null;
       toast({
         title: 'Eingefügt',
-        description: `${cutAppointment.customer?.name} → ${employee?.name} am ${format(targetDate, 'dd.MM.yyyy')}`
+        description: employee 
+          ? `${cutAppointment.customer?.name} → ${employee.name} am ${format(targetDate, 'dd.MM.yyyy')}`
+          : `${cutAppointment.customer?.name} → Unzugeordnet am ${format(targetDate, 'dd.MM.yyyy')}`
       });
 
       setCutAppointment(null);
@@ -951,6 +977,11 @@ const ScheduleBuilderModern = () => {
                   activeId={activeId}
                   onEditAppointment={setEditingAppointment}
                   onCut={handleCutAppointment}
+                  onSlotClick={(date) => {
+                    if (cutAppointment) {
+                      handlePasteAppointment(null, date);
+                    }
+                  }}
                 />
                 
                 {/* Calendar with scroll */}
