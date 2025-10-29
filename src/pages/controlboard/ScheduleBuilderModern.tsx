@@ -424,8 +424,20 @@ const ScheduleBuilderModern = () => {
       return;
     }
 
-    // Extract employee ID and date from drop zone ID (format: "employeeId-date")
-    const [employeeId] = overId.split('-');
+    // Extract employee ID from drop zone ID (format: "employee-UUID-dayIndex")
+    if (!overId.startsWith('employee-')) {
+      toast({
+        title: 'Fehler',
+        description: 'Ungültiger Zielbereich. Bitte auf einen Mitarbeiter ziehen.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Remove "employee-" prefix and extract UUID (remove last dash and dayIndex)
+    const withoutPrefix = overId.replace('employee-', '');
+    const lastDashIndex = withoutPrefix.lastIndexOf('-');
+    const employeeId = withoutPrefix.substring(0, lastDashIndex);
 
     // Validate employee ID
     if (!employeeId || !employees.find(emp => emp.id === employeeId)) {
