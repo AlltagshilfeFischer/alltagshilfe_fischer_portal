@@ -76,6 +76,7 @@ const ScheduleBuilderModern = () => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employeeOrder, setEmployeeOrder] = useState<string[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,6 +221,12 @@ const ScheduleBuilderModern = () => {
       }) as Customer) || [];
 
       setEmployees(transformedEmployees);
+      
+      // Initialize employee order if not set
+      if (employeeOrder.length === 0) {
+        setEmployeeOrder(transformedEmployees.map(emp => emp.id));
+      }
+      
       setCustomers(transformedCustomers);
       setAppointments(transformedAppointments);
     } catch (error) {
@@ -248,12 +255,27 @@ const ScheduleBuilderModern = () => {
   };
 
   const filteredEmployees = useMemo(() => {
-    return employees.filter(emp => 
+    const filtered = employees.filter(emp => 
       emp.ist_aktiv && 
       !hiddenEmployeeIds.has(emp.id) && 
       emp.name.toLowerCase().includes(searchEmployee.toLowerCase())
     );
-  }, [employees, searchEmployee, hiddenEmployeeIds]);
+    
+    // Sort by custom order
+    return filtered.sort((a, b) => {
+      const aIndex = employeeOrder.indexOf(a.id);
+      const bIndex = employeeOrder.indexOf(b.id);
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
+  }, [employees, searchEmployee, hiddenEmployeeIds, employeeOrder]);
+
+  const handleReorderEmployees = (reorderedEmployees: Employee[]) => {
+    const newOrder = reorderedEmployees.map(emp => emp.id);
+    setEmployeeOrder(newOrder);
+    setEmployees(reorderedEmployees);
+  };
 
   const unassignedAppointments = useMemo(() => {
     return appointments.filter(app => !app.mitarbeiter_id);
@@ -553,6 +575,7 @@ const ScheduleBuilderModern = () => {
                   return newSet;
                 });
               }}
+              onReorderEmployees={handleReorderEmployees}
               searchQuery={searchEmployee}
               onSearchChange={setSearchEmployee}
             />

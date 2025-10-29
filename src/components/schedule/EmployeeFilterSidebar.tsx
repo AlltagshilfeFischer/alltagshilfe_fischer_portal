@@ -5,8 +5,24 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Users, Eye, EyeOff, TrendingUp, AlertCircle } from 'lucide-react';
+import { Search, Users, Eye, EyeOff, AlertCircle, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableEmployeeCard } from './SortableEmployeeCard';
 
 interface Employee {
   id: string;
@@ -21,6 +37,7 @@ interface EmployeeFilterSidebarProps {
   employees: Employee[];
   hiddenEmployeeIds: Set<string>;
   onToggleEmployee: (employeeId: string) => void;
+  onReorderEmployees: (employees: Employee[]) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   className?: string;
@@ -30,11 +47,31 @@ export function EmployeeFilterSidebar({
   employees,
   hiddenEmployeeIds,
   onToggleEmployee,
+  onReorderEmployees,
   searchQuery,
   onSearchChange,
   className
 }: EmployeeFilterSidebarProps) {
   const [showOnlyActive, setShowOnlyActive] = useState(true);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = employees.findIndex((emp) => emp.id === active.id);
+      const newIndex = employees.findIndex((emp) => emp.id === over.id);
+
+      const reorderedEmployees = arrayMove(employees, oldIndex, newIndex);
+      onReorderEmployees(reorderedEmployees);
+    }
+  };
 
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -86,17 +123,17 @@ export function EmployeeFilterSidebar({
         </div>
 
         {/* Quick actions */}
-        <div className="flex gap-2 flex-shrink-0">
+        <div className="flex flex-col gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => employees.forEach(e => {
               if (!hiddenEmployeeIds.has(e.id)) onToggleEmployee(e.id);
             })}
-            className="flex-1 h-8 text-xs whitespace-nowrap"
+            className="w-full h-8 text-xs"
           >
-            <EyeOff className="h-3 w-3 mr-1 flex-shrink-0" />
-            <span className="truncate">Alle ausblenden</span>
+            <EyeOff className="h-3 w-3 mr-1.5" />
+            Alle ausblenden
           </Button>
           <Button
             variant="outline"
@@ -104,58 +141,37 @@ export function EmployeeFilterSidebar({
             onClick={() => employees.forEach(e => {
               if (hiddenEmployeeIds.has(e.id)) onToggleEmployee(e.id);
             })}
-            className="flex-1 h-8 text-xs whitespace-nowrap"
+            className="w-full h-8 text-xs"
           >
-            <Eye className="h-3 w-3 mr-1 flex-shrink-0" />
-            <span className="truncate">Alle anzeigen</span>
+            <Eye className="h-3 w-3 mr-1.5" />
+            Alle anzeigen
           </Button>
         </div>
 
-        {/* Employee list */}
-        <ScrollArea className="flex-1 -mx-4 px-4">
-          <div className="space-y-2 pr-4">
-            {filteredEmployees.map((employee) => {
-              const isVisible = !hiddenEmployeeIds.has(employee.id);
-              const workload = employee.workload || 0;
-
-              return (
-                <div
-                  key={employee.id}
-                  className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all hover:bg-muted/50",
-                    isVisible ? "bg-card" : "bg-muted/20 opacity-50"
-                  )}
-                  onClick={() => onToggleEmployee(employee.id)}
-                >
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
-                    style={{ backgroundColor: employee.farbe_kalender }}
-                  >
-                    {employee.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{employee.name}</div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-muted-foreground">
-                        Max: {employee.max_termine_pro_tag}/Tag
-                      </span>
-                      {workload >= 90 && (
-                        <AlertCircle className="h-3 w-3 text-destructive" />
-                      )}
-                    </div>
-                  </div>
-
-                  {isVisible ? (
-                    <Eye className="h-4 w-4 text-primary" />
-                  ) : (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
+        {/* Employee list with drag & drop */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <ScrollArea className="flex-1 -mx-4 px-4">
+            <SortableContext
+              items={filteredEmployees.map(e => e.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2 pr-4">
+                {filteredEmployees.map((employee) => (
+                  <SortableEmployeeCard
+                    key={employee.id}
+                    employee={employee}
+                    isVisible={!hiddenEmployeeIds.has(employee.id)}
+                    onToggle={() => onToggleEmployee(employee.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </ScrollArea>
+        </DndContext>
       </CardContent>
     </Card>
   );
