@@ -471,54 +471,23 @@ const ScheduleBuilderModern = () => {
     // Handle drop into "Unassigned" bar (ids like "unassigned-YYYY-MM-DD")
     if (overId.startsWith('unassigned-')) {
       try {
-        const appointment = appointments.find(app => app.id === appointmentId);
-        if (!appointment) return;
-
-        // Extract target date from unassigned drop zone ID
-        const dateStr = overId.replace('unassigned-', '');
-        const targetDate = new Date(dateStr);
-
-        const originalStart = new Date(appointment.start_at);
-        const originalEnd = new Date(appointment.end_at);
-        
-        // Create new dates with target date but original times
-        const newStart = new Date(targetDate);
-        newStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
-        
-        const newEnd = new Date(targetDate);
-        newEnd.setHours(originalEnd.getHours(), originalEnd.getMinutes(), 0, 0);
-
-        let updateData: any = { 
-          mitarbeiter_id: null, 
-          status: 'unassigned',
-          start_at: newStart.toISOString(),
-          end_at: newEnd.toISOString()
-        };
-
-        // If it's a recurring appointment, mark as exception when moving
-        if (appointment.vorlage_id && !appointment.ist_ausnahme) {
-          updateData.ist_ausnahme = true;
-          updateData.ausnahme_grund = 'Verschoben in Unzugeordnete Termine';
-        }
-
         const { error } = await supabase
           .from('termine')
-          .update(updateData)
+          .update({ mitarbeiter_id: null, status: 'unassigned' })
           .eq('id', appointmentId);
 
         if (error) throw error;
 
         toast({
           title: 'Erfolg',
-          description: `Termin wurde auf ${format(targetDate, 'dd.MM.yyyy')} verschoben (nicht zugewiesen).`
+          description: 'Termin wurde nicht zugewiesen.'
         });
 
         await loadData();
       } catch (error) {
-        console.error('Error moving to unassigned:', error);
         toast({
           title: 'Fehler',
-          description: 'Fehler beim Verschieben des Termins.',
+          description: 'Fehler beim Nicht-Zuweisen des Termins.',
           variant: 'destructive'
         });
       }
@@ -614,48 +583,6 @@ const ScheduleBuilderModern = () => {
     } else {
       setSlotDialogData({ employeeId, date });
       setShowSlotDialog(true);
-    }
-  };
-
-  const handleUnassignedSlotClick = async (date: Date) => {
-    if (!cutAppointment) return;
-
-    try {
-      const originalStart = new Date(cutAppointment.start_at);
-      const originalEnd = new Date(cutAppointment.end_at);
-      
-      // Create new dates with target date but original times
-      const newStart = new Date(date);
-      newStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
-      
-      const newEnd = new Date(date);
-      newEnd.setHours(originalEnd.getHours(), originalEnd.getMinutes(), 0, 0);
-
-      const { error } = await supabase
-        .from('termine')
-        .update({
-          mitarbeiter_id: null,
-          start_at: newStart.toISOString(),
-          end_at: newEnd.toISOString(),
-          status: 'unassigned'
-        })
-        .eq('id', cutAppointment.id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Eingefügt',
-        description: `${cutAppointment.customer?.name} → Unzugeordnet am ${format(date, 'dd.MM.yyyy')}`
-      });
-
-      setCutAppointment(null);
-      await loadData();
-    } catch (error) {
-      toast({
-        title: 'Fehler',
-        description: 'Fehler beim Einfügen des Termins.',
-        variant: 'destructive'
-      });
     }
   };
 
@@ -1024,7 +951,6 @@ const ScheduleBuilderModern = () => {
                   activeId={activeId}
                   onEditAppointment={setEditingAppointment}
                   onCut={handleCutAppointment}
-                  onSlotClick={handleUnassignedSlotClick}
                 />
                 
                 {/* Calendar with scroll */}
