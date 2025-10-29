@@ -6,6 +6,7 @@ import MasterData from './controlboard/MasterData';
 import NewEntries from './controlboard/NewEntries';
 import BenutzerverwaltungNeu from './controlboard/BenutzerverwaltungNeu';
 import Billing from './controlboard/Billing';
+import Dokumentenverwaltung from './controlboard/Dokumentenverwaltung';
 import MitarbeiterStart from './MitarbeiterStart';
 import PendingApproval from './PendingApproval';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -48,6 +49,7 @@ export default function Dashboard() {
         <Route path="/controlboard/master-data" element={<MasterData />} />
         <Route path="/controlboard/new-entries" element={<NewEntries />} />
         <Route path="/controlboard/admin" element={<BenutzerverwaltungNeu />} />
+        <Route path="/controlboard/dokumentenverwaltung" element={<Dokumentenverwaltung />} />
         <Route path="/controlboard/billing" element={<Billing />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

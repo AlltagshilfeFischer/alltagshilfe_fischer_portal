@@ -8,6 +8,7 @@ import {
   Settings,
   UserCheck,
   UserCog,
+  FolderOpen,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -31,6 +32,7 @@ const controlboardItems = [
   { title: 'Stammdaten verwalten', url: '/dashboard/controlboard/master-data', icon: FileText },
   { title: 'Neukunden', url: '/dashboard/controlboard/new-entries', icon: Users },
   { title: 'Mitarbeiterverwaltung', url: '/dashboard/controlboard/admin', icon: UserCog },
+  { title: 'Dokumentenverwaltung', url: '/dashboard/controlboard/dokumentenverwaltung', icon: FolderOpen },
   { title: 'Leistungen & Abrechnungen', url: '/dashboard/controlboard/billing', icon: FileText },
 ];
 

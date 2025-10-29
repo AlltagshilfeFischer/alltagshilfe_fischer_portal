@@ -83,6 +83,63 @@ export type Database = {
         }
         Relationships: []
       }
+      dokumente: {
+        Row: {
+          beschreibung: string | null
+          created_at: string
+          dateiname: string
+          dateipfad: string
+          groesse_bytes: number
+          hochgeladen_von: string
+          id: string
+          kunden_id: string
+          mime_type: string
+          titel: string
+          updated_at: string
+        }
+        Insert: {
+          beschreibung?: string | null
+          created_at?: string
+          dateiname: string
+          dateipfad: string
+          groesse_bytes: number
+          hochgeladen_von: string
+          id?: string
+          kunden_id: string
+          mime_type: string
+          titel: string
+          updated_at?: string
+        }
+        Update: {
+          beschreibung?: string | null
+          created_at?: string
+          dateiname?: string
+          dateipfad?: string
+          groesse_bytes?: number
+          hochgeladen_von?: string
+          id?: string
+          kunden_id?: string
+          mime_type?: string
+          titel?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dokumente_hochgeladen_von_fkey"
+            columns: ["hochgeladen_von"]
+            isOneToOne: false
+            referencedRelation: "benutzer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dokumente_kunden_id_fkey"
+            columns: ["kunden_id"]
+            isOneToOne: false
+            referencedRelation: "kunden"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kunden: {
         Row: {
           adresse: string | null
