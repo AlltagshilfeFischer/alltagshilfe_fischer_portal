@@ -4,6 +4,16 @@ import { de } from 'date-fns/locale';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, X, AlertCircle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
@@ -106,6 +116,11 @@ const ScheduleBuilderModern = () => {
     targetDate: undefined
   });
   const [cutAppointment, setCutAppointment] = useState<Appointment | null>(null);
+  const [seriesMoveDialog, setSeriesMoveDialog] = useState<{
+    appointment: Appointment;
+    employeeId: string;
+    targetDate: Date;
+  } | null>(null);
   
   const { toast } = useToast();
   const { setOpen } = useSidebar();
@@ -375,7 +390,7 @@ const ScheduleBuilderModern = () => {
     );
   };
 
-  const assignAppointment = async (appointmentId: string, employeeId: string, targetDate?: Date) => {
+  const assignAppointment = async (appointmentId: string, employeeId: string, targetDate?: Date, makeException: boolean = false) => {
     try {
       const appointment = appointments.find(app => app.id === appointmentId);
       if (!appointment) return;
@@ -384,6 +399,12 @@ const ScheduleBuilderModern = () => {
         mitarbeiter_id: employeeId, 
         status: 'scheduled' 
       };
+
+      // Mark as exception if requested (for recurring appointments)
+      if (makeException) {
+        updateData.ist_ausnahme = true;
+        updateData.ausnahme_grund = 'Verschoben per Drag & Drop';
+      }
 
       // If target date is provided, adjust start_at and end_at to the new date while keeping the time
       if (targetDate) {
@@ -509,6 +530,21 @@ const ScheduleBuilderModern = () => {
       return;
     }
 
+    // Get the appointment to check if it's a recurring appointment
+    const appointment = appointments.find(app => app.id === appointmentId);
+    if (!appointment) return;
+
+    // Check if this is a recurring appointment that hasn't been marked as exception
+    if (appointment.vorlage_id && !appointment.ist_ausnahme) {
+      // Show dialog to ask if user wants to move just this appointment or the series
+      setSeriesMoveDialog({ 
+        appointment, 
+        employeeId, 
+        targetDate: targetDate || new Date(appointment.start_at) 
+      });
+      return;
+    }
+
     const conflicts = checkForConflicts(appointmentId, employeeId);
 
     if (conflicts.length > 0) {
@@ -525,7 +561,12 @@ const ScheduleBuilderModern = () => {
   };
 
   const handleConflictConfirm = async () => {
-    await assignAppointment(conflictWarning.appointmentId, conflictWarning.employeeId, conflictWarning.targetDate);
+    await assignAppointment(
+      conflictWarning.appointmentId, 
+      conflictWarning.employeeId, 
+      conflictWarning.targetDate,
+      false // Not making an exception here, as it's already determined
+    );
     setConflictWarning({
       show: false,
       appointmentId: '',
@@ -1030,6 +1071,66 @@ const ScheduleBuilderModern = () => {
             end: appointments.find(app => app.id === conflictWarning.appointmentId)?.end_at || new Date().toISOString()
           }}
         />
+
+        {/* Series Move Dialog */}
+        <AlertDialog open={!!seriesMoveDialog} onOpenChange={(open) => !open && setSeriesMoveDialog(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Regeltermin verschieben</AlertDialogTitle>
+              <AlertDialogDescription>
+                Dieser Termin ist Teil einer wiederkehrenden Serie. Möchten Sie nur diesen einzelnen Termin verschieben oder die gesamte Serie?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  if (seriesMoveDialog) {
+                    // Move only this appointment as an exception
+                    const conflicts = checkForConflicts(
+                      seriesMoveDialog.appointment.id,
+                      seriesMoveDialog.employeeId
+                    );
+                    
+                    if (conflicts.length > 0) {
+                      setConflictWarning({
+                        show: true,
+                        appointmentId: seriesMoveDialog.appointment.id,
+                        employeeId: seriesMoveDialog.employeeId,
+                        conflicts,
+                        targetDate: seriesMoveDialog.targetDate
+                      });
+                      setSeriesMoveDialog(null);
+                    } else {
+                      await assignAppointment(
+                        seriesMoveDialog.appointment.id,
+                        seriesMoveDialog.employeeId,
+                        seriesMoveDialog.targetDate,
+                        true // makeException = true
+                      );
+                      setSeriesMoveDialog(null);
+                    }
+                  }
+                }}
+              >
+                Nur diesen Termin
+              </AlertDialogAction>
+              <AlertDialogAction
+                onClick={() => {
+                  if (seriesMoveDialog) {
+                    toast({
+                      title: 'Hinweis',
+                      description: 'Das Verschieben ganzer Serien wird in einer zukünftigen Version implementiert.'
+                    });
+                    setSeriesMoveDialog(null);
+                  }
+                }}
+              >
+                Alle zukünftigen Termine
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <CreateAppointmentDialog
           open={showCreateAppointment}
