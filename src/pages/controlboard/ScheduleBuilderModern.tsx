@@ -148,30 +148,47 @@ const ScheduleBuilderModern = () => {
         };
       }) || [];
 
-      const transformedAppointments = appointmentsData?.map(app => ({
-        ...app,
-        customer: app.customer ? {
-          id: app.customer.id,
-          name: (app.customer as any).name || '',
-          email: app.customer.email || null,
-          telefonnr: (app.customer as any).telefonnr || null,
-          geburtsdatum: (app.customer as any).geburtsdatum || null,
-          pflegegrad: (app.customer as any).pflegegrad || null,
-          adresse: (app.customer as any).adresse || null,
-          stadtteil: (app.customer as any).stadtteil || null,
-          notfall_name: (app.customer as any).notfall_name || null,
-          notfall_telefon: (app.customer as any).notfall_telefon || null,
-          aktiv: (app.customer as any).aktiv || false,
-          status: (app.customer as any).status || null,
-          pflegekasse: (app.customer as any).pflegekasse || null,
-          versichertennummer: (app.customer as any).versichertennummer || null,
-          stunden_kontingent_monat: (app.customer as any).stunden_kontingent_monat || null,
-          tage: (app.customer as any).tage || null,
-          mitarbeiter: (app.customer as any).mitarbeiter || null,
-          angehoerige_ansprechpartner: (app.customer as any).angehoerige_ansprechpartner || null,
-          farbe_kalender: (app.customer as any).farbe_kalender || '#10B981'
-        } as Customer : undefined
-      })) || [];
+      const transformedAppointments = appointmentsData?.map(app => {
+        const empData = app.employee as any;
+        return {
+          id: app.id,
+          titel: app.titel,
+          kunden_id: app.kunden_id,
+          mitarbeiter_id: app.mitarbeiter_id,
+          start_at: app.start_at,
+          end_at: app.end_at,
+          customer: app.customer ? {
+            id: app.customer.id,
+            name: (app.customer as any).name || '',
+            email: app.customer.email || null,
+            telefonnr: (app.customer as any).telefonnr || null,
+            geburtsdatum: (app.customer as any).geburtsdatum || null,
+            pflegegrad: (app.customer as any).pflegegrad || null,
+            adresse: (app.customer as any).adresse || null,
+            stadtteil: (app.customer as any).stadtteil || null,
+            notfall_name: (app.customer as any).notfall_name || null,
+            notfall_telefon: (app.customer as any).notfall_telefon || null,
+            aktiv: (app.customer as any).aktiv || false,
+            status: (app.customer as any).status || null,
+            pflegekasse: (app.customer as any).pflegekasse || null,
+            versichertennummer: (app.customer as any).versichertennummer || null,
+            stunden_kontingent_monat: (app.customer as any).stunden_kontingent_monat || null,
+            tage: (app.customer as any).tage || null,
+            mitarbeiter: (app.customer as any).mitarbeiter || null,
+            angehoerige_ansprechpartner: (app.customer as any).angehoerige_ansprechpartner || null,
+            farbe_kalender: (app.customer as any).farbe_kalender || '#10B981'
+          } as Customer : undefined,
+          employee: empData ? {
+            id: empData.id,
+            name: empData.vorname && empData.nachname ? `${empData.vorname} ${empData.nachname}` : `Mitarbeiter ${empData.id.slice(0, 8)}`,
+            telefon: empData.telefon || '',
+            ist_aktiv: empData.ist_aktiv || false,
+            max_termine_pro_tag: empData.max_termine_pro_tag || 8,
+            farbe_kalender: empData.farbe_kalender || '#10B981',
+            workload: Math.floor(Math.random() * 40) + 60
+          } as Employee : undefined
+        } as Appointment;
+      }) || [];
 
       const transformedCustomers = customersData?.map(cust => ({
         id: cust.id,
