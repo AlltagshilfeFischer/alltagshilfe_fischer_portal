@@ -61,7 +61,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className={collapsed ? "w-16" : "w-64"}>
+    <Sidebar>
       <SidebarContent className="border-r">
         {/* Logo */}
         <div className="p-4 border-b">
