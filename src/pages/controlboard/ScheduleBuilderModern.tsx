@@ -102,17 +102,16 @@ const ScheduleBuilderModern = () => {
   const { toast } = useToast();
   const { setOpen } = useSidebar();
 
-  // Auto-collapse sidebar once per visit to this page
   useEffect(() => {
     const KEY = 'autoCollapsed:schedule-builder';
     if (!sessionStorage.getItem(KEY)) {
       sessionStorage.setItem(KEY, '1');
-      setOpen(false);
+      setTimeout(() => setOpen(false), 0);
     }
     return () => {
       sessionStorage.removeItem(KEY);
     };
-  }, [setOpen]);
+  }, []); // intentionally run once per mount
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
