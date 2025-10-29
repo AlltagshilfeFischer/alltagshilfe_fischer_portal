@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Sidebar, SidebarContent, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,17 +27,15 @@ function DashboardContent({ children }: DashboardLayoutProps) {
 
   return (
     <SidebarProvider>
-      <SidebarContent>
-        <div className="min-h-screen flex w-full bg-background">
-          <AppSidebar />
-          <div className="flex-1 flex flex-col">
-            <DashboardHeader />
-            <main className="flex-1 p-6">
-              {children}
-            </main>
-          </div>
-        </div>
-      </SidebarContent>
+      <div className="min-h-screen flex w-full bg-background">
+        <AppSidebar />
+        <SidebarInset>
+          <DashboardHeader />
+          <main className="flex-1 p-6">
+            {children}
+          </main>
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }
