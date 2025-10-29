@@ -79,6 +79,7 @@ const ScheduleBuilderModern = () => {
   const [employeeOrder, setEmployeeOrder] = useState<string[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerTimeWindows, setCustomerTimeWindows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hiddenEmployeeIds, setHiddenEmployeeIds] = useState<Set<string>>(new Set());
   const [searchEmployee, setSearchEmployee] = useState('');
@@ -150,6 +151,17 @@ const ScheduleBuilderModern = () => {
         .order('start_at');
       
       if (appointmentsError) throw appointmentsError;
+
+      // Load customer time windows
+      const { data: timeWindowsData, error: timeWindowsError } = await supabase
+        .from('kunden_zeitfenster')
+        .select('*');
+      
+      if (timeWindowsError) {
+        console.error('Error loading time windows:', timeWindowsError);
+      } else {
+        setCustomerTimeWindows(timeWindowsData || []);
+      }
 
       const transformedEmployees = employeesData?.map(emp => {
         const benutzer = (emp as any).benutzer;
@@ -554,6 +566,32 @@ const ScheduleBuilderModern = () => {
     setShowSlotDialog(false);
   };
 
+  const handleDeleteAppointment = async (appointmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('termine')
+        .delete()
+        .eq('id', appointmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Erfolg',
+        description: 'Termin wurde gelöscht.'
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Löschen des Termins.',
+        variant: 'destructive'
+      });
+      throw error; // Re-throw to let dialog know deletion failed
+    }
+  };
+
   const draggedAppointment = appointments.find(app => app.id === activeId);
 
   if (loading) {
@@ -670,6 +708,7 @@ const ScheduleBuilderModern = () => {
           appointment={editingAppointment}
           employees={employees}
           customers={customers}
+          customerTimeWindows={editingAppointment ? customerTimeWindows.filter(tw => tw.kunden_id === editingAppointment.kunden_id) : []}
           onUpdate={async (appointment) => {
             try {
               const { error } = await supabase
@@ -701,6 +740,7 @@ const ScheduleBuilderModern = () => {
               });
             }
           }}
+          onDelete={handleDeleteAppointment}
         />
 
         <ConflictWarningDialog

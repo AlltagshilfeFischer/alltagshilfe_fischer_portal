@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,9 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { format } from 'date-fns';
+import { format, getDay } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Clock, User, Phone, Mail, MapPin, Edit, Save, X, AlertTriangle } from 'lucide-react';
+import { Clock, User, Phone, Mail, MapPin, Edit, Save, X, AlertTriangle, Trash2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -34,6 +35,13 @@ interface Customer {
   telefonnr: string | null;
 }
 
+interface CustomerTimeWindow {
+  wochentag: number;
+  von: string;
+  bis: string;
+  prioritaet: number;
+}
+
 interface Appointment {
   id: string;
   titel: string;
@@ -53,7 +61,9 @@ interface AppointmentDetailDialogProps {
   employees: Employee[];
   customers: Customer[];
   onUpdate: (appointment: Appointment) => Promise<void>;
+  onDelete: (appointmentId: string) => Promise<void>;
   isConflicting?: boolean;
+  customerTimeWindows?: CustomerTimeWindow[];
 }
 
 export function AppointmentDetailDialog({ 
@@ -63,11 +73,14 @@ export function AppointmentDetailDialog({
   employees, 
   customers, 
   onUpdate,
-  isConflicting = false
+  onDelete,
+  isConflicting = false,
+  customerTimeWindows = []
 }: AppointmentDetailDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedAppointment, setEditedAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -77,6 +90,31 @@ export function AppointmentDetailDialog({
   }, [appointment]);
 
   if (!appointment || !editedAppointment) return null;
+
+  // Check if appointment is outside customer time windows
+  const isOutsideTimeWindow = () => {
+    if (!customerTimeWindows || customerTimeWindows.length === 0) return false;
+    
+    const appointmentStart = new Date(editedAppointment.start_at);
+    const appointmentEnd = new Date(editedAppointment.end_at);
+    const dayOfWeek = getDay(appointmentStart); // 0 = Sunday, 1 = Monday, etc.
+    const startTime = format(appointmentStart, 'HH:mm');
+    const endTime = format(appointmentEnd, 'HH:mm');
+
+    // Check if there's a matching time window for this day
+    const matchingWindows = customerTimeWindows.filter(tw => tw.wochentag === dayOfWeek);
+    
+    if (matchingWindows.length === 0) return true; // No time window defined for this day
+
+    // Check if appointment fits in any of the windows
+    const fitsInWindow = matchingWindows.some(tw => {
+      return startTime >= tw.von && endTime <= tw.bis;
+    });
+
+    return !fitsInWindow;
+  };
+
+  const timeWindowWarning = isOutsideTimeWindow();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -123,6 +161,19 @@ export function AppointmentDetailDialog({
   const handleCancel = () => {
     setEditedAppointment({ ...appointment });
     setIsEditing(false);
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      await onDelete(appointment.id);
+      setShowDeleteDialog(false);
+      onClose();
+    } catch (error: any) {
+      // Error handling is done in onDelete callback
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -363,6 +414,21 @@ export function AppointmentDetailDialog({
             </CardContent>
           </Card>
 
+          {/* Time Window Warning */}
+          {timeWindowWarning && (
+            <Card className="border-orange-200 bg-orange-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-orange-800">
+                  <AlertCircle className="h-4 w-4" />
+                  <h3 className="font-medium">Außerhalb Kundenzeitfenster</h3>
+                </div>
+                <p className="text-sm text-orange-700 mt-2">
+                  Dieser Termin liegt außerhalb der bevorzugten Zeitfenster des Kunden. Der Kunde hat möglicherweise zu dieser Zeit keine Verfügbarkeit angegeben.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Conflict Warning */}
           {isConflicting && (
             <Card className="border-red-200 bg-red-50">
@@ -380,6 +446,16 @@ export function AppointmentDetailDialog({
         </div>
 
         <DialogFooter className="gap-2">
+          {!isEditing && (
+            <Button 
+              variant="destructive" 
+              onClick={() => setShowDeleteDialog(true)}
+              className="mr-auto"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Löschen
+            </Button>
+          )}
           <Button variant="outline" onClick={onClose}>
             Schließen
           </Button>
@@ -396,6 +472,30 @@ export function AppointmentDetailDialog({
           )}
         </DialogFooter>
       </DialogContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Termin wirklich löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Aktion kann nicht rückgängig gemacht werden. Der Termin "{appointment.titel}" 
+              am {format(new Date(appointment.start_at), 'dd.MM.yyyy', { locale: de })} 
+              wird dauerhaft gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              disabled={loading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {loading ? 'Wird gelöscht...' : 'Termin löschen'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
