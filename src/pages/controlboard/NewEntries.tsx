@@ -241,22 +241,40 @@ export default function NewEntries() {
             {/* Basis-Informationen */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Basis-Informationen</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="kategorie">Kategorie *</Label>
-                  <Select
-                    value={newCustomer.kategorie}
-                    onValueChange={(value) => setNewCustomer({ ...newCustomer, kategorie: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Auswählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Interessent">Interessent</SelectItem>
-                      <SelectItem value="Kunde">Kunde</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              
+              {/* Kategorie - Prominent */}
+              <div className="p-4 border-2 border-primary/30 rounded-lg bg-primary/5 space-y-3">
+                <Label htmlFor="kategorie" className="text-lg font-semibold text-primary flex items-center gap-2">
+                  Kategorie *
+                  <span className="text-sm font-normal text-muted-foreground">
+                    (Ist dies ein Interessent oder bereits ein Kunde?)
+                  </span>
+                </Label>
+                <Select
+                  value={newCustomer.kategorie}
+                  onValueChange={(value) => setNewCustomer({ ...newCustomer, kategorie: value })}
+                >
+                  <SelectTrigger className="h-12 text-base font-medium">
+                    <SelectValue placeholder="Kategorie auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Interessent" className="text-base py-3">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">Interessent</span>
+                        <span className="text-sm text-muted-foreground">Für potenzielle neue Kunden</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="Kunde" className="text-base py-3">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">Kunde</span>
+                        <span className="text-sm text-muted-foreground">Für bestehende Kunden</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Name (Vor- und Nachname) *</Label>
                   <Input
