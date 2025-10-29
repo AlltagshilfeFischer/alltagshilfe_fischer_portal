@@ -20,7 +20,10 @@ interface Employee {
   nachname?: string;
   name: string;
   telefon: string;
+  ist_aktiv: boolean;
+  max_termine_pro_tag: number;
   farbe_kalender: string;
+  workload: number;
   benutzer?: {
     email: string;
     vorname: string;
@@ -33,6 +36,21 @@ interface Customer {
   name: string;
   email: string | null;
   telefonnr: string | null;
+  geburtsdatum: string | null;
+  pflegegrad: number | null;
+  adresse: string | null;
+  stadtteil: string | null;
+  notfall_name: string | null;
+  notfall_telefon: string | null;
+  aktiv: boolean;
+  status: string | null;
+  pflegekasse: string | null;
+  versichertennummer: string | null;
+  stunden_kontingent_monat: number | null;
+  tage: string | null;
+  mitarbeiter: string | null;
+  angehoerige_ansprechpartner: string | null;
+  farbe_kalender?: string;
 }
 
 interface CustomerTimeWindow {
@@ -52,6 +70,9 @@ interface Appointment {
   status: 'unassigned' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   customer?: Customer;
   employee?: Employee;
+  vorlage_id?: string | null;
+  ist_ausnahme?: boolean | null;
+  ausnahme_grund?: string | null;
 }
 
 interface AppointmentDetailDialogProps {
@@ -62,6 +83,7 @@ interface AppointmentDetailDialogProps {
   customers: Customer[];
   onUpdate: (appointment: Appointment) => Promise<void>;
   onDelete: (appointmentId: string) => Promise<void>;
+  onCut?: (appointment: Appointment) => void;
   isConflicting?: boolean;
   customerTimeWindows?: CustomerTimeWindow[];
 }
@@ -74,6 +96,7 @@ export function AppointmentDetailDialog({
   customers, 
   onUpdate,
   onDelete,
+  onCut,
   isConflicting = false,
   customerTimeWindows = []
 }: AppointmentDetailDialogProps) {
@@ -81,6 +104,8 @@ export function AppointmentDetailDialog({
   const [editedAppointment, setEditedAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSeriesDialog, setShowSeriesDialog] = useState(false);
+  const [seriesAction, setSeriesAction] = useState<'single' | 'all'>('single');
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -147,10 +172,32 @@ export function AppointmentDetailDialog({
   const handleSave = async () => {
     if (!editedAppointment) return;
     
+    // Check if this is part of a recurring series
+    if (editedAppointment.vorlage_id && !editedAppointment.ist_ausnahme) {
+      setShowSeriesDialog(true);
+      return;
+    }
+    
+    await performSave();
+  };
+
+  const performSave = async () => {
+    if (!editedAppointment) return;
+    
     setLoading(true);
     try {
-      await onUpdate(editedAppointment);
+      // If user chose to update only this appointment, mark as exception
+      if (seriesAction === 'single' && editedAppointment.vorlage_id) {
+        await onUpdate({
+          ...editedAppointment,
+          ist_ausnahme: true,
+          ausnahme_grund: 'Manuelle Änderung durch Benutzer'
+        });
+      } else {
+        await onUpdate(editedAppointment);
+      }
       setIsEditing(false);
+      setShowSeriesDialog(false);
     } catch (error: any) {
       // Error handling is done in onUpdate callback
     } finally {
@@ -447,14 +494,30 @@ export function AppointmentDetailDialog({
 
         <DialogFooter className="gap-2">
           {!isEditing && (
-            <Button 
-              variant="destructive" 
-              onClick={() => setShowDeleteDialog(true)}
-              className="mr-auto"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Löschen
-            </Button>
+            <>
+              <Button 
+                variant="destructive" 
+                onClick={() => setShowDeleteDialog(true)}
+                className="mr-auto"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Löschen
+              </Button>
+              {onCut && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    onCut(appointment);
+                    onClose();
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+                  </svg>
+                  Ausschneiden
+                </Button>
+              )}
+            </>
           )}
           <Button variant="outline" onClick={onClose}>
             Schließen
@@ -492,6 +555,54 @@ export function AppointmentDetailDialog({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {loading ? 'Wird gelöscht...' : 'Termin löschen'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Series Edit Dialog */}
+      <AlertDialog open={showSeriesDialog} onOpenChange={setShowSeriesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Serientermin bearbeiten</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dieser Termin ist Teil einer Terminserie. Möchten Sie nur diesen einzelnen Termin oder die gesamte Serie ändern?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-4">
+            <button
+              onClick={() => setSeriesAction('single')}
+              className={cn(
+                "w-full p-4 text-left rounded-lg border-2 transition-colors",
+                seriesAction === 'single' 
+                  ? "border-primary bg-primary/5" 
+                  : "border-border hover:border-primary/50"
+              )}
+            >
+              <div className="font-medium">Nur diesen Termin</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Die Serie wird normal fortgesetzt. Dieser Termin wird als Ausnahme markiert.
+              </div>
+            </button>
+            <button
+              onClick={() => setSeriesAction('all')}
+              className={cn(
+                "w-full p-4 text-left rounded-lg border-2 transition-colors",
+                seriesAction === 'all' 
+                  ? "border-primary bg-primary/5" 
+                  : "border-border hover:border-primary/50"
+              )}
+            >
+              <div className="font-medium">Alle zukünftigen Termine</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Ändert die Vorlage und betrifft alle zukünftigen Termine dieser Serie.
+              </div>
+            </button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={performSave} disabled={loading}>
+              {loading ? 'Wird gespeichert...' : 'Änderungen übernehmen'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

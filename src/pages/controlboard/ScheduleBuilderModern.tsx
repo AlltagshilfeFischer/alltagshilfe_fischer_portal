@@ -3,7 +3,7 @@ import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks } from 'dat
 import { de } from 'date-fns/locale';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, X, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
@@ -71,6 +71,9 @@ interface Appointment {
   end_at: string;
   customer?: Customer;
   employee?: Employee;
+  vorlage_id?: string | null;
+  ist_ausnahme?: boolean | null;
+  ausnahme_grund?: string | null;
 }
 
 const ScheduleBuilderModern = () => {
@@ -102,6 +105,7 @@ const ScheduleBuilderModern = () => {
     conflicts: [],
     targetDate: undefined
   });
+  const [cutAppointment, setCutAppointment] = useState<Appointment | null>(null);
   
   const { toast } = useToast();
   const { setOpen } = useSidebar();
@@ -532,8 +536,13 @@ const ScheduleBuilderModern = () => {
   };
 
   const handleSlotClick = (employeeId: string, date: Date) => {
-    setSlotDialogData({ employeeId, date });
-    setShowSlotDialog(true);
+    // If we have a cut appointment, paste it
+    if (cutAppointment) {
+      handlePasteAppointment(employeeId, date);
+    } else {
+      setSlotDialogData({ employeeId, date });
+      setShowSlotDialog(true);
+    }
   };
 
   const handleCreateAppointment = async (data: any) => {
@@ -749,6 +758,66 @@ const ScheduleBuilderModern = () => {
 
   const draggedAppointment = appointments.find(app => app.id === activeId);
 
+  // Cut/Paste handlers
+  const handleCutAppointment = (appointment: Appointment) => {
+    setCutAppointment(appointment);
+    toast({
+      title: 'Ausgeschnitten',
+      description: `Termin "${appointment.titel}" kann jetzt eingefügt werden.`
+    });
+  };
+
+  const handlePasteAppointment = async (employeeId: string, targetDate: Date) => {
+    if (!cutAppointment) return;
+
+    try {
+      const originalStart = new Date(cutAppointment.start_at);
+      const originalEnd = new Date(cutAppointment.end_at);
+      
+      // Create new dates with target date but original times
+      const newStart = new Date(targetDate);
+      newStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+      
+      const newEnd = new Date(targetDate);
+      newEnd.setHours(originalEnd.getHours(), originalEnd.getMinutes(), 0, 0);
+
+      const { error } = await supabase
+        .from('termine')
+        .update({
+          mitarbeiter_id: employeeId,
+          start_at: newStart.toISOString(),
+          end_at: newEnd.toISOString(),
+          status: 'scheduled'
+        })
+        .eq('id', cutAppointment.id);
+
+      if (error) throw error;
+
+      const employee = employees.find(emp => emp.id === employeeId);
+      toast({
+        title: 'Eingefügt',
+        description: `${cutAppointment.customer?.name} → ${employee?.name} am ${format(targetDate, 'dd.MM.yyyy')}`
+      });
+
+      setCutAppointment(null);
+      await loadData();
+    } catch (error) {
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Einfügen des Termins.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleCancelCut = () => {
+    setCutAppointment(null);
+    toast({
+      title: 'Abgebrochen',
+      description: 'Ausschneiden wurde abgebrochen.'
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -856,6 +925,38 @@ const ScheduleBuilderModern = () => {
           </div>
         </div>
 
+        {/* Cut/Paste Bar */}
+        {cutAppointment && (
+          <Card className="flex-shrink-0 bg-amber-50 border-amber-200">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-amber-100 p-2 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M scissors" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Ausgeschnitten:</div>
+                    <div className="text-sm text-muted-foreground">
+                      {cutAppointment.titel} - {cutAppointment.customer?.name} 
+                      {' '}am {format(new Date(cutAppointment.start_at), 'dd.MM.yyyy HH:mm', { locale: de })}
+                    </div>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={handleCancelCut}>
+                  <X className="h-4 w-4 mr-1" />
+                  Abbrechen
+                </Button>
+              </div>
+              <div className="text-xs text-amber-700 mt-2 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Klicken Sie auf einen leeren Zeitslot, um den Termin einzufügen
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Dialogs */}
         <AppointmentDetailDialog
           isOpen={!!editingAppointment}
@@ -864,25 +965,38 @@ const ScheduleBuilderModern = () => {
           employees={employees}
           customers={customers}
           customerTimeWindows={editingAppointment ? customerTimeWindows.filter(tw => tw.kunden_id === editingAppointment.kunden_id) : []}
+          onCut={handleCutAppointment}
           onUpdate={async (appointment) => {
             try {
+              const updateData: any = {
+                titel: appointment.titel,
+                status: appointment.status,
+                mitarbeiter_id: appointment.mitarbeiter_id,
+                kunden_id: appointment.kunden_id,
+                start_at: appointment.start_at,
+                end_at: appointment.end_at
+              };
+              
+              // Include series exception fields if present
+              if (appointment.ist_ausnahme !== undefined) {
+                updateData.ist_ausnahme = appointment.ist_ausnahme;
+              }
+              if (appointment.ausnahme_grund) {
+                updateData.ausnahme_grund = appointment.ausnahme_grund;
+              }
+              
               const { error } = await supabase
                 .from('termine')
-                .update({
-                  titel: appointment.titel,
-                  status: appointment.status,
-                  mitarbeiter_id: appointment.mitarbeiter_id,
-                  kunden_id: appointment.kunden_id,
-                  start_at: appointment.start_at,
-                  end_at: appointment.end_at
-                })
+                .update(updateData)
                 .eq('id', appointment.id);
 
               if (error) throw error;
 
               toast({
                 title: 'Erfolg',
-                description: 'Termin wurde aktualisiert.'
+                description: appointment.ist_ausnahme 
+                  ? 'Einzeltermin wurde als Ausnahme gespeichert.' 
+                  : 'Termin wurde aktualisiert.'
               });
 
               await loadData();
