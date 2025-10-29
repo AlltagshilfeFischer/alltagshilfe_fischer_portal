@@ -490,9 +490,18 @@ const ScheduleBuilderModern = () => {
 
   const handleCreateAppointment = async (data: any) => {
     try {
+      if (!data.start_at || !data.end_at) {
+        toast({
+          title: 'Fehlende Zeiten',
+          description: 'Bitte Start- und Endzeit angeben.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('termine')
-        .insert([{
+        .insert([{ 
           titel: data.titel,
           kunden_id: data.kunden_id,
           mitarbeiter_id: data.mitarbeiter_id,
@@ -510,10 +519,10 @@ const ScheduleBuilderModern = () => {
 
       await loadData();
       setShowCreateAppointment(false);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Fehler',
-        description: 'Fehler beim Erstellen des Termins.',
+        description: `Fehler beim Erstellen des Termins: ${error?.message || error}`,
         variant: 'destructive'
       });
     }
@@ -523,7 +532,7 @@ const ScheduleBuilderModern = () => {
     try {
       const { error } = await supabase
         .from('termin_vorlagen')
-        .insert([{
+        .insert([{ 
           titel: data.titel,
           kunden_id: data.kunden_id,
           mitarbeiter_id: data.mitarbeiter_id,
@@ -554,18 +563,29 @@ const ScheduleBuilderModern = () => {
 
       if (genError) throw genError;
 
-      toast({
-        title: 'Erfolg',
-        description: `Regeltermin erstellt. ${genCount ?? 0} Termine erzeugt.`
-      });
+      const created = Number(genCount ?? 0);
+      if (created === 0) {
+        toast({
+          title: 'Hinweis',
+          description: 'Es wurden keine Termine erzeugt. Prüfe Zeitraum, Wochentag und Verfügbarkeiten.',
+        });
+      } else {
+        toast({
+          title: 'Erfolg',
+          description: `Regeltermin erstellt. ${created} Termine erzeugt.`
+        });
+      }
+
+      // Jump calendar to the first generated week so the user sees the result
+      setCurrentWeek(new Date(fromDate));
 
       await loadData();
       setShowCreateRecurring(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating recurring appointment:', error);
       toast({
         title: 'Fehler',
-        description: 'Fehler beim Erstellen des Regeltermins.',
+        description: `Fehler beim Erstellen des Regeltermins: ${error?.message || error}`,
         variant: 'destructive'
       });
     }
