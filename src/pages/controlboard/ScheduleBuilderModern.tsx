@@ -6,14 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useSidebar } from '@/components/ui/sidebar';
 import { ModernWeekCalendar } from '@/components/schedule/ModernWeekCalendar';
 import { WeekNavigationBar } from '@/components/schedule/WeekNavigationBar';
 import { CalendarLegend } from '@/components/schedule/CalendarLegend';
 import { EmployeeFilterSidebar } from '@/components/schedule/EmployeeFilterSidebar';
 import { CalendarStats } from '@/components/schedule/CalendarStats';
 import { UnassignedAppointmentsBar } from '@/components/schedule/UnassignedAppointmentsBar';
-import { AppointmentApprovalBar } from '@/components/schedule/AppointmentApprovalBar';
 import { AppointmentDetailDialog } from '@/components/schedule/AppointmentDetailDialog';
 import { CreateAppointmentDialog } from '@/components/schedule/CreateAppointmentDialog';
 import { CreateRecurringAppointmentDialog } from '@/components/schedule/CreateRecurringAppointmentDialog';
@@ -99,12 +97,6 @@ const ScheduleBuilderModern = () => {
   });
   
   const { toast } = useToast();
-  const { setOpen } = useSidebar();
-
-  // Auto-collapse sidebar when calendar is used
-  useEffect(() => {
-    setOpen(false);
-  }, [setOpen]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -156,47 +148,30 @@ const ScheduleBuilderModern = () => {
         };
       }) || [];
 
-      const transformedAppointments = appointmentsData?.map(app => {
-        const empData = app.employee as any;
-        return {
-          id: app.id,
-          titel: app.titel,
-          kunden_id: app.kunden_id,
-          mitarbeiter_id: app.mitarbeiter_id,
-          start_at: app.start_at,
-          end_at: app.end_at,
-          customer: app.customer ? {
-            id: app.customer.id,
-            name: (app.customer as any).name || '',
-            email: app.customer.email || null,
-            telefonnr: (app.customer as any).telefonnr || null,
-            geburtsdatum: (app.customer as any).geburtsdatum || null,
-            pflegegrad: (app.customer as any).pflegegrad || null,
-            adresse: (app.customer as any).adresse || null,
-            stadtteil: (app.customer as any).stadtteil || null,
-            notfall_name: (app.customer as any).notfall_name || null,
-            notfall_telefon: (app.customer as any).notfall_telefon || null,
-            aktiv: (app.customer as any).aktiv || false,
-            status: (app.customer as any).status || null,
-            pflegekasse: (app.customer as any).pflegekasse || null,
-            versichertennummer: (app.customer as any).versichertennummer || null,
-            stunden_kontingent_monat: (app.customer as any).stunden_kontingent_monat || null,
-            tage: (app.customer as any).tage || null,
-            mitarbeiter: (app.customer as any).mitarbeiter || null,
-            angehoerige_ansprechpartner: (app.customer as any).angehoerige_ansprechpartner || null,
-            farbe_kalender: (app.customer as any).farbe_kalender || '#10B981'
-          } as Customer : undefined,
-          employee: empData ? {
-            id: empData.id,
-            name: empData.vorname && empData.nachname ? `${empData.vorname} ${empData.nachname}` : `Mitarbeiter ${empData.id.slice(0, 8)}`,
-            telefon: empData.telefon || '',
-            ist_aktiv: empData.ist_aktiv || false,
-            max_termine_pro_tag: empData.max_termine_pro_tag || 8,
-            farbe_kalender: empData.farbe_kalender || '#10B981',
-            workload: Math.floor(Math.random() * 40) + 60
-          } as Employee : undefined
-        } as Appointment;
-      }) || [];
+      const transformedAppointments = appointmentsData?.map(app => ({
+        ...app,
+        customer: app.customer ? {
+          id: app.customer.id,
+          name: (app.customer as any).name || '',
+          email: app.customer.email || null,
+          telefonnr: (app.customer as any).telefonnr || null,
+          geburtsdatum: (app.customer as any).geburtsdatum || null,
+          pflegegrad: (app.customer as any).pflegegrad || null,
+          adresse: (app.customer as any).adresse || null,
+          stadtteil: (app.customer as any).stadtteil || null,
+          notfall_name: (app.customer as any).notfall_name || null,
+          notfall_telefon: (app.customer as any).notfall_telefon || null,
+          aktiv: (app.customer as any).aktiv || false,
+          status: (app.customer as any).status || null,
+          pflegekasse: (app.customer as any).pflegekasse || null,
+          versichertennummer: (app.customer as any).versichertennummer || null,
+          stunden_kontingent_monat: (app.customer as any).stunden_kontingent_monat || null,
+          tage: (app.customer as any).tage || null,
+          mitarbeiter: (app.customer as any).mitarbeiter || null,
+          angehoerige_ansprechpartner: (app.customer as any).angehoerige_ansprechpartner || null,
+          farbe_kalender: (app.customer as any).farbe_kalender || '#10B981'
+        } as Customer : undefined
+      })) || [];
 
       const transformedCustomers = customersData?.map(cust => ({
         id: cust.id,
@@ -497,35 +472,32 @@ const ScheduleBuilderModern = () => {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="h-[calc(100vh-4rem)] flex flex-col gap-3 p-4 bg-gradient-to-br from-background to-muted/20 overflow-hidden">
+      <div className="h-full flex flex-col gap-4 p-6 bg-gradient-to-br from-background to-muted/20">
         {/* Header */}
-        <div className="flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Dienstplan & Terminverwaltung</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-3xl font-bold">Dienstplan & Terminverwaltung</h1>
+            <p className="text-muted-foreground">
               Professionelle Wochenansicht mit Drag & Drop
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setShowCreateAppointment(true)} size="sm">
+            <Button onClick={() => setShowCreateAppointment(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Neuer Termin
             </Button>
-            <Button variant="outline" onClick={() => setShowCreateRecurring(true)} size="sm">
+            <Button variant="outline" onClick={() => setShowCreateRecurring(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Serientermin
             </Button>
           </div>
         </div>
 
-        {/* Approval Bar */}
-        <AppointmentApprovalBar />
-
         {/* Stats */}
         <CalendarStats {...stats} />
 
         {/* Navigation */}
-        <div className="flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center justify-between">
           <WeekNavigationBar
             currentWeek={currentWeek}
             onPreviousWeek={() => setCurrentWeek(prev => subWeeks(prev, 1))}
@@ -535,10 +507,10 @@ const ScheduleBuilderModern = () => {
           <CalendarLegend />
         </div>
 
-        {/* Main Content - No Scrolling */}
-        <div className="flex-1 flex gap-3 min-h-0 overflow-hidden">
+        {/* Main Content */}
+        <div className="flex-1 flex gap-4 min-h-0">
           {/* Sidebar */}
-          <div className="w-64 flex-shrink-0">
+          <div className="w-80 flex-shrink-0">
             <EmployeeFilterSidebar
               employees={employees}
               hiddenEmployeeIds={hiddenEmployeeIds}
@@ -559,7 +531,7 @@ const ScheduleBuilderModern = () => {
           </div>
 
           {/* Calendar */}
-          <div className="flex-1 flex flex-col gap-3 min-w-0 overflow-hidden">
+          <div className="flex-1 flex flex-col gap-4 min-w-0">
             {/* Unassigned Bar */}
             <UnassignedAppointmentsBar
               appointments={appointments}
@@ -568,9 +540,9 @@ const ScheduleBuilderModern = () => {
               onEditAppointment={setEditingAppointment}
             />
 
-            {/* Calendar Grid - Fixed Height */}
-            <Card className="flex-1 shadow-lg overflow-auto">
-              <CardContent className="p-0">
+            {/* Calendar Grid */}
+            <Card className="flex-1 shadow-lg overflow-hidden">
+              <CardContent className="p-0 h-full">
                 <ModernWeekCalendar
                   employees={filteredEmployees}
                   appointments={appointments}
