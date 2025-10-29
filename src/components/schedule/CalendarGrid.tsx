@@ -181,7 +181,7 @@ export function CalendarGrid({
               const dayAppointments = getAppointmentsForDate(employee.id, date);
               const dropZoneId = `employee-${employee.id}-${dayIndex}`;
               const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-              const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+              const isWeekend = false; // Wochenenden werden normal behandelt
 
               return (
                  <div 

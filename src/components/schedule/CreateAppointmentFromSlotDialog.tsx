@@ -212,11 +212,10 @@ export function CreateAppointmentFromSlotDialog({
           {/* Single Appointment Tab */}
           <TabsContent value="single" className="space-y-4 mt-4">
             {date && (date.getDay() === 0 || date.getDay() === 6) && (
-              <Alert variant="destructive">
+              <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Achtung:</strong> Sie erstellen einen Termin am Wochenende ({format(date, 'EEEE', { locale: de })}). 
-                  Normalerweise finden keine Termine am Wochenende statt.
+                  <strong>Hinweis:</strong> Sie erstellen einen Termin am Wochenende ({format(date, 'EEEE', { locale: de })}).
                 </AlertDescription>
               </Alert>
             )}
@@ -353,11 +352,10 @@ export function CreateAppointmentFromSlotDialog({
           {/* Recurring Appointment Tab */}
           <TabsContent value="recurring" className="space-y-4 mt-4">
             {(wochentag === 0 || wochentag === 6) && (
-              <Alert variant="destructive">
+              <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Achtung:</strong> Sie erstellen wiederkehrende Termine am Wochenende ({WEEKDAYS.find(d => d.value === wochentag)?.label}). 
-                  Normalerweise finden keine Termine am Wochenende statt.
+                  <strong>Hinweis:</strong> Sie erstellen wiederkehrende Termine am Wochenende ({WEEKDAYS.find(d => d.value === wochentag)?.label}).
                 </AlertDescription>
               </Alert>
             )}
