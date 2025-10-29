@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
 import { MyChangeRequests } from '@/components/mitarbeiter/MyChangeRequests';
+import { EmployeeWeekCalendar } from '@/components/schedule/EmployeeWeekCalendar';
+import { EmployeeChangeRequestDialog } from '@/components/schedule/EmployeeChangeRequestDialog';
 
 interface Appointment {
   id: string;
@@ -14,235 +16,182 @@ interface Appointment {
   start_at: string;
   end_at: string;
   status: string;
+  mitarbeiter_id: string | null;
+  kunden_id: string;
   customer?: {
+    id: string;
     name: string;
+    farbe_kalender?: string;
   };
+}
+
+interface Employee {
+  id: string;
+  vorname: string;
+  nachname: string;
+  farbe_kalender: string;
 }
 
 export default function MitarbeiterDashboard() {
   const { mitarbeiterId } = useUserRole();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [showChangeRequestDialog, setShowChangeRequestDialog] = useState(false);
+
+  const loadData = async () => {
+    if (!mitarbeiterId) return;
+
+    try {
+      // Load employee data
+      const { data: empData, error: empError } = await supabase
+        .from('mitarbeiter')
+        .select('id, vorname, nachname, farbe_kalender')
+        .eq('id', mitarbeiterId)
+        .single();
+
+      if (empError) throw empError;
+      setEmployee(empData);
+
+      // Load appointments
+      const { data, error } = await supabase
+        .from('termine')
+        .select(`
+          id,
+          titel,
+          start_at,
+          end_at,
+          status,
+          mitarbeiter_id,
+          kunden_id,
+          customer:kunden(id, name, farbe_kalender)
+        `)
+        .eq('mitarbeiter_id', mitarbeiterId)
+        .order('start_at', { ascending: true });
+
+      if (error) throw error;
+      
+      setAppointments((data as any) || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadAppointments() {
-      if (!mitarbeiterId) {
-        setAppointments([]);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('termine')
-          .select(`
-            id,
-            titel,
-            start_at,
-            end_at,
-            status,
-            customer:kunden(name)
-          `)
-          .eq('mitarbeiter_id', mitarbeiterId)
-          .gte('start_at', new Date().toISOString())
-          .order('start_at', { ascending: true })
-          .limit(20);
-
-        if (error) throw error;
-        setAppointments(data || []);
-      } catch (error) {
-        console.error('Error loading appointments:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadAppointments();
+    loadData();
   }, [mitarbeiterId]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-500/10 text-green-700 dark:text-green-400';
-      case 'scheduled':
-        return 'bg-blue-500/10 text-blue-700 dark:text-blue-400';
-      case 'in_progress':
-        return 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400';
-      case 'completed':
-        return 'bg-gray-500/10 text-gray-700 dark:text-gray-400';
-      default:
-        return 'bg-gray-500/10 text-gray-700 dark:text-gray-400';
+  const getWeekDates = () => {
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
+    const dates = [];
+    let current = weekStart;
+
+    while (current <= weekEnd) {
+      dates.push(new Date(current));
+      current = addDays(current, 1);
     }
+    return dates;
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'Bestätigt';
-      case 'scheduled':
-        return 'Geplant';
-      case 'in_progress':
-        return 'In Bearbeitung';
-      case 'completed':
-        return 'Abgeschlossen';
-      case 'cancelled':
-        return 'Abgesagt';
-      default:
-        return status;
-    }
-  };
+  const weekDates = useMemo(() => getWeekDates(), [currentWeek]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
-  const today = appointments.filter(
-    (apt) => format(new Date(apt.start_at), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-  );
+  const handleEditAppointment = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setShowChangeRequestDialog(true);
+  };
 
-  const upcoming = appointments.filter(
-    (apt) => format(new Date(apt.start_at), 'yyyy-MM-dd') > format(new Date(), 'yyyy-MM-dd')
-  );
+  const handleSlotClick = (date: Date) => {
+    // Optional: Handle slot click for creating new appointments
+    console.log('Slot clicked:', date);
+  };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Meine Termine</h1>
-        <p className="text-muted-foreground mt-2">
-          Übersicht über Ihre anstehenden Termine
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-foreground">Mein Kalender</h1>
+        <p className="text-muted-foreground mt-1">
+          Ihre Termine im Überblick
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Heute</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{today.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Termine für heute
-            </p>
-          </CardContent>
-        </Card>
+      {/* Week Navigation */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Vorherige Woche
+            </Button>
+            
+            <div className="text-center">
+              <h2 className="text-lg font-semibold">
+                KW {format(weekDates[0], 'w', { locale: de })}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {format(weekDates[0], 'dd.MM.', { locale: de })} - {format(weekDates[6], 'dd.MM.yyyy', { locale: de })}
+              </p>
+            </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Anstehend</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{upcoming.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Kommende Termine
-            </p>
-          </CardContent>
-        </Card>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+            >
+              Nächste Woche
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gesamt</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{appointments.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Alle anstehenden Termine
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Calendar */}
+      <Card>
+        <CardContent className="p-0">
+          {employee && (
+            <EmployeeWeekCalendar
+              appointments={appointments}
+              weekDates={weekDates}
+              onEditAppointment={handleEditAppointment}
+              onSlotClick={handleSlotClick}
+              employeeName={`${employee.vorname} ${employee.nachname}`}
+              employeeColor={employee.farbe_kalender}
+            />
+          )}
+        </CardContent>
+      </Card>
 
-      {today.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Termine heute
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {today.map((appointment) => (
-              <div
-                key={appointment.id}
-                className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex-1">
-                  <h3 className="font-medium">{appointment.titel}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {(appointment.customer as any)?.name}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {format(new Date(appointment.start_at), 'HH:mm', { locale: de })} -{' '}
-                    {format(new Date(appointment.end_at), 'HH:mm', { locale: de })}
-                  </div>
-                </div>
-                <Badge className={getStatusColor(appointment.status)}>
-                  {getStatusLabel(appointment.status)}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {upcoming.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Kommende Termine
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {upcoming.map((appointment) => (
-              <div
-                key={appointment.id}
-                className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex-1">
-                  <h3 className="font-medium">{appointment.titel}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {(appointment.customer as any)?.name}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {format(new Date(appointment.start_at), 'dd.MM.yyyy', { locale: de })}
-                    <Clock className="h-3 w-3 ml-2" />
-                    {format(new Date(appointment.start_at), 'HH:mm', { locale: de })} -{' '}
-                    {format(new Date(appointment.end_at), 'HH:mm', { locale: de })}
-                  </div>
-                </div>
-                <Badge className={getStatusColor(appointment.status)}>
-                  {getStatusLabel(appointment.status)}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {appointments.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">Keine Termine</h3>
-            <p className="text-sm text-muted-foreground text-center">
-              Sie haben derzeit keine anstehenden Termine.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Änderungsanfragen */}
+      {/* Change Requests */}
       <MyChangeRequests />
+
+      {/* Change Request Dialog */}
+      {mitarbeiterId && (
+        <EmployeeChangeRequestDialog
+          isOpen={showChangeRequestDialog}
+          onClose={() => {
+            setShowChangeRequestDialog(false);
+            setSelectedAppointment(null);
+          }}
+          appointment={selectedAppointment}
+          mitarbeiterId={mitarbeiterId}
+        />
+      )}
     </div>
   );
 }
