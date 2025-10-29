@@ -94,11 +94,13 @@ const ScheduleBuilderModern = () => {
     appointmentId: string;
     employeeId: string;
     conflicts: any[];
+    targetDate?: Date;
   }>({
     show: false,
     appointmentId: '',
     employeeId: '',
-    conflicts: []
+    conflicts: [],
+    targetDate: undefined
   });
   
   const { toast } = useToast();
@@ -369,25 +371,55 @@ const ScheduleBuilderModern = () => {
     );
   };
 
-  const assignAppointment = async (appointmentId: string, employeeId: string) => {
+  const assignAppointment = async (appointmentId: string, employeeId: string, targetDate?: Date) => {
     try {
-      setAppointments(prev => prev.map(app =>
-        app.id === appointmentId ? { ...app, mitarbeiter_id: employeeId } : app
-      ));
+      const appointment = appointments.find(app => app.id === appointmentId);
+      if (!appointment) return;
+
+      let updateData: any = { 
+        mitarbeiter_id: employeeId, 
+        status: 'scheduled' 
+      };
+
+      // If target date is provided, adjust start_at and end_at to the new date while keeping the time
+      if (targetDate) {
+        const originalStart = new Date(appointment.start_at);
+        const originalEnd = new Date(appointment.end_at);
+        
+        // Create new dates with target date but original times
+        const newStart = new Date(targetDate);
+        newStart.setHours(originalStart.getHours(), originalStart.getMinutes(), originalStart.getSeconds(), originalStart.getMilliseconds());
+        
+        const newEnd = new Date(targetDate);
+        newEnd.setHours(originalEnd.getHours(), originalEnd.getMinutes(), originalEnd.getSeconds(), originalEnd.getMilliseconds());
+        
+        updateData.start_at = newStart.toISOString();
+        updateData.end_at = newEnd.toISOString();
+        
+        // Update local state immediately
+        setAppointments(prev => prev.map(app =>
+          app.id === appointmentId 
+            ? { ...app, mitarbeiter_id: employeeId, start_at: newStart.toISOString(), end_at: newEnd.toISOString() } 
+            : app
+        ));
+      } else {
+        setAppointments(prev => prev.map(app =>
+          app.id === appointmentId ? { ...app, mitarbeiter_id: employeeId } : app
+        ));
+      }
 
       const { error } = await supabase
         .from('termine')
-        .update({ mitarbeiter_id: employeeId, status: 'scheduled' })
+        .update(updateData)
         .eq('id', appointmentId);
 
       if (error) throw error;
 
-      const appointment = appointments.find(app => app.id === appointmentId);
       const employee = employees.find(emp => emp.id === employeeId);
 
       toast({
         title: 'Erfolg',
-        description: `${appointment?.customer?.name} → ${employee?.name}`
+        description: `${appointment?.customer?.name} → ${employee?.name}${targetDate ? ` am ${format(targetDate, 'dd.MM.yyyy')}` : ''}`
       });
 
       await loadData();
@@ -437,18 +469,31 @@ const ScheduleBuilderModern = () => {
       return;
     }
 
-    // Extract employee ID from drop zone ID format: "<employeeId>-YYYY-MM-DD"
-    const match = overId.match(/^(.*)-(\d{4}-\d{2}-\d{2})$/);
-    if (!match) {
-      toast({
-        title: 'Fehler',
-        description: 'Ungültiger Zielbereich. Bitte auf einen Mitarbeiter ziehen.',
-        variant: 'destructive'
-      });
-      return;
+    // Extract employee ID and date from drop zone ID format: "<employeeId>-YYYY-MM-DD" or "employee-<employeeId>-<dayIndex>"
+    let employeeId: string;
+    let targetDate: Date | undefined;
+    
+    // Try format: "employee-<employeeId>-<dayIndex>" (from CalendarGrid)
+    const gridMatch = overId.match(/^employee-(.+)-(\d+)$/);
+    if (gridMatch) {
+      employeeId = gridMatch[1];
+      const dayIndex = parseInt(gridMatch[2]);
+      const weekDates = getWeekDates();
+      targetDate = weekDates[dayIndex];
+    } else {
+      // Try format: "<employeeId>-YYYY-MM-DD" (from ModernWeekCalendar)
+      const dateMatch = overId.match(/^(.*)-(\d{4}-\d{2}-\d{2})$/);
+      if (!dateMatch) {
+        toast({
+          title: 'Fehler',
+          description: 'Ungültiger Zielbereich. Bitte auf einen Mitarbeiter ziehen.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      employeeId = dateMatch[1];
+      targetDate = new Date(dateMatch[2]);
     }
-
-    const employeeId = match[1];
 
     // Validate employee ID
     if (!employeeId || !employees.find(emp => emp.id === employeeId)) {
@@ -467,20 +512,22 @@ const ScheduleBuilderModern = () => {
         show: true,
         appointmentId,
         employeeId,
-        conflicts
+        conflicts,
+        targetDate
       });
     } else {
-      await assignAppointment(appointmentId, employeeId);
+      await assignAppointment(appointmentId, employeeId, targetDate);
     }
   };
 
   const handleConflictConfirm = async () => {
-    await assignAppointment(conflictWarning.appointmentId, conflictWarning.employeeId);
+    await assignAppointment(conflictWarning.appointmentId, conflictWarning.employeeId, conflictWarning.targetDate);
     setConflictWarning({
       show: false,
       appointmentId: '',
       employeeId: '',
-      conflicts: []
+      conflicts: [],
+      targetDate: undefined
     });
   };
 
@@ -857,7 +904,8 @@ const ScheduleBuilderModern = () => {
             show: false,
             appointmentId: '',
             employeeId: '',
-            conflicts: []
+            conflicts: [],
+            targetDate: undefined
           })}
           onConfirm={handleConflictConfirm}
           employeeName={employees.find(emp => emp.id === conflictWarning.employeeId)?.name || ''}
