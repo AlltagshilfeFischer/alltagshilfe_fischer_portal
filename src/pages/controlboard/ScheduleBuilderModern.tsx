@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useSidebar } from '@/components/ui/sidebar';
 import { ModernWeekCalendar } from '@/components/schedule/ModernWeekCalendar';
@@ -490,24 +491,47 @@ const ScheduleBuilderModern = () => {
 
   const handleCreateAppointment = async (data: any) => {
     try {
-      if (!data.start_at || !data.end_at) {
+      console.log('CreateAppointment payload received:', data);
+
+      const appointmentSchema = z.object({
+        titel: z.string().trim().min(1, 'Titel ist erforderlich'),
+        kunden_id: z.string().uuid('Ungültige Kunden-ID'),
+        mitarbeiter_id: z.string().uuid().nullable().optional(),
+        start_at: z
+          .string()
+          .min(1, 'Startzeit fehlt')
+          .refine((v) => !isNaN(Date.parse(v)), { message: 'Ungültige Startzeit' }),
+        end_at: z
+          .string()
+          .min(1, 'Endzeit fehlt')
+          .refine((v) => !isNaN(Date.parse(v)), { message: 'Ungültige Endzeit' }),
+      }).refine(
+        (vals) => new Date(vals.end_at).getTime() > new Date(vals.start_at).getTime(),
+        { path: ['end_at'], message: 'Endzeit muss nach Startzeit liegen' }
+      );
+
+      const parsed = appointmentSchema.safeParse(data);
+      if (!parsed.success) {
+        const message = parsed.error.issues?.[0]?.message || 'Bitte Eingaben prüfen.';
         toast({
-          title: 'Fehlende Zeiten',
-          description: 'Bitte Start- und Endzeit angeben.',
-          variant: 'destructive'
+          title: 'Ungültige Eingaben',
+          description: message,
+          variant: 'destructive',
         });
         return;
       }
 
+      const payload = parsed.data;
+
       const { error } = await supabase
         .from('termine')
         .insert([{ 
-          titel: data.titel,
-          kunden_id: data.kunden_id,
-          mitarbeiter_id: data.mitarbeiter_id,
-          start_at: data.start_at,
-          end_at: data.end_at,
-          status: data.mitarbeiter_id ? 'scheduled' : 'unassigned'
+          titel: payload.titel,
+          kunden_id: payload.kunden_id,
+          mitarbeiter_id: payload.mitarbeiter_id ?? null,
+          start_at: payload.start_at,
+          end_at: payload.end_at,
+          status: payload.mitarbeiter_id ? 'scheduled' : 'unassigned'
         }]);
 
       if (error) throw error;

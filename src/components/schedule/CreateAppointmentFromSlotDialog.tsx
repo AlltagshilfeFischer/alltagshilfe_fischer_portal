@@ -325,6 +325,7 @@ export function CreateAppointmentFromSlotDialog({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -334,6 +335,7 @@ export function CreateAppointmentFromSlotDialog({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
+                  required
                 />
               </div>
             </div>
@@ -445,6 +447,7 @@ export function CreateAppointmentFromSlotDialog({
                   type="time"
                   value={recurringStartTime}
                   onChange={(e) => setRecurringStartTime(e.target.value)}
+                  required
                 />
               </div>
               <div className="space-y-2">
