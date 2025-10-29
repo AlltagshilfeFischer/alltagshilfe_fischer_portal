@@ -539,9 +539,24 @@ const ScheduleBuilderModern = () => {
 
       if (error) throw error;
 
+      // After creating the template, generate concrete appointments for a reasonable horizon
+      const fromDate = data.gueltig_von as string; // 'yyyy-MM-dd'
+      const toDate = (data.gueltig_bis as string) || (() => {
+        const d = new Date(fromDate);
+        d.setDate(d.getDate() + 60); // generate ~2 months ahead if no end provided
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      })();
+
+      const { data: genCount, error: genError } = await supabase.rpc('generate_termine_from_vorlagen', {
+        p_from: fromDate,
+        p_to: toDate
+      });
+
+      if (genError) throw genError;
+
       toast({
         title: 'Erfolg',
-        description: 'Regeltermin wurde erstellt.'
+        description: `Regeltermin erstellt. ${genCount ?? 0} Termine erzeugt.`
       });
 
       await loadData();
