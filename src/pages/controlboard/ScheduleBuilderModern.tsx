@@ -101,13 +101,9 @@ const ScheduleBuilderModern = () => {
   const { toast } = useToast();
   const { setOpen } = useSidebar();
 
-  // Auto-collapse sidebar only on first visit
+  // Auto-collapse sidebar every time when entering schedule builder
   useEffect(() => {
-    const hasVisitedScheduler = localStorage.getItem('hasVisitedScheduler');
-    if (!hasVisitedScheduler) {
-      setOpen(false);
-      localStorage.setItem('hasVisitedScheduler', 'true');
-    }
+    setOpen(false);
   }, [setOpen]);
 
   const sensors = useSensors(
