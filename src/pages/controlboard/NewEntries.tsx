@@ -207,42 +207,57 @@ export default function NewEntries() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleCreateCustomer} className="space-y-8">
+            {/* Kategorie-Auswahl - Zwei große Felder */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">Was möchten Sie anlegen?</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setNewCustomer({ ...newCustomer, kategorie: 'Interessent' })}
+                  className={`p-6 border-2 rounded-lg transition-all hover:scale-105 ${
+                    newCustomer.kategorie === 'Interessent'
+                      ? 'border-primary bg-primary/10 shadow-lg'
+                      : 'border-muted bg-background hover:border-primary/50'
+                  }`}
+                >
+                  <div className="text-center space-y-2">
+                    <div className={`text-2xl font-bold ${
+                      newCustomer.kategorie === 'Interessent' ? 'text-primary' : 'text-foreground'
+                    }`}>
+                      Interessent
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Für potenzielle neue Kunden
+                    </p>
+                  </div>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setNewCustomer({ ...newCustomer, kategorie: 'Kunde' })}
+                  className={`p-6 border-2 rounded-lg transition-all hover:scale-105 ${
+                    newCustomer.kategorie === 'Kunde'
+                      ? 'border-primary bg-primary/10 shadow-lg'
+                      : 'border-muted bg-background hover:border-primary/50'
+                  }`}
+                >
+                  <div className="text-center space-y-2">
+                    <div className={`text-2xl font-bold ${
+                      newCustomer.kategorie === 'Kunde' ? 'text-primary' : 'text-foreground'
+                    }`}>
+                      Kunde
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Für bestehende Kunden
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             {/* Basis-Informationen */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Basis-Informationen</h3>
-              
-              {/* Kategorie - Prominent */}
-              <div className="p-4 border-2 border-primary/30 rounded-lg bg-primary/5 space-y-3">
-                <Label htmlFor="kategorie" className="text-lg font-semibold text-primary flex items-center gap-2">
-                  Kategorie *
-                  <span className="text-sm font-normal text-muted-foreground">
-                    (Ist dies ein Interessent oder bereits ein Kunde?)
-                  </span>
-                </Label>
-                <Select
-                  value={newCustomer.kategorie}
-                  onValueChange={(value) => setNewCustomer({ ...newCustomer, kategorie: value })}
-                >
-                  <SelectTrigger className="h-12 text-base font-medium">
-                    <SelectValue placeholder="Kategorie auswählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Interessent" className="text-base py-3">
-                      <div className="flex flex-col">
-                        <span className="font-semibold">Interessent</span>
-                        <span className="text-sm text-muted-foreground">Für potenzielle neue Kunden</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="Kunde" className="text-base py-3">
-                      <div className="flex flex-col">
-                        <span className="font-semibold">Kunde</span>
-                        <span className="text-sm text-muted-foreground">Für bestehende Kunden</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Name (Vor- und Nachname) *</Label>
