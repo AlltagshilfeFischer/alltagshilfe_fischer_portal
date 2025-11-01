@@ -391,7 +391,7 @@ export default function MasterData() {
       if (aValue > bValue) return direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [customers, customerSort, searchQuery, customerStatusFilter]);
+  }, [customers, customerSort, searchQuery, customerStatusFilter, customerKategorieFilter]);
 
   const sortedEmployees = useMemo(() => {
     if (!employees) return [];
