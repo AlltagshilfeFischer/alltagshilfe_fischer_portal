@@ -53,7 +53,7 @@ export default function NewEntries() {
   });
   const [zeitfensterText, setZeitfensterText] = useState('');
   const [isGeneratingZeitfenster, setIsGeneratingZeitfenster] = useState(false);
-  const [showManualInput, setShowManualInput] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -80,6 +80,45 @@ export default function NewEntries() {
 
   const removeZeitfenster = (index: number) => {
     setZeitfenster(zeitfenster.filter((_, i) => i !== index));
+    if (editingIndex === index) {
+      setEditingIndex(null);
+      setCurrentZeitfenster({
+        wochentag: 1,
+        von: '09:00',
+        bis: '17:00',
+        prioritaet: 3
+      });
+    }
+  };
+
+  const startEditZeitfenster = (index: number) => {
+    setEditingIndex(index);
+    setCurrentZeitfenster(zeitfenster[index]);
+  };
+
+  const saveEditZeitfenster = () => {
+    if (editingIndex !== null) {
+      const updated = [...zeitfenster];
+      updated[editingIndex] = currentZeitfenster;
+      setZeitfenster(updated);
+      setEditingIndex(null);
+      setCurrentZeitfenster({
+        wochentag: 1,
+        von: '09:00',
+        bis: '17:00',
+        prioritaet: 3
+      });
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingIndex(null);
+    setCurrentZeitfenster({
+      wochentag: 1,
+      von: '09:00',
+      bis: '17:00',
+      prioritaet: 3
+    });
   };
 
   const generateZeitfensterFromText = async () => {
@@ -534,16 +573,19 @@ export default function NewEntries() {
                 </Button>
               </div>
               
-              {/* Existing Zeitfenster */}
+              {/* Liste der Zeitfenster */}
               {zeitfenster.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label>Generierte Zeitfenster</Label>
+                    <Label>Zeitfenster ({zeitfenster.length})</Label>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => setZeitfenster([])}
+                      onClick={() => {
+                        setZeitfenster([]);
+                        setEditingIndex(null);
+                      }}
                     >
                       Alle löschen
                     </Button>
@@ -557,6 +599,14 @@ export default function NewEntries() {
                         type="button"
                         variant="ghost"
                         size="sm"
+                        onClick={() => startEditZeitfenster(index)}
+                      >
+                        Bearbeiten
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => removeZeitfenster(index)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -566,22 +616,10 @@ export default function NewEntries() {
                 </div>
               )}
 
-              {/* Manual Input Toggle */}
-              <div className="text-center">
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  onClick={() => setShowManualInput(!showManualInput)}
-                  className="text-muted-foreground"
-                >
-                  {showManualInput ? 'Manuelle Eingabe ausblenden' : 'Manuelle Eingabe anzeigen'}
-                </Button>
-              </div>
-
-              {/* Add new Zeitfenster manually */}
-              {showManualInput && (
-                <div className="grid grid-cols-5 gap-4 p-4 border rounded-lg bg-muted/20">
+              {/* Zeitfenster hinzufügen/bearbeiten */}
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/20">
+                <Label>{editingIndex !== null ? 'Zeitfenster bearbeiten' : 'Neues Zeitfenster hinzufügen'}</Label>
+                <div className="grid grid-cols-4 gap-4">
                   <div>
                     <Label htmlFor="wochentag">Wochentag</Label>
                     <Select
@@ -648,7 +686,28 @@ export default function NewEntries() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex items-end">
+                </div>
+                <div className="flex gap-2">
+                  {editingIndex !== null ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={saveEditZeitfenster}
+                        className="flex-1"
+                      >
+                        Speichern
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={cancelEdit}
+                        className="flex-1"
+                      >
+                        Abbrechen
+                      </Button>
+                    </>
+                  ) : (
                     <Button
                       type="button"
                       variant="outline"
@@ -658,9 +717,9 @@ export default function NewEntries() {
                       <Plus className="h-4 w-4 mr-2" />
                       Hinzufügen
                     </Button>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Notfall & Angehörige */}
