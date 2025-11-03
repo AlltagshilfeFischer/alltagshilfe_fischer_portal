@@ -110,15 +110,18 @@ export default function NewEntries() {
 
       const data = await response.json();
       
-      // Expected response format: { zeitfenster: Array<Zeitfenster> }
-      if (data.zeitfenster && Array.isArray(data.zeitfenster)) {
-        setZeitfenster(data.zeitfenster);
+      // n8n wraps response in output object: { output: { zeitfenster: Array<Zeitfenster> } }
+      const zeitfensterData = data.output?.zeitfenster || data.zeitfenster;
+      
+      if (zeitfensterData && Array.isArray(zeitfensterData)) {
+        setZeitfenster(zeitfensterData);
         toast({
           title: 'Zeitfenster generiert',
-          description: `${data.zeitfenster.length} Zeitfenster wurden erfolgreich erstellt`,
+          description: `${zeitfensterData.length} Zeitfenster wurden erfolgreich erstellt`,
         });
         setZeitfensterText('');
       } else {
+        console.error('Invalid response format:', data);
         throw new Error('Ungültiges Antwortformat');
       }
     } catch (error) {
