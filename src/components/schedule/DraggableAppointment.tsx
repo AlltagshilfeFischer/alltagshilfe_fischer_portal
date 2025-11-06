@@ -75,7 +75,10 @@ export function DraggableAppointment({
           )}
           {...attributes}
           {...listeners}
-          onClick={onClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
         >
           {/* Compact layout for more appointments */}
           <div className="flex items-center justify-between gap-1">
