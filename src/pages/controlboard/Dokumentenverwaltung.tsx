@@ -127,8 +127,7 @@ export default function Dokumentenverwaltung() {
       .select(`
         *,
         kunden:kunden_id (name),
-        mitarbeiter:mitarbeiter_id (vorname, nachname),
-        benutzer:hochgeladen_von (vorname, nachname)
+        mitarbeiter:mitarbeiter_id (vorname, nachname)
       `)
       .order('created_at', { ascending: false });
 
