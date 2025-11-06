@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,6 +14,13 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  const examplePrompts = [
+    "Jeden Montag um 10:00 Uhr für Max Mustermann, Reinigung",
+    "Mittwoch 14:00 Uhr Frau Schmidt Hauswirtschaft",
+    "Täglich 8:00-9:00 Herr Meyer Grundpflege ab morgen für 2 Wochen",
+    "Dienstag und Donnerstag 16:00 Frau Klein Behandlungspflege"
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +78,7 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
 
   return (
     <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-      <CardContent className="p-3">
+      <CardContent className="p-3 space-y-2">
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
           <Input
@@ -96,6 +104,20 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
             )}
           </Button>
         </form>
+        
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-xs text-muted-foreground">Beispiele:</span>
+          {examplePrompts.map((example, index) => (
+            <Badge
+              key={index}
+              variant="secondary"
+              className="cursor-pointer hover:bg-primary/20 text-xs py-0.5 px-2"
+              onClick={() => setPrompt(example)}
+            >
+              {example}
+            </Badge>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
