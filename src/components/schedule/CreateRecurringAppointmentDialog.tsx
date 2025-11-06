@@ -24,23 +24,27 @@ interface Employee {
   nachname?: string;
 }
 
+interface RecurringTemplate {
+  id?: string;
+  titel: string;
+  kunden_id: string;
+  mitarbeiter_id: string | null;
+  wochentag: number;
+  start_zeit: string;
+  dauer_minuten: number;
+  intervall: 'weekly' | 'biweekly' | 'monthly';
+  gueltig_von: string;
+  gueltig_bis: string | null;
+  notizen: string | null;
+}
+
 interface CreateRecurringAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customers: Customer[];
   employees: Employee[];
-  onSubmit: (template: {
-    titel: string;
-    kunden_id: string;
-    mitarbeiter_id: string | null;
-    wochentag: number;
-    start_zeit: string;
-    dauer_minuten: number;
-    intervall: 'weekly' | 'biweekly' | 'monthly';
-    gueltig_von: string;
-    gueltig_bis: string | null;
-    notizen: string | null;
-  }) => Promise<void>;
+  onSubmit: (template: RecurringTemplate) => Promise<void>;
+  editingTemplate?: RecurringTemplate | null;
 }
 
 const WEEKDAYS = [
@@ -65,6 +69,7 @@ export function CreateRecurringAppointmentDialog({
   customers,
   employees,
   onSubmit,
+  editingTemplate = null,
 }: CreateRecurringAppointmentDialogProps) {
   const [titel, setTitel] = useState('');
   const [kundenId, setKundenId] = useState('');
@@ -77,6 +82,22 @@ export function CreateRecurringAppointmentDialog({
   const [gueltigBis, setGueltigBis] = useState<Date>();
   const [notizen, setNotizen] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Load template data when editing
+  React.useEffect(() => {
+    if (editingTemplate) {
+      setTitel(editingTemplate.titel);
+      setKundenId(editingTemplate.kunden_id);
+      setMitarbeiterId(editingTemplate.mitarbeiter_id || 'unassigned');
+      setWochentag(editingTemplate.wochentag);
+      setStartZeit(editingTemplate.start_zeit);
+      setDauerMinuten(editingTemplate.dauer_minuten);
+      setIntervall(editingTemplate.intervall);
+      setGueltigVon(new Date(editingTemplate.gueltig_von));
+      setGueltigBis(editingTemplate.gueltig_bis ? new Date(editingTemplate.gueltig_bis) : undefined);
+      setNotizen(editingTemplate.notizen || '');
+    }
+  }, [editingTemplate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +118,7 @@ export function CreateRecurringAppointmentDialog({
       }
 
       await onSubmit({
+        ...(editingTemplate?.id && { id: editingTemplate.id }),
         titel,
         kunden_id: kundenId,
         mitarbeiter_id: mitarbeiterId === 'unassigned' ? null : mitarbeiterId || null,
@@ -134,9 +156,11 @@ export function CreateRecurringAppointmentDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Repeat className="h-5 w-5" />
-            Regeltermin erstellen
+            {editingTemplate ? 'Regeltermin bearbeiten' : 'Regeltermin erstellen'}
           </DialogTitle>
-          <DialogDescription className="sr-only">Wiederkehrende Terminvorlage erstellen</DialogDescription>
+          <DialogDescription className="sr-only">
+            {editingTemplate ? 'Wiederkehrende Terminvorlage bearbeiten' : 'Wiederkehrende Terminvorlage erstellen'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -320,7 +344,7 @@ export function CreateRecurringAppointmentDialog({
               Abbrechen
             </Button>
             <Button type="submit" disabled={loading || !gueltigVon || !kundenId}>
-              {loading ? 'Erstelle...' : 'Regeltermin erstellen'}
+              {loading ? (editingTemplate ? 'Speichere...' : 'Erstelle...') : (editingTemplate ? 'Änderungen speichern' : 'Regeltermin erstellen')}
             </Button>
           </DialogFooter>
         </form>

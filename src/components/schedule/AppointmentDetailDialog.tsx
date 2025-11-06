@@ -10,9 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { format, getDay } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Clock, User, Phone, Mail, MapPin, Edit, Save, X, AlertTriangle, Trash2, AlertCircle } from 'lucide-react';
+import { Clock, User, Phone, Mail, MapPin, Edit, Save, X, AlertTriangle, Trash2, AlertCircle, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { CreateRecurringAppointmentDialog } from './CreateRecurringAppointmentDialog';
 
 interface Employee {
   id: string;
@@ -104,6 +106,8 @@ export function AppointmentDetailDialog({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSeriesDialog, setShowSeriesDialog] = useState(false);
   const [seriesAction, setSeriesAction] = useState<'single' | 'all'>('single');
+  const [showEditTemplateDialog, setShowEditTemplateDialog] = useState(false);
+  const [templateData, setTemplateData] = useState<any>(null);
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -221,6 +225,75 @@ export function AppointmentDetailDialog({
     }
   };
 
+  const handleEditTemplate = async () => {
+    if (!editedAppointment?.vorlage_id) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('termin_vorlagen')
+        .select('*')
+        .eq('id', editedAppointment.vorlage_id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setTemplateData(data);
+        setShowEditTemplateDialog(true);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Fehler',
+        description: 'Vorlage konnte nicht geladen werden: ' + error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTemplateUpdate = async (template: any) => {
+    if (!editedAppointment?.vorlage_id) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('termin_vorlagen')
+        .update({
+          titel: template.titel,
+          kunden_id: template.kunden_id,
+          mitarbeiter_id: template.mitarbeiter_id,
+          wochentag: template.wochentag,
+          start_zeit: template.start_zeit,
+          dauer_minuten: template.dauer_minuten,
+          intervall: template.intervall,
+          gueltig_von: template.gueltig_von,
+          gueltig_bis: template.gueltig_bis,
+          notizen: template.notizen,
+        })
+        .eq('id', editedAppointment.vorlage_id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Erfolg',
+        description: 'Die Terminvorlage wurde aktualisiert. Zukünftige Termine werden entsprechend angepasst.',
+      });
+
+      setShowEditTemplateDialog(false);
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: 'Fehler',
+        description: 'Vorlage konnte nicht aktualisiert werden: ' + error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -228,6 +301,12 @@ export function AppointmentDetailDialog({
           <DialogTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
             Termindetails
+            {editedAppointment.vorlage_id && !editedAppointment.ist_ausnahme && (
+              <Badge variant="outline" className="ml-2">
+                <Repeat className="h-3 w-3 mr-1" />
+                Serie
+              </Badge>
+            )}
             {isConflicting && (
               <Badge variant="destructive" className="ml-auto">
                 <AlertTriangle className="h-3 w-3 mr-1" />
@@ -492,14 +571,26 @@ export function AppointmentDetailDialog({
 
         <DialogFooter className="gap-2">
           {!isEditing && (
-            <Button 
-              variant="destructive" 
-              onClick={() => setShowDeleteDialog(true)}
-              className="mr-auto"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Löschen
-            </Button>
+            <>
+              <Button 
+                variant="destructive" 
+                onClick={() => setShowDeleteDialog(true)}
+                className="mr-auto"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Löschen
+              </Button>
+              {editedAppointment.vorlage_id && !editedAppointment.ist_ausnahme && (
+                <Button 
+                  variant="outline"
+                  onClick={handleEditTemplate}
+                  disabled={loading}
+                >
+                  <Repeat className="h-4 w-4 mr-2" />
+                  Serie bearbeiten
+                </Button>
+              )}
+            </>
           )}
           <Button variant="outline" onClick={onClose}>
             Schließen
@@ -589,6 +680,18 @@ export function AppointmentDetailDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Template Dialog */}
+      {templateData && (
+        <CreateRecurringAppointmentDialog
+          open={showEditTemplateDialog}
+          onOpenChange={setShowEditTemplateDialog}
+          customers={customers}
+          employees={employees}
+          onSubmit={handleTemplateUpdate}
+          editingTemplate={templateData}
+        />
+      )}
     </Dialog>
   );
 }
