@@ -65,14 +65,11 @@ export function SortableEmployeeCard({ employee, isVisible, onToggle }: Sortable
       {/* Employee Info */}
       <div className="flex-1 min-w-0">
         <div className="font-medium text-sm truncate">{employee.name}</div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-muted-foreground">
-            Max: {employee.max_termine_pro_tag}/Tag
-          </span>
-          {workload >= 90 && (
+        {workload >= 90 && (
+          <div className="flex items-center gap-2 mt-0.5">
             <AlertCircle className="h-3 w-3 text-destructive" />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Visibility Toggle */}
