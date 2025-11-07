@@ -16,10 +16,10 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
   const { toast } = useToast();
 
   const examplePrompts = [
-    "Jeden Montag um 10:00 Uhr für Max Mustermann, Reinigung",
-    "Mittwoch 14:00 Uhr Frau Schmidt Hauswirtschaft",
-    "Täglich 8:00-9:00 Herr Meyer Grundpflege ab morgen für 2 Wochen",
-    "Dienstag und Donnerstag 16:00 Frau Klein Behandlungspflege"
+    "Jeden Montag um 14:00",
+    "Mittwoch 10:00 Hauswirtschaft",
+    "Täglich 8:00-9:00 für 2 Wochen",
+    "Di + Do 16:00 Behandlungspflege"
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
