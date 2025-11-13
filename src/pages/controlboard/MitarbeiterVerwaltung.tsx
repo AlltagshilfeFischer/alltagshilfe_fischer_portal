@@ -81,29 +81,42 @@ export default function MitarbeiterVerwaltung() {
 
   const loadData = async () => {
     try {
-      const [regResponse, mitResponse] = await Promise.all([
-        supabase
-          .from('pending_registrations')
-          .select('*')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('mitarbeiter')
-          .select(`
-            *,
-            benutzer!mitarbeiter_benutzer_id_fkey (
-              vorname,
-              nachname,
-              email
-            )
-          `)
-          .order('created_at', { ascending: false })
-      ]);
+      // Load registrations first
+      const { data: regData, error: regError } = await supabase
+        .from('pending_registrations')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (regError) throw regError;
 
-      if (regResponse.error) throw regResponse.error;
-      if (mitResponse.error) throw mitResponse.error;
+      // Load employees (without relying on FK embedding)
+      const { data: mitData, error: mitError } = await supabase
+        .from('mitarbeiter')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (mitError) throw mitError;
 
-      setRegistrations(regResponse.data || []);
-      setMitarbeiter(mitResponse.data || []);
+      let enrichedMitarbeiter: any[] = mitData || [];
+      const benutzerIds = (enrichedMitarbeiter
+        .map((m: any) => m.benutzer_id)
+        .filter((id: string | null) => !!id)) as string[];
+
+      if (benutzerIds.length > 0) {
+        const { data: benData, error: benError } = await supabase
+          .from('benutzer')
+          .select('id, vorname, nachname, email')
+          .in('id', benutzerIds);
+
+        if (!benError && benData) {
+          const byId = new Map(benData.map((b: any) => [b.id, b]));
+          enrichedMitarbeiter = enrichedMitarbeiter.map((m: any) => ({
+            ...m,
+            benutzer: m.benutzer_id ? byId.get(m.benutzer_id) : undefined,
+          }));
+        }
+      }
+
+      setRegistrations(regData || []);
+      setMitarbeiter(enrichedMitarbeiter as any);
     } catch (error: any) {
       console.error('Error loading data:', error);
       toast({
