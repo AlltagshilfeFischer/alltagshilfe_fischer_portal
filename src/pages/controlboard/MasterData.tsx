@@ -72,12 +72,33 @@ export default function MasterData() {
   const { data: employees, isLoading: employeesLoading } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      // Load employees first
+      const { data: mitData, error: mitError } = await (supabase as any)
         .from('mitarbeiter')
         .select('*');
-      
-      if (error) throw error;
-      return data;
+      if (mitError) throw mitError;
+
+      const benutzerIds = (mitData || [])
+        .map((m: any) => m.benutzer_id)
+        .filter((id: string | null) => !!id);
+
+      if (benutzerIds.length === 0) return mitData;
+
+      // Load related user data to get email
+      const { data: benData, error: benError } = await (supabase as any)
+        .from('benutzer')
+        .select('id, email, vorname, nachname')
+        .in('id', benutzerIds);
+      if (benError) throw benError;
+
+      const byId = new Map((benData || []).map((b: any) => [b.id, b]));
+      const enriched = (mitData || []).map((m: any) => ({
+        ...m,
+        email: m.email ?? (m.benutzer_id ? (byId.get(m.benutzer_id) as any)?.email : undefined),
+        benutzer: m.benutzer_id ? (byId.get(m.benutzer_id) as any) : undefined,
+      }));
+
+      return enriched;
     },
   });
 
