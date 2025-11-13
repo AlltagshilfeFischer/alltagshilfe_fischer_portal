@@ -30,7 +30,6 @@ export default function NewEntries() {
     versichertennummer: '',
     pflegegrad: '',
     stunden_kontingent_monat: '',
-    sollstunden: '',
     startdatum: '',
     notfall_name: '',
     notfall_telefon: '',
@@ -191,7 +190,6 @@ export default function NewEntries() {
           versichertennummer: customerData.versichertennummer,
           pflegegrad: customerData.pflegegrad ? parseInt(customerData.pflegegrad) : null,
           stunden_kontingent_monat: customerData.stunden_kontingent_monat ? parseFloat(customerData.stunden_kontingent_monat) : null,
-          sollstunden: customerData.sollstunden ? parseInt(customerData.sollstunden) : null,
           startdatum: customerData.startdatum || null,
           notfall_name: customerData.notfall_name,
           notfall_telefon: customerData.notfall_telefon,
@@ -509,7 +507,7 @@ export default function NewEntries() {
             {/* Stunden & Termine */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Stunden & Termine</h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="stunden_kontingent_monat">Stunden-Kontingent/Monat</Label>
                   <Input
@@ -518,15 +516,6 @@ export default function NewEntries() {
                     step="0.5"
                     value={newCustomer.stunden_kontingent_monat}
                     onChange={(e) => setNewCustomer({ ...newCustomer, stunden_kontingent_monat: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="sollstunden">Sollstunden</Label>
-                  <Input
-                    id="sollstunden"
-                    type="number"
-                    value={newCustomer.sollstunden}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, sollstunden: e.target.value })}
                   />
                 </div>
                 <div>
