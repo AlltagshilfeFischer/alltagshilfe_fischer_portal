@@ -540,48 +540,48 @@ export default function MasterData() {
   }, [employees, employeeSort, employeeSearchQuery, employeeStatusFilter]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Stammdatenverwaltung</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Stammdatenverwaltung</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Verwalten Sie Kunden- und Mitarbeiterdaten
         </p>
       </div>
 
       <Tabs defaultValue="customers" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="customers">Kunden</TabsTrigger>
-          <TabsTrigger value="employees">Mitarbeiter</TabsTrigger>
+          <TabsTrigger value="customers" className="text-sm sm:text-base">Kunden</TabsTrigger>
+          <TabsTrigger value="employees" className="text-sm sm:text-base">Mitarbeiter</TabsTrigger>
         </TabsList>
 
         {/* Kunden Tab */}
         <TabsContent value="customers">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Building className="h-4 w-4 sm:h-5 sm:w-5" />
                 Kundenverwaltung
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 Bearbeiten Sie alle Kundendaten direkt in der Tabelle
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               {/* Search and Filter Bar */}
               <div className="mb-4 space-y-3">
-                <div className="flex gap-3">
-                  <div className="relative flex-1">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <div className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Kunden suchen (Name, Telefon, E-Mail, Adresse, Notfallkontakt...)"
+                      placeholder="Kunden suchen..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 text-sm"
                     />
                   </div>
                   <Select value={customerStatusFilter} onValueChange={(value: any) => setCustomerStatusFilter(value)}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -593,7 +593,7 @@ export default function MasterData() {
                 </div>
                 
                 {/* Kategorie Filter Buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button
                     variant={customerKategorieFilter === 'all' ? 'default' : 'outline'}
                     size="sm"
@@ -620,8 +620,8 @@ export default function MasterData() {
               {customersLoading ? (
                 <div className="text-center py-4">Lade Kundendaten...</div>
               ) : customers && customers.length > 0 ? (
-                <div className="rounded-md border">
-                   <Table>
+                <div className="rounded-md border overflow-x-auto">
+                   <Table className="min-w-[900px]">
                      <TableHeader>
                        <TableRow>
                          <TableHead>
@@ -795,29 +795,29 @@ export default function MasterData() {
         {/* Mitarbeiter Tab */}
         <TabsContent value="employees">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                 Mitarbeiterverwaltung
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 Übersicht aller registrierten Mitarbeiter
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               {/* Search and Filter Bar */}
-              <div className="mb-4 flex gap-3">
-                <div className="relative flex-1">
+              <div className="mb-4 flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <div className="relative flex-1 min-w-[200px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Mitarbeiter suchen (Name, E-Mail, Telefon...)"
+                    placeholder="Mitarbeiter suchen..."
                     value={employeeSearchQuery}
                     onChange={(e) => setEmployeeSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-sm"
                   />
                 </div>
                 <Select value={employeeStatusFilter} onValueChange={(value: any) => setEmployeeStatusFilter(value)}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -830,8 +830,8 @@ export default function MasterData() {
               {employeesLoading ? (
                 <div className="text-center py-4">Lade Mitarbeiterdaten...</div>
               ) : employees && employees.length > 0 ? (
-                <div className="rounded-md border">
-                   <Table>
+                <div className="rounded-md border overflow-x-auto">
+                   <Table className="min-w-[700px]">
                      <TableHeader>
                        <TableRow>
                          <TableHead>

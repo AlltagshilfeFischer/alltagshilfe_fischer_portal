@@ -78,15 +78,15 @@ export default function DashboardHome() {
   // Kategorisierung der Termine
   const todayAppointments = appointments?.filter((apt: any) => isToday(new Date(apt.start_at))) || [];
   const upcomingAppointments = appointments?.filter((apt: any) => isFuture(new Date(apt.start_at)) && !isToday(new Date(apt.start_at))) || [];
-  return <div className="space-y-6">
+  return <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Übersicht</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Übersicht</p>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Kunden</CardTitle>

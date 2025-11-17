@@ -29,10 +29,12 @@ function DashboardContent({ children }: DashboardLayoutProps) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="flex flex-col w-full">
           <DashboardHeader />
-          <main className="flex-1 p-6">
-            {children}
+          <main className="flex-1 w-full p-3 sm:p-4 lg:p-6 overflow-x-hidden">
+            <div className="max-w-[1920px] mx-auto">
+              {children}
+            </div>
           </main>
         </SidebarInset>
       </div>
