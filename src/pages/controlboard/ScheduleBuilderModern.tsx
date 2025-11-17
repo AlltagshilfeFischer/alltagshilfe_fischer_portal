@@ -897,24 +897,26 @@ const ScheduleBuilderModern = () => {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="h-[calc(100vh-4rem)] flex flex-col gap-3 p-4 bg-gradient-to-br from-background to-muted/20 overflow-hidden">
+      <div className="h-[calc(100vh-4rem)] flex flex-col gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-br from-background to-muted/20 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between flex-shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 flex-shrink-0">
           <div>
-            <h1 className="text-2xl font-bold">Dienstplan & Terminverwaltung</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-xl sm:text-2xl font-bold">Dienstplan & Terminverwaltung</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Professionelle Wochenansicht mit Drag & Drop
             </p>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center flex-wrap">
             <AppointmentApprovalBar />
             <Button onClick={() => setShowCreateAppointment(true)} size="sm">
               <Plus className="h-4 w-4 mr-2" />
-              Neuer Termin
+              <span className="hidden sm:inline">Neuer Termin</span>
+              <span className="sm:hidden">Neu</span>
             </Button>
             <Button variant="outline" onClick={() => setShowCreateRecurring(true)} size="sm">
               <Plus className="h-4 w-4 mr-2" />
-              Serientermin
+              <span className="hidden sm:inline">Serientermin</span>
+              <span className="sm:hidden">Serie</span>
             </Button>
           </div>
         </div>
@@ -926,7 +928,7 @@ const ScheduleBuilderModern = () => {
         <CalendarStats {...stats} />
 
         {/* Navigation */}
-        <div className="flex items-center justify-between flex-shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 flex-shrink-0">
           <WeekNavigationBar
             currentWeek={currentWeek}
             onPreviousWeek={() => setCurrentWeek(prev => subWeeks(prev, 1))}
@@ -936,10 +938,10 @@ const ScheduleBuilderModern = () => {
           <CalendarLegend />
         </div>
 
-        {/* Main Content - No Scrolling */}
-        <div className="flex-1 flex gap-3 min-h-0 overflow-hidden">
+        {/* Main Content - Responsive Layout */}
+        <div className="flex-1 flex flex-col lg:flex-row gap-3 min-h-0 overflow-hidden">
           {/* Sidebar */}
-          <div className="w-64 flex-shrink-0">
+          <div className="w-full lg:w-64 flex-shrink-0 max-h-[300px] lg:max-h-none overflow-y-auto lg:overflow-y-visible">
             <EmployeeFilterSidebar
               employees={employees}
               hiddenEmployeeIds={hiddenEmployeeIds}
