@@ -43,7 +43,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-type SortKey = 'name' | 'status' | 'telefon' | 'email' | 'created_at' | 'pflegegrad' | 'adresse' | 'geburtsdatum';
+type SortKey = 'name' | 'status' | 'telefon' | 'email' | 'created_at' | 'pflegegrad' | 'adresse' | 'geburtsdatum' | 'eintritt';
 type SortDirection = 'asc' | 'desc';
 
 export default function MasterData() {
@@ -51,7 +51,7 @@ export default function MasterData() {
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEmployeeDialogOpen, setIsEmployeeDialogOpen] = useState(false);
-  const [customerSort, setCustomerSort] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'name', direction: 'asc' });
+  const [customerSort, setCustomerSort] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'eintritt', direction: 'asc' });
   const [employeeSort, setEmployeeSort] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'name', direction: 'asc' });
   const [searchQuery, setSearchQuery] = useState('');
   const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
@@ -476,6 +476,10 @@ export default function MasterData() {
         case 'geburtsdatum':
           aValue = new Date(a.geburtsdatum || 0).getTime();
           bValue = new Date(b.geburtsdatum || 0).getTime();
+          break;
+        case 'eintritt':
+          aValue = new Date(a.eintritt || 0).getTime();
+          bValue = new Date(b.eintritt || 0).getTime();
           break;
         case 'created_at':
           aValue = new Date(a.created_at || 0).getTime();
