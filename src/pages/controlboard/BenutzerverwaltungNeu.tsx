@@ -5,10 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Trash2, UserX, UserCheck } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Trash2, UserX, UserCheck, Pencil } from 'lucide-react';
 
 interface PendingRegistration {
   id: string;
@@ -24,6 +27,13 @@ interface Mitarbeiter {
   vorname: string | null;
   nachname: string | null;
   ist_aktiv: boolean;
+  telefon: string | null;
+  adresse: string | null;
+  farbe_kalender: string | null;
+  standort: 'Hannover' | null;
+  zustaendigkeitsbereich: string | null;
+  soll_wochenstunden: number | null;
+  max_termine_pro_tag: number | null;
   benutzer?: {
     email: string;
   };
@@ -39,6 +49,8 @@ export default function BenutzerverwaltungNeu() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedMitarbeiter, setSelectedMitarbeiter] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingMitarbeiter, setEditingMitarbeiter] = useState<Mitarbeiter | null>(null);
 
   const { toast } = useToast();
 
@@ -232,6 +244,53 @@ export default function BenutzerverwaltungNeu() {
     }
   };
 
+  const handleEditMitarbeiter = (mitarbeiter: Mitarbeiter) => {
+    setEditingMitarbeiter(mitarbeiter);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveMitarbeiter = async () => {
+    if (!editingMitarbeiter) return;
+
+    setActionLoading(editingMitarbeiter.id);
+    try {
+      const { error } = await supabase
+        .from('mitarbeiter')
+        .update({
+          vorname: editingMitarbeiter.vorname,
+          nachname: editingMitarbeiter.nachname,
+          telefon: editingMitarbeiter.telefon,
+          adresse: editingMitarbeiter.adresse,
+          farbe_kalender: editingMitarbeiter.farbe_kalender,
+          standort: editingMitarbeiter.standort,
+          zustaendigkeitsbereich: editingMitarbeiter.zustaendigkeitsbereich,
+          soll_wochenstunden: editingMitarbeiter.soll_wochenstunden,
+          max_termine_pro_tag: editingMitarbeiter.max_termine_pro_tag,
+        })
+        .eq('id', editingMitarbeiter.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Erfolgreich',
+        description: 'Mitarbeiter-Daten wurden aktualisiert.',
+      });
+
+      setEditDialogOpen(false);
+      setEditingMitarbeiter(null);
+      loadData();
+    } catch (error: any) {
+      console.error('Error updating employee:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Fehler',
+        description: error.message || 'Aktualisierung fehlgeschlagen.',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -354,6 +413,14 @@ export default function BenutzerverwaltungNeu() {
                           {m.ist_aktiv ? 'Aktiv' : 'Inaktiv'}
                         </Badge>
                         <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditMitarbeiter(m)}
+                          disabled={actionLoading === m.id}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
                           variant={m.ist_aktiv ? 'outline' : 'default'}
                           size="sm"
                           onClick={() => handleToggleActive(m.id, m.ist_aktiv)}
@@ -441,6 +508,120 @@ export default function BenutzerverwaltungNeu() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Mitarbeiter bearbeiten</DialogTitle>
+            <DialogDescription>
+              Stammdaten des Mitarbeiters anpassen
+            </DialogDescription>
+          </DialogHeader>
+          {editingMitarbeiter && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-vorname">Vorname</Label>
+                  <Input
+                    id="edit-vorname"
+                    value={editingMitarbeiter.vorname || ''}
+                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, vorname: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nachname">Nachname</Label>
+                  <Input
+                    id="edit-nachname"
+                    value={editingMitarbeiter.nachname || ''}
+                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, nachname: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-telefon">Telefon</Label>
+                <Input
+                  id="edit-telefon"
+                  value={editingMitarbeiter.telefon || ''}
+                  onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, telefon: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-adresse">Adresse</Label>
+                <Textarea
+                  id="edit-adresse"
+                  value={editingMitarbeiter.adresse || ''}
+                  onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, adresse: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-farbe">Kalenderfarbe</Label>
+                  <Input
+                    id="edit-farbe"
+                    type="color"
+                    value={editingMitarbeiter.farbe_kalender || '#3B82F6'}
+                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, farbe_kalender: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-standort">Standort</Label>
+                  <Select
+                    value={editingMitarbeiter.standort || 'Hannover'}
+                    onValueChange={(value: 'Hannover') => setEditingMitarbeiter({ ...editingMitarbeiter, standort: value })}
+                  >
+                    <SelectTrigger id="edit-standort">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Hannover">Hannover</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-zustaendigkeit">Zuständigkeitsbereich</Label>
+                <Input
+                  id="edit-zustaendigkeit"
+                  value={editingMitarbeiter.zustaendigkeitsbereich || ''}
+                  onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, zustaendigkeitsbereich: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-wochenstunden">Soll-Wochenstunden</Label>
+                  <Input
+                    id="edit-wochenstunden"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={editingMitarbeiter.soll_wochenstunden || ''}
+                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, soll_wochenstunden: e.target.value ? parseFloat(e.target.value) : null })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-max-termine">Max. Termine pro Tag</Label>
+                  <Input
+                    id="edit-max-termine"
+                    type="number"
+                    min="0"
+                    value={editingMitarbeiter.max_termine_pro_tag || ''}
+                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, max_termine_pro_tag: e.target.value ? parseInt(e.target.value) : null })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleSaveMitarbeiter} disabled={actionLoading === editingMitarbeiter?.id}>
+              {actionLoading === editingMitarbeiter?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Speichern
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
