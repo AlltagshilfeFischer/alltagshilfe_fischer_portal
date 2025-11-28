@@ -87,6 +87,8 @@ export default function MasterData() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customerStatusFilter, setCustomerStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [customerKategorieFilter, setCustomerKategorieFilter] = useState<'all' | 'Kunde' | 'Interessent'>('all');
+  const [dateFromFilter, setDateFromFilter] = useState<string>('');
+  const [dateToFilter, setDateToFilter] = useState<string>('');
   const [stadtteilFilter, setStadtteilFilter] = useState<string>('all');
   const [eintrittsdatumFilter, setEintrittsdatumFilter] = useState<string>('all');
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
@@ -441,6 +443,19 @@ export default function MasterData() {
       });
     }
     
+    // Filter by date range (created_at)
+    if (dateFromFilter || dateToFilter) {
+      filtered = filtered.filter((customer: any) => {
+        const createdAt = customer.created_at ? new Date(customer.created_at) : null;
+        if (!createdAt) return false;
+        
+        const matchesFrom = !dateFromFilter || createdAt >= new Date(dateFromFilter);
+        const matchesTo = !dateToFilter || createdAt <= new Date(dateToFilter + 'T23:59:59');
+        
+        return matchesFrom && matchesTo;
+      });
+    }
+    
     // Then sort
     return [...filtered].sort((a, b) => {
       const { key, direction } = customerSort;
@@ -492,7 +507,7 @@ export default function MasterData() {
       if (aValue > bValue) return direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [customers, customerSort, searchQuery, customerStatusFilter, customerKategorieFilter, stadtteilFilter, eintrittsdatumFilter]);
+  }, [customers, customerSort, searchQuery, customerStatusFilter, customerKategorieFilter, stadtteilFilter, eintrittsdatumFilter, dateFromFilter, dateToFilter]);
 
 
   return (
@@ -564,6 +579,41 @@ export default function MasterData() {
                       <SelectItem value="last_year">Letztes Jahr+</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                
+                {/* Date Range Filter */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-center">
+                  <Label className="text-sm font-medium whitespace-nowrap">Hinzugefügt:</Label>
+                  <div className="flex gap-2 items-center">
+                    <Label className="text-sm text-muted-foreground whitespace-nowrap">Von:</Label>
+                    <Input
+                      type="date"
+                      value={dateFromFilter}
+                      onChange={(e) => setDateFromFilter(e.target.value)}
+                      className="w-[160px]"
+                    />
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <Label className="text-sm text-muted-foreground whitespace-nowrap">Bis:</Label>
+                    <Input
+                      type="date"
+                      value={dateToFilter}
+                      onChange={(e) => setDateToFilter(e.target.value)}
+                      className="w-[160px]"
+                    />
+                  </div>
+                  {(dateFromFilter || dateToFilter) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setDateFromFilter('');
+                        setDateToFilter('');
+                      }}
+                    >
+                      Zurücksetzen
+                    </Button>
+                  )}
                 </div>
                 
                 {/* Kategorie Filter Buttons */}
@@ -662,6 +712,15 @@ export default function MasterData() {
                                Geburtsdatum
                              </SortButton>
                            </TableHead>
+                           <TableHead>
+                             <SortButton 
+                               sortKey="created_at" 
+                               currentSort={customerSort} 
+                               onClick={(key) => handleSort(key)}
+                             >
+                               Hinzugefügt
+                             </SortButton>
+                           </TableHead>
                           <TableHead>Aktionen</TableHead>
                        </TableRow>
                      </TableHeader>
@@ -709,6 +768,15 @@ export default function MasterData() {
                             </TableCell>
                            <TableCell>
                              {formatDate(customer.geburtsdatum)}
+                           </TableCell>
+                           <TableCell>
+                             {customer.created_at 
+                               ? new Date(customer.created_at).toLocaleDateString('de-DE', {
+                                   day: '2-digit',
+                                   month: '2-digit',
+                                   year: 'numeric'
+                                 })
+                               : '-'}
                            </TableCell>
                                <TableCell>
                                  <div className="flex gap-2">
