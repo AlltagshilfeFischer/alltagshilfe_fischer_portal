@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import AITimeWindowsCreator from '@/components/schedule/AITimeWindowsCreator';
+import AIEmployeeSuggestions from '@/components/schedule/AIEmployeeSuggestions';
 
 
 export default function NewEntries() {
@@ -44,10 +46,13 @@ export default function NewEntries() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  const [step, setStep] = useState<'customer' | 'timewindows' | 'employees'>('customer');
+  const [savedCustomerId, setSavedCustomerId] = useState<string | null>(null);
+  const [timeWindows, setTimeWindows] = useState<any[]>([]);
+
   const createCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
-      // Step 1: Create customer
-      const { data: kunde, error: kundeError } = await supabase
+      const { data, error } = await supabase
         .from('kunden')
         .insert([{
           kategorie: customerData.kategorie,
@@ -77,60 +82,159 @@ export default function NewEntries() {
         .select()
         .single();
       
-      if (kundeError) throw kundeError;
-
-      return kunde;
+      if (error) throw error;
+      return data;
     },
-    onSuccess: async (kunde) => {
-      queryClient.invalidateQueries({ queryKey: ['kunden'] });
-      
+    onSuccess: (data) => {
       toast({
-        title: 'Kunde angelegt',
-        description: 'Kunde wurde erfolgreich erstellt. Starte KI-Mitarbeiterzuweisung...',
+        title: "Kunde erfolgreich angelegt",
+        description: "Weiter zur Zeitfenster-Konfiguration",
       });
-
-      // TODO: Automatische Vertragsbereitstellung hier implementieren
-      // Placeholder für zukünftige automatische Vertragsgenerierung
-
-      // Step 3: AI-based employee assignment
-      try {
-        const { data, error } = await supabase.functions.invoke('assign-employee-to-customer', {
-          body: {
-            kunden_id: kunde.id
-          }
-        });
-
-        if (error) throw error;
-
-        toast({
-          title: 'Mitarbeiter zugewiesen',
-          description: `${data.employee_name} wurde zugewiesen (Score: ${data.match_score}/100)\n${data.reasoning}`,
-        });
-      } catch (error) {
-        console.error('Employee assignment error:', error);
-        toast({
-          title: 'Hinweis',
-          description: 'Kunde wurde angelegt, aber Mitarbeiterzuweisung fehlgeschlagen. Bitte manuell zuweisen.',
-          variant: 'destructive',
-        });
-      }
-
-      // Don't reset form after success - let user see the results
+      queryClient.invalidateQueries({ queryKey: ['kunden'] });
+      setSavedCustomerId(data.id);
+      setStep('timewindows');
     },
-    onError: (error) => {
-      console.error('Customer creation error:', error);
+    onError: (error: any) => {
       toast({
-        title: 'Fehler',
-        description: 'Kunde konnte nicht erstellt werden',
-        variant: 'destructive',
+        title: "Fehler beim Anlegen des Kunden",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
+
+  const handleTimeWindowsConfirm = async (windows: any[]) => {
+    if (!savedCustomerId) return;
+
+    try {
+      const windowsData = windows.map(w => ({
+        kunden_id: savedCustomerId,
+        wochentag: w.wochentag,
+        von: w.von,
+        bis: w.bis,
+        prioritaet: w.prioritaet || 3
+      }));
+
+      const { error } = await supabase
+        .from('kunden_zeitfenster')
+        .insert(windowsData);
+
+      if (error) throw error;
+
+      setTimeWindows(windows);
+      setStep('employees');
+      toast({
+        title: "Zeitfenster gespeichert",
+        description: "Weiter zur Mitarbeiter-Auswahl",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Fehler beim Speichern der Zeitfenster",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEmployeeConfirm = async (mitarbeiterId: string, frequency: string) => {
+    if (!savedCustomerId) return;
+
+    try {
+      const { error: updateError } = await supabase
+        .from('kunden')
+        .update({ mitarbeiter: mitarbeiterId })
+        .eq('id', savedCustomerId);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Kunde erfolgreich angelegt",
+        description: "Mitarbeiter zugewiesen und Zeitfenster konfiguriert",
+      });
+
+      setStep('customer');
+      setSavedCustomerId(null);
+      setTimeWindows([]);
+      setNewCustomer({
+        kategorie: 'Kunde',
+        vorname: '',
+        nachname: '',
+        geburtsdatum: '',
+        strasse: '',
+        stadt: '',
+        plz: '',
+        stadtteil: '',
+        telefonnr: '',
+        email: '',
+        pflegekasse: '',
+        versichertennummer: '',
+        pflegegrad: '',
+        kasse_privat: '',
+        verhinderungspflege_status: '',
+        kopie_lw: '',
+        stunden_kontingent_monat: '',
+        startdatum: '',
+        eintritt: '',
+        austritt: '',
+        notfall_name: '',
+        notfall_telefon: '',
+        angehoerige_ansprechpartner: ''
+      });
+      navigate('/dashboard/controlboard/master-data');
+    } catch (error: any) {
+      toast({
+        title: "Fehler beim Zuweisen des Mitarbeiters",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleCreateCustomer = (e: React.FormEvent) => {
     e.preventDefault();
     createCustomerMutation.mutate(newCustomer);
   };
+
+  if (step === 'timewindows') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Zeitfenster konfigurieren</h1>
+            <p className="text-muted-foreground">
+              Definieren Sie die gewünschten Besuchszeiten mit KI-Unterstützung
+            </p>
+          </div>
+        </div>
+        <AITimeWindowsCreator
+          onConfirm={handleTimeWindowsConfirm}
+          onCancel={() => navigate('/dashboard/controlboard/master-data')}
+        />
+      </div>
+    );
+  }
+
+  if (step === 'employees') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Mitarbeiter zuweisen</h1>
+            <p className="text-muted-foreground">
+              Finden Sie den besten Mitarbeiter für diesen Kunden
+            </p>
+          </div>
+        </div>
+        <AIEmployeeSuggestions
+          timeWindows={timeWindows}
+          customerPlz={newCustomer.plz}
+          onConfirm={handleEmployeeConfirm}
+          onBack={() => setStep('timewindows')}
+          onCancel={() => navigate('/dashboard/controlboard/master-data')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -139,7 +243,7 @@ export default function NewEntries() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Neuen Kunden anlegen</h1>
           <p className="text-muted-foreground">
-            Erfassen Sie alle Kundendaten und erhalten Sie automatisch einen passenden Mitarbeiter
+            Erfassen Sie alle Kundendaten - danach folgt die KI-gestützte Zeitfenster- und Mitarbeiter-Konfiguration
           </p>
         </div>
         <Button onClick={() => navigate('/dashboard/controlboard/master-data')} variant="outline" className="gap-2">
