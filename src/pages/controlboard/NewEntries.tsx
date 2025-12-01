@@ -5,13 +5,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserPlus, Building2, Save, Plus, Trash2, Clock, ArrowLeft } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import AITimeWindowsCreator from '@/components/schedule/AITimeWindowsCreator';
 import AIEmployeeSuggestions from '@/components/schedule/AIEmployeeSuggestions';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 export default function NewEntries() {
@@ -38,7 +39,9 @@ export default function NewEntries() {
     austritt: '',
     notfall_name: '',
     notfall_telefon: '',
-    angehoerige_ansprechpartner: ''
+    angehoerige_ansprechpartner: '',
+    has_regular_appointments: false,
+    mitarbeiter: ''
   });
 
 
@@ -49,6 +52,21 @@ export default function NewEntries() {
   const [step, setStep] = useState<'customer' | 'timewindows' | 'employees'>('customer');
   const [savedCustomerId, setSavedCustomerId] = useState<string | null>(null);
   const [timeWindows, setTimeWindows] = useState<any[]>([]);
+
+  // Fetch active employees for assignment
+  const { data: employees = [] } = useQuery({
+    queryKey: ['active-employees'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mitarbeiter')
+        .select('id, vorname, nachname')
+        .eq('ist_aktiv', true)
+        .order('nachname');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const createCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
@@ -77,7 +95,8 @@ export default function NewEntries() {
           angehoerige_ansprechpartner: customerData.angehoerige_ansprechpartner,
           kasse_privat: customerData.kasse_privat,
           verhinderungspflege_status: customerData.verhinderungspflege_status,
-          kopie_lw: customerData.kopie_lw
+          kopie_lw: customerData.kopie_lw,
+          mitarbeiter: customerData.has_regular_appointments && customerData.mitarbeiter ? customerData.mitarbeiter : null
         }])
         .select()
         .single();
@@ -178,7 +197,9 @@ export default function NewEntries() {
         austritt: '',
         notfall_name: '',
         notfall_telefon: '',
-        angehoerige_ansprechpartner: ''
+        angehoerige_ansprechpartner: '',
+        has_regular_appointments: false,
+        mitarbeiter: ''
       });
       navigate('/dashboard/controlboard/master-data');
     } catch (error: any) {
@@ -525,8 +546,54 @@ export default function NewEntries() {
               </div>
             </div>
 
+            {/* Betreuung */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Betreuung</h3>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="has_regular_appointments"
+                    checked={newCustomer.has_regular_appointments}
+                    onCheckedChange={(checked) => 
+                      setNewCustomer({ 
+                        ...newCustomer, 
+                        has_regular_appointments: checked as boolean,
+                        mitarbeiter: checked ? newCustomer.mitarbeiter : ''
+                      })
+                    }
+                  />
+                  <Label htmlFor="has_regular_appointments" className="cursor-pointer">
+                    Kunde hat regelmäßige Termine
+                  </Label>
+                </div>
 
-            <Button 
+                <div>
+                  <Label htmlFor="hauptbetreuer">Hauptbetreuer</Label>
+                  <Select
+                    value={newCustomer.mitarbeiter}
+                    onValueChange={(value) => setNewCustomer({ ...newCustomer, mitarbeiter: value })}
+                    disabled={!newCustomer.has_regular_appointments}
+                  >
+                    <SelectTrigger 
+                      id="hauptbetreuer"
+                      className={!newCustomer.has_regular_appointments ? 'opacity-50 cursor-not-allowed' : ''}
+                    >
+                      <SelectValue placeholder="Mitarbeiter auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.vorname} {emp.nachname}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+
+            <Button
               type="submit" 
               className="w-full"
               disabled={createCustomerMutation.isPending}
