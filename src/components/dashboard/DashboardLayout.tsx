@@ -25,11 +25,12 @@ function DashboardContent({ children }: DashboardLayoutProps) {
     return <Navigate to="/" replace />;
   }
 
-  // When auto-collapse is disabled, sidebar always starts expanded and doesn't auto-collapse
-  const sidebarDefaultOpen = settings.sidebarAutoCollapse ? undefined : true;
+  // When auto-collapse is disabled, force sidebar to always be open
+  const sidebarOpen = settings.sidebarAutoCollapse ? undefined : true;
+  const handleOpenChange = settings.sidebarAutoCollapse ? undefined : () => {}; // Prevent changes when disabled
 
   return (
-    <SidebarProvider defaultOpen={sidebarDefaultOpen}>
+    <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange}>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <SidebarInset className="flex flex-col w-full">
