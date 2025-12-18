@@ -44,9 +44,11 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
-  const collapsed = state === "collapsed";
   const { role } = useUserRole();
   const { settings } = useSettings();
+
+  // When auto-collapse is disabled, always show expanded content
+  const collapsed = settings.sidebarAutoCollapse ? state === "collapsed" : false;
 
   const isActive = (path: string) => {
     if (path === '/dashboard') {
