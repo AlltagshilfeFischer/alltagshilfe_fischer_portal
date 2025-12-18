@@ -59,7 +59,7 @@ const AuthPage = () => {
     
     setLoading(true);
     
-    const { error } = await signUp(email, password);
+    const { error } = await signUp(email, password, vorname, nachname);
     
     if (error) {
       let errorMessage = error.message;
@@ -82,6 +82,8 @@ const AuthPage = () => {
       setActiveTab('login');
       setPassword('');
       setConfirmPassword('');
+      setVorname('');
+      setNachname('');
     }
     
     setLoading(false);
