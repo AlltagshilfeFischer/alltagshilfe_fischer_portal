@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
@@ -14,12 +14,18 @@ function SidebarAutoCollapseHandler() {
   const location = useLocation();
   const { setOpen } = useSidebar();
   const { settings } = useSettings();
+  const prevPathRef = useRef<string>('');
 
   useEffect(() => {
-    // Auto-collapse sidebar when navigating to schedule-builder
-    if (settings.sidebarAutoCollapseOnSchedule && location.pathname.includes('/schedule-builder')) {
+    const isSchedulePage = location.pathname.includes('/schedule-builder');
+    const wasSchedulePage = prevPathRef.current.includes('/schedule-builder');
+    
+    // Only collapse when NAVIGATING TO schedule-builder (not already there)
+    if (settings.sidebarAutoCollapseOnSchedule && isSchedulePage && !wasSchedulePage) {
       setOpen(false);
     }
+    
+    prevPathRef.current = location.pathname;
   }, [location.pathname, settings.sidebarAutoCollapseOnSchedule, setOpen]);
 
   return null;
