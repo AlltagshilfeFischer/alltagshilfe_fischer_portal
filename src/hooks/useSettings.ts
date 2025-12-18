@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 interface AppSettings {
-  sidebarAutoCollapse: boolean;
+  sidebarAutoCollapseOnSchedule: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  sidebarAutoCollapse: true,
+  sidebarAutoCollapseOnSchedule: true,
 };
 
 const SETTINGS_KEY = 'app-settings';

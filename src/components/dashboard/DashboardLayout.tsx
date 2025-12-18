@@ -1,5 +1,6 @@
-import { Navigate } from 'react-router-dom';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { SidebarProvider, SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,9 +10,23 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+function SidebarAutoCollapseHandler() {
+  const location = useLocation();
+  const { setOpen } = useSidebar();
+  const { settings } = useSettings();
+
+  useEffect(() => {
+    // Auto-collapse sidebar when navigating to schedule-builder
+    if (settings.sidebarAutoCollapseOnSchedule && location.pathname.includes('/schedule-builder')) {
+      setOpen(false);
+    }
+  }, [location.pathname, settings.sidebarAutoCollapseOnSchedule, setOpen]);
+
+  return null;
+}
+
 function DashboardContent({ children }: DashboardLayoutProps) {
   const { user, loading } = useAuth();
-  const { settings } = useSettings();
 
   if (loading) {
     return (
@@ -25,12 +40,9 @@ function DashboardContent({ children }: DashboardLayoutProps) {
     return <Navigate to="/" replace />;
   }
 
-  // When auto-collapse is disabled, force sidebar to always be open
-  const sidebarOpen = settings.sidebarAutoCollapse ? undefined : true;
-  const handleOpenChange = settings.sidebarAutoCollapse ? undefined : () => {}; // Prevent changes when disabled
-
   return (
-    <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange}>
+    <SidebarProvider>
+      <SidebarAutoCollapseHandler />
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <SidebarInset className="flex flex-col w-full">
