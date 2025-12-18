@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, vorname?: string, nachname?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   loading: boolean;
@@ -49,16 +49,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, vorname?: string, nachname?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl
+        emailRedirectTo: redirectUrl,
+        data: {
+          vorname: vorname || '',
+          nachname: nachname || '',
+        }
       }
     });
+
+    // If signup succeeded, update pending_registrations with the names
+    if (!error && data?.user) {
+      await supabase
+        .from('pending_registrations')
+        .upsert({
+          email: email,
+          vorname: vorname || null,
+          nachname: nachname || null,
+          status: 'pending'
+        }, { onConflict: 'email' });
+    }
+
     return { error };
   };
 
