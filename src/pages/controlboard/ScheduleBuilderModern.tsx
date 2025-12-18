@@ -897,26 +897,17 @@ const ScheduleBuilderModern = () => {
         </div>
 
         {/* AI Appointment Creator + Conflicts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-shrink-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 flex-shrink-0">
           <AIAppointmentCreator onAppointmentCreated={loadData} />
           
           {/* Conflicts Card */}
-          <Card className={`p-3 ${stats.conflictCount > 0 ? 'bg-destructive/5 border-destructive/30' : 'bg-muted/30'}`}>
-            <div className="flex items-center gap-3 h-full">
-              <div className={`p-2 rounded-lg ${stats.conflictCount > 0 ? 'bg-destructive/10' : 'bg-muted'}`}>
-                <AlertTriangle className={`h-5 w-5 ${stats.conflictCount > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Konflikte diese Woche</div>
-                <div className={`text-2xl font-bold ${stats.conflictCount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {stats.conflictCount}
-                </div>
-              </div>
-              {stats.conflictCount > 0 && (
-                <div className="ml-auto text-xs text-destructive/80">
-                  Überschneidende Termine
-                </div>
-              )}
+          <Card className={`p-2 ${stats.conflictCount > 0 ? 'bg-destructive/5 border-destructive/30' : 'bg-muted/30'}`}>
+            <div className="flex items-center gap-2 h-full">
+              <AlertTriangle className={`h-4 w-4 flex-shrink-0 ${stats.conflictCount > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+              <span className="text-xs text-muted-foreground">Konflikte:</span>
+              <span className={`text-sm font-bold ${stats.conflictCount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {stats.conflictCount}
+              </span>
             </div>
           </Card>
         </div>

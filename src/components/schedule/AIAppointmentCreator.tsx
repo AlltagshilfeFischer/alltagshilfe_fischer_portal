@@ -199,51 +199,27 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
 
   return (
     <>
-      <Card className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-purple-600" />
-            <h3 className="font-medium text-sm text-purple-900">AI Terminassistent</h3>
-          </div>
-          
+      <Card className="p-2 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-purple-600 flex-shrink-0" />
           <Textarea
             placeholder="z.B. 'Jeden Mo um 12 Uhr mit Frau Klemme'"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="min-h-[40px] bg-white text-sm resize-none"
+            className="min-h-[32px] h-8 bg-white text-xs resize-none flex-1"
             disabled={isLoading}
-            rows={2}
+            rows={1}
           />
-
-          <div className="flex flex-wrap gap-1">
-            {exampleSnippets.slice(0, 5).map((snippet, index) => (
-              <Badge
-                key={index}
-                variant="secondary"
-                className="cursor-pointer hover:bg-purple-200 hover:text-purple-900 transition-colors text-[10px] py-0 px-1.5"
-                onClick={() => addSnippet(snippet)}
-              >
-                {snippet}
-              </Badge>
-            ))}
-          </div>
-          
           <Button
             onClick={handleGenerate}
             disabled={isLoading || !prompt.trim()}
             size="sm"
-            className="self-end h-7 text-xs"
+            className="h-8 text-xs flex-shrink-0"
           >
             {isLoading ? (
-              <>
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                Analysiere...
-              </>
+              <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
-              <>
-                <Sparkles className="h-3 w-3 mr-1" />
-                Generieren
-              </>
+              <Sparkles className="h-3 w-3" />
             )}
           </Button>
         </div>
