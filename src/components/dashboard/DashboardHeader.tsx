@@ -2,7 +2,6 @@ import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useSettings } from '@/hooks/useSettings';
 import { LogOut, User } from 'lucide-react';
 import {
   DropdownMenu,
@@ -17,7 +16,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 export function DashboardHeader() {
   const { user, signOut } = useAuth();
   const { role } = useUserRole();
-  const { settings } = useSettings();
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,10 +31,7 @@ export function DashboardHeader() {
   return (
     <header className="relative z-[100] pointer-events-auto h-16 border-b bg-card px-6 flex items-center justify-between">
       <div className="flex items-center gap-4">
-        {/* Only show sidebar trigger when auto-collapse is enabled */}
-        {settings.sidebarAutoCollapse && (
-          <SidebarTrigger className="h-8 w-8" />
-        )}
+        <SidebarTrigger className="h-8 w-8" />
         <div>
           <h1 className="text-lg font-semibold">Alltagshilfe Control Board</h1>
           <p className="text-sm text-muted-foreground">

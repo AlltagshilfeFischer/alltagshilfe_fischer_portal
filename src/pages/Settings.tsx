@@ -27,15 +27,15 @@ export default function Settings() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="sidebar-auto-collapse">Sidebar automatisch einklappen</Label>
+              <Label htmlFor="sidebar-auto-collapse">Sidebar im Dienstplan einklappen</Label>
               <p className="text-sm text-muted-foreground">
-                Die Sidebar wird automatisch eingeklappt, wenn der Bildschirm kleiner wird
+                Die Sidebar wird automatisch eingeklappt, wenn du den Dienstplan öffnest
               </p>
             </div>
             <Switch
               id="sidebar-auto-collapse"
-              checked={settings.sidebarAutoCollapse}
-              onCheckedChange={(checked) => updateSettings({ sidebarAutoCollapse: checked })}
+              checked={settings.sidebarAutoCollapseOnSchedule}
+              onCheckedChange={(checked) => updateSettings({ sidebarAutoCollapseOnSchedule: checked })}
             />
           </div>
         </CardContent>
