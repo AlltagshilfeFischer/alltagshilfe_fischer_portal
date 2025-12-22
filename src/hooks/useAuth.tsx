@@ -64,8 +64,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // Handle Supabase error for already registered user (422 error)
+    if (error) {
+      if (error.message?.includes('already registered') || 
+          error.message?.includes('User already registered') ||
+          (error as any).code === 'user_already_exists') {
+        return { 
+          error: { 
+            message: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an oder setzen Sie Ihr Passwort zurück.' 
+          } 
+        };
+      }
+      return { error };
+    }
+
     // Check if user already exists (Supabase returns user with empty identities array)
-    if (!error && data?.user && data.user.identities?.length === 0) {
+    if (data?.user && data.user.identities?.length === 0) {
       return { 
         error: { 
           message: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an oder setzen Sie Ihr Passwort zurück.' 
@@ -74,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // If signup succeeded, update pending_registrations with the names
-    if (!error && data?.user) {
+    if (data?.user) {
       await supabase
         .from('pending_registrations')
         .upsert({
@@ -85,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }, { onConflict: 'email' });
     }
 
-    return { error };
+    return { error: null };
   };
 
   const signOut = async () => {
