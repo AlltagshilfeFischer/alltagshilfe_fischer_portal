@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Download, Upload, AlertCircle, Check, Plus, Trash2, X } from 'lucide-react';
+import { Download, Upload, AlertCircle, Check, Plus, Trash2, X, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -38,6 +38,7 @@ interface CustomerRow {
   kategorie: string;
   pflegekasse: string;
   versichertennummer: string;
+  zeitfenster_text: string; // AI-parsed time windows
   errors: string[];
 }
 
@@ -59,6 +60,7 @@ const COLUMNS = [
   { key: 'kategorie', label: 'Kategorie', required: false, width: 110, hint: 'Kunde/Interessent' },
   { key: 'pflegekasse', label: 'Pflegekasse', required: false, width: 120 },
   { key: 'versichertennummer', label: 'Versichertennr.', required: false, width: 130 },
+  { key: 'zeitfenster_text', label: 'Zeitfenster (KI)', required: false, width: 200, hint: 'z.B. Mo-Fr 8-12 Uhr', isAI: true },
 ];
 
 const createEmptyRow = (): CustomerRow => ({
@@ -76,6 +78,7 @@ const createEmptyRow = (): CustomerRow => ({
   kategorie: 'Kunde',
   pflegekasse: '',
   versichertennummer: '',
+  zeitfenster_text: '',
   errors: [],
 });
 
@@ -382,10 +385,13 @@ export function CustomerImportExport({ customers }: CustomerImportExportProps) {
                     {COLUMNS.map(col => (
                       <th 
                         key={col.key} 
-                        className="p-2 text-left font-medium whitespace-nowrap"
+                        className={`p-2 text-left font-medium whitespace-nowrap ${(col as any).isAI ? 'bg-purple-50/50' : ''}`}
                         style={{ minWidth: col.width }}
                       >
-                        {col.label}
+                        <div className="flex items-center gap-1">
+                          {(col as any).isAI && <Sparkles className="h-3 w-3 text-purple-500" />}
+                          {col.label}
+                        </div>
                         {col.required && <span className="text-red-500 ml-1">*</span>}
                         {col.hint && (
                           <span className="text-muted-foreground text-xs block font-normal">
@@ -448,6 +454,16 @@ export function CustomerImportExport({ customers }: CustomerImportExportProps) {
                                   ))}
                                 </SelectContent>
                               </Select>
+                            ) : (col as any).isAI ? (
+                              <div className="relative">
+                                <Input
+                                  value={(row as any)[col.key] || ''}
+                                  onChange={(e) => updateRow(row.id, col.key, e.target.value)}
+                                  className="h-8 text-xs pr-7 border-purple-200 bg-purple-50/30 focus:border-purple-400"
+                                  placeholder={col.hint || ''}
+                                />
+                                <Sparkles className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-purple-400" />
+                              </div>
                             ) : (
                               <Input
                                 value={(row as any)[col.key] || ''}
