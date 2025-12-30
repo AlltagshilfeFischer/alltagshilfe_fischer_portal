@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Download, Trash2, Upload, Filter, Search, Calendar, User, Users, Building2 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { 
+  FileText, Download, Trash2, Upload, Search, Calendar, User, Users, Building2, 
+  ChevronRight, ChevronDown, FolderOpen, File, Eye
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -30,22 +35,20 @@ interface Dokument {
   hochgeladen_von: string;
   created_at: string;
   kunden?: {
-    name: string;
+    vorname: string | null;
+    nachname: string | null;
   } | null;
   mitarbeiter?: {
     vorname: string | null;
     nachname: string | null;
   } | null;
-  benutzer?: {
-    vorname: string | null;
-    nachname: string | null;
-  };
 }
 
 interface Kunde {
   id: string;
-  name: string;
-  kategorie: string;
+  vorname: string | null;
+  nachname: string | null;
+  kategorie: string | null;
 }
 
 interface Mitarbeiter {
@@ -61,9 +64,10 @@ export default function Dokumentenverwaltung() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<DokumentKategorie>('kunde');
-  const [filterEntityId, setFilterEntityId] = useState<string>('all');
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   // Upload form state
@@ -82,12 +86,23 @@ export default function Dokumentenverwaltung() {
     loadDokumente();
   }, []);
 
+  // Auto-select first entity when switching tabs
+  useEffect(() => {
+    if (activeTab === 'kunde' && kunden.length > 0 && !selectedEntityId) {
+      setSelectedEntityId(kunden[0].id);
+    } else if (activeTab === 'mitarbeiter' && mitarbeiter.length > 0 && !selectedEntityId) {
+      setSelectedEntityId(mitarbeiter[0].id);
+    } else if (activeTab === 'intern') {
+      setSelectedEntityId(null);
+    }
+  }, [activeTab, kunden, mitarbeiter]);
+
   const loadKunden = async () => {
     const { data, error } = await supabase
       .from('kunden')
-      .select('id, name, kategorie')
+      .select('id, vorname, nachname, kategorie')
       .eq('aktiv', true)
-      .order('name');
+      .order('nachname');
 
     if (error) {
       toast({
@@ -126,7 +141,7 @@ export default function Dokumentenverwaltung() {
       .from('dokumente')
       .select(`
         *,
-        kunden:kunden_id (name),
+        kunden:kunden_id (vorname, nachname),
         mitarbeiter:mitarbeiter_id (vorname, nachname)
       `)
       .order('created_at', { ascending: false });
@@ -176,11 +191,9 @@ export default function Dokumentenverwaltung() {
     setUploading(true);
 
     try {
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Nicht angemeldet');
 
-      // Generate file path based on category
       const fileExt = uploadForm.file.name.split('.').pop();
       let folderPath = '';
       if (uploadForm.kategorie === 'kunde') {
@@ -192,14 +205,12 @@ export default function Dokumentenverwaltung() {
       }
       const fileName = `${folderPath}/${Date.now()}.${fileExt}`;
 
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('dokumente')
         .upload(fileName, uploadForm.file);
 
       if (uploadError) throw uploadError;
 
-      // Create metadata entry
       const { error: metadataError } = await supabase
         .from('dokumente')
         .insert({
@@ -251,7 +262,6 @@ export default function Dokumentenverwaltung() {
 
       if (error) throw error;
 
-      // Create download link
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
@@ -278,14 +288,12 @@ export default function Dokumentenverwaltung() {
     if (!confirm(`Dokument "${dokument.titel}" wirklich löschen?`)) return;
 
     try {
-      // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('dokumente')
         .remove([dokument.dateipfad]);
 
       if (storageError) throw storageError;
 
-      // Delete metadata
       const { error: metadataError } = await supabase
         .from('dokumente')
         .delete()
@@ -322,44 +330,86 @@ export default function Dokumentenverwaltung() {
     return '📎';
   };
 
-  const filteredDokumente = dokumente.filter((dok) => {
-    const matchesKategorie = dok.kategorie === activeTab;
+  // Get documents for selected entity, grouped by year
+  const entityDocuments = useMemo(() => {
+    let filtered = dokumente.filter(d => d.kategorie === activeTab);
     
-    let matchesEntity = true;
-    if (filterEntityId !== 'all') {
-      if (activeTab === 'kunde') {
-        matchesEntity = dok.kunden_id === filterEntityId;
-      } else if (activeTab === 'mitarbeiter') {
-        matchesEntity = dok.mitarbeiter_id === filterEntityId;
-      }
+    if (activeTab === 'kunde' && selectedEntityId) {
+      filtered = filtered.filter(d => d.kunden_id === selectedEntityId);
+    } else if (activeTab === 'mitarbeiter' && selectedEntityId) {
+      filtered = filtered.filter(d => d.mitarbeiter_id === selectedEntityId);
     }
-    
-    const matchesSearch = 
-      dok.titel.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dok.dateiname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (dok.beschreibung && dok.beschreibung.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    return matchesKategorie && matchesEntity && matchesSearch;
-  });
 
-  const getEntityName = (dokument: Dokument) => {
-    if (dokument.kategorie === 'kunde' && dokument.kunden) {
-      return dokument.kunden.name;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(d => 
+        d.titel.toLowerCase().includes(query) ||
+        d.dateiname.toLowerCase().includes(query) ||
+        (d.beschreibung && d.beschreibung.toLowerCase().includes(query))
+      );
     }
-    if (dokument.kategorie === 'mitarbeiter' && dokument.mitarbeiter) {
-      const { vorname, nachname } = dokument.mitarbeiter;
-      return `${vorname || ''} ${nachname || ''}`.trim() || 'Unbekannt';
+
+    // Group by year
+    const grouped: Record<string, Dokument[]> = {};
+    filtered.forEach(doc => {
+      const year = new Date(doc.created_at).getFullYear().toString();
+      if (!grouped[year]) grouped[year] = [];
+      grouped[year].push(doc);
+    });
+
+    // Sort years descending
+    const sortedYears = Object.keys(grouped).sort((a, b) => parseInt(b) - parseInt(a));
+    
+    return { grouped, sortedYears, total: filtered.length };
+  }, [dokumente, activeTab, selectedEntityId, searchQuery]);
+
+  // Get document count per entity
+  const getEntityDocCount = (entityId: string, type: 'kunde' | 'mitarbeiter') => {
+    return dokumente.filter(d => 
+      type === 'kunde' ? d.kunden_id === entityId : d.mitarbeiter_id === entityId
+    ).length;
+  };
+
+  const toggleYear = (year: string) => {
+    setExpandedYears(prev => {
+      const next = new Set(prev);
+      if (next.has(year)) {
+        next.delete(year);
+      } else {
+        next.add(year);
+      }
+      return next;
+    });
+  };
+
+  // Auto-expand current year
+  useEffect(() => {
+    const currentYear = new Date().getFullYear().toString();
+    setExpandedYears(new Set([currentYear]));
+  }, []);
+
+  const getEntityFullName = (entity: Kunde | Mitarbeiter) => {
+    return `${entity.vorname || ''} ${entity.nachname || ''}`.trim() || 'Unbekannt';
+  };
+
+  const getSelectedEntityName = () => {
+    if (activeTab === 'kunde') {
+      const kunde = kunden.find(k => k.id === selectedEntityId);
+      return kunde ? getEntityFullName(kunde) : '';
+    } else if (activeTab === 'mitarbeiter') {
+      const ma = mitarbeiter.find(m => m.id === selectedEntityId);
+      return ma ? getEntityFullName(ma) : '';
     }
-    return 'Intern';
+    return 'Interne Dokumente';
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 h-[calc(100vh-4rem)] flex flex-col">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">Dokumentenverwaltung</h1>
           <p className="text-muted-foreground mt-1">
-            Verwalten Sie Dokumente für Kunden, Mitarbeiter und interne Zwecke
+            Dokumente nach Kunden und Mitarbeitern organisiert
           </p>
         </div>
         <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
@@ -373,7 +423,7 @@ export default function Dokumentenverwaltung() {
             <DialogHeader>
               <DialogTitle>Neues Dokument hochladen</DialogTitle>
               <DialogDescription>
-                Laden Sie ein Dokument hoch und ordnen Sie es einer Kategorie zu
+                Laden Sie ein Dokument hoch und ordnen Sie es zu
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -449,7 +499,7 @@ export default function Dokumentenverwaltung() {
                     <SelectContent>
                       {kunden.map((kunde) => (
                         <SelectItem key={kunde.id} value={kunde.id}>
-                          {kunde.name}
+                          {getEntityFullName(kunde)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -472,7 +522,7 @@ export default function Dokumentenverwaltung() {
                     <SelectContent>
                       {mitarbeiter.map((ma) => (
                         <SelectItem key={ma.id} value={ma.id}>
-                          {ma.vorname} {ma.nachname}
+                          {getEntityFullName(ma)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -518,193 +568,230 @@ export default function Dokumentenverwaltung() {
 
       <Tabs value={activeTab} onValueChange={(v) => {
         setActiveTab(v as DokumentKategorie);
-        setFilterEntityId('all');
+        setSelectedEntityId(null);
         setSearchQuery('');
-      }}>
-        <TabsList className="grid w-full grid-cols-3">
+      }} className="flex-1 flex flex-col min-h-0">
+        <TabsList className="grid w-full grid-cols-3 mb-4">
           <TabsTrigger value="kunde" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            Kunden
+            Kunden ({dokumente.filter(d => d.kategorie === 'kunde').length})
           </TabsTrigger>
           <TabsTrigger value="mitarbeiter" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Mitarbeiter
+            Mitarbeiter ({dokumente.filter(d => d.kategorie === 'mitarbeiter').length})
           </TabsTrigger>
           <TabsTrigger value="intern" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Intern
+            Intern ({dokumente.filter(d => d.kategorie === 'intern').length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-6 mt-6">
-
-          {/* Filter Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filter & Suche
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {activeTab !== 'intern' && (
-                  <div>
-                    <Label htmlFor="filter-entity">
-                      {activeTab === 'kunde' ? 'Nach Kunde filtern' : 'Nach Mitarbeiter filtern'}
-                    </Label>
-                    <Select value={filterEntityId} onValueChange={setFilterEntityId}>
-                      <SelectTrigger id="filter-entity">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          {activeTab === 'kunde' ? 'Alle Kunden' : 'Alle Mitarbeiter'}
-                        </SelectItem>
-                        {activeTab === 'kunde' ? (
-                          kunden.map((kunde) => (
-                            <SelectItem key={kunde.id} value={kunde.id}>
-                              {kunde.name}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          mitarbeiter.map((ma) => (
-                            <SelectItem key={ma.id} value={ma.id}>
-                              {ma.vorname} {ma.nachname}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <div>
-                  <Label htmlFor="search-query">Suche</Label>
+        <TabsContent value={activeTab} className="flex-1 min-h-0 mt-0">
+          <div className="grid grid-cols-12 gap-4 h-full">
+            {/* Left sidebar: Entity list */}
+            {activeTab !== 'intern' && (
+              <Card className="col-span-3 flex flex-col min-h-0">
+                <CardHeader className="py-3 px-4 border-b">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="search-query"
-                      className="pl-9"
-                      placeholder="Titel, Dateiname oder Beschreibung..."
+                      className="pl-9 h-9"
+                      placeholder={`${activeTab === 'kunde' ? 'Kunde' : 'Mitarbeiter'} suchen...`}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Documents Grid */}
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Dokumente werden geladen...</p>
-            </div>
-          ) : filteredDokumente.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {searchQuery || filterEntityId !== 'all'
-                    ? 'Keine Dokumente gefunden'
-                    : 'Noch keine Dokumente hochgeladen'}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDokumente.map((dokument) => (
-                <Card key={dokument.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-2 flex-1 min-w-0">
-                        <span className="text-2xl flex-shrink-0">
-                          {getMimeTypeIcon(dokument.mime_type)}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-base truncate">
-                            {dokument.titel}
-                          </CardTitle>
-                          <CardDescription className="text-xs truncate">
-                            {dokument.dateiname}
-                          </CardDescription>
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {dokument.beschreibung && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {dokument.beschreibung}
-                      </p>
+                </CardHeader>
+                <ScrollArea className="flex-1">
+                  <div className="p-2">
+                    {activeTab === 'kunde' ? (
+                      kunden.map((kunde) => {
+                        const docCount = getEntityDocCount(kunde.id, 'kunde');
+                        const isSelected = selectedEntityId === kunde.id;
+                        return (
+                          <button
+                            key={kunde.id}
+                            onClick={() => setSelectedEntityId(kunde.id)}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-colors mb-1 ${
+                              isSelected 
+                                ? 'bg-primary text-primary-foreground' 
+                                : 'hover:bg-muted'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <User className={`h-4 w-4 flex-shrink-0 ${isSelected ? '' : 'text-muted-foreground'}`} />
+                              <span className="truncate font-medium text-sm">
+                                {getEntityFullName(kunde)}
+                              </span>
+                            </div>
+                            <Badge 
+                              variant={isSelected ? "secondary" : "outline"} 
+                              className={`ml-2 flex-shrink-0 ${isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : ''}`}
+                            >
+                              {docCount}
+                            </Badge>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      mitarbeiter.map((ma) => {
+                        const docCount = getEntityDocCount(ma.id, 'mitarbeiter');
+                        const isSelected = selectedEntityId === ma.id;
+                        return (
+                          <button
+                            key={ma.id}
+                            onClick={() => setSelectedEntityId(ma.id)}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-colors mb-1 ${
+                              isSelected 
+                                ? 'bg-primary text-primary-foreground' 
+                                : 'hover:bg-muted'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Users className={`h-4 w-4 flex-shrink-0 ${isSelected ? '' : 'text-muted-foreground'}`} />
+                              <span className="truncate font-medium text-sm">
+                                {getEntityFullName(ma)}
+                              </span>
+                            </div>
+                            <Badge 
+                              variant={isSelected ? "secondary" : "outline"} 
+                              className={`ml-2 flex-shrink-0 ${isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : ''}`}
+                            >
+                              {docCount}
+                            </Badge>
+                          </button>
+                        );
+                      })
                     )}
-                    <div className="space-y-2 text-sm">
-                      {activeTab !== 'intern' && (
-                        <div className="flex items-center gap-2">
-                          {activeTab === 'kunde' ? (
-                            <User className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <span className="font-medium">
-                            {getEntityName(dokument)}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          {format(new Date(dokument.created_at), 'dd.MM.yyyy', {
-                            locale: de,
-                          })}
-                        </span>
-                      </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {formatFileSize(dokument.groesse_bytes)}
-                      </Badge>
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => handleDownload(dokument)}
-                      >
-                        <Download className="h-4 w-4 mr-1" />
-                        Download
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDelete(dokument)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                  </div>
+                </ScrollArea>
+              </Card>
+            )}
 
-          {/* Summary */}
-          {!loading && (
-            <Card>
-              <CardContent className="py-4">
-                <p className="text-sm text-muted-foreground text-center">
-                  {filteredDokumente.length} von {dokumente.filter(d => d.kategorie === activeTab).length} Dokumenten angezeigt
-                  {filterEntityId !== 'all' && activeTab === 'kunde' &&
-                    ` • Gefiltert nach: ${
-                      kunden.find((k) => k.id === filterEntityId)?.name
-                    }`}
-                  {filterEntityId !== 'all' && activeTab === 'mitarbeiter' &&
-                    ` • Gefiltert nach: ${
-                      mitarbeiter.find((m) => m.id === filterEntityId)?.vorname
-                    } ${mitarbeiter.find((m) => m.id === filterEntityId)?.nachname}`}
-                </p>
-              </CardContent>
+            {/* Right content: Documents grouped by year */}
+            <Card className={`${activeTab === 'intern' ? 'col-span-12' : 'col-span-9'} flex flex-col min-h-0`}>
+              <CardHeader className="py-3 px-4 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FolderOpen className="h-5 w-5 text-primary" />
+                    <div>
+                      <CardTitle className="text-lg">
+                        {getSelectedEntityName() || 'Kein Eintrag ausgewählt'}
+                      </CardTitle>
+                      <CardDescription>
+                        {entityDocuments.total} Dokument{entityDocuments.total !== 1 ? 'e' : ''}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  {activeTab === 'intern' && (
+                    <div className="relative w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        className="pl-9 h-9"
+                        placeholder="Dokument suchen..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              
+              <ScrollArea className="flex-1">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <p className="text-muted-foreground">Dokumente werden geladen...</p>
+                  </div>
+                ) : !selectedEntityId && activeTab !== 'intern' ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <User className="h-12 w-12 mb-4 opacity-50" />
+                    <p>Wählen Sie einen {activeTab === 'kunde' ? 'Kunden' : 'Mitarbeiter'} aus</p>
+                  </div>
+                ) : entityDocuments.total === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <FileText className="h-12 w-12 mb-4 opacity-50" />
+                    <p>Keine Dokumente vorhanden</p>
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-2">
+                    {entityDocuments.sortedYears.map((year) => (
+                      <Collapsible 
+                        key={year}
+                        open={expandedYears.has(year)}
+                        onOpenChange={() => toggleYear(year)}
+                      >
+                        <CollapsibleTrigger className="w-full">
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                            {expandedYears.has(year) ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <Calendar className="h-4 w-4 text-primary" />
+                            <span className="font-semibold">{year}</span>
+                            <Badge variant="secondary" className="ml-auto">
+                              {entityDocuments.grouped[year].length} Dokument{entityDocuments.grouped[year].length !== 1 ? 'e' : ''}
+                            </Badge>
+                          </div>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-4">
+                            {entityDocuments.grouped[year].map((dokument) => (
+                              <div
+                                key={dokument.id}
+                                className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow group"
+                              >
+                                <span className="text-2xl flex-shrink-0">
+                                  {getMimeTypeIcon(dokument.mime_type)}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium truncate">{dokument.titel}</span>
+                                    <Badge variant="outline" className="text-xs flex-shrink-0">
+                                      {formatFileSize(dokument.groesse_bytes)}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                                    <span className="truncate">{dokument.dateiname}</span>
+                                    <span>•</span>
+                                    <span>{format(new Date(dokument.created_at), 'dd.MM.yyyy', { locale: de })}</span>
+                                  </div>
+                                  {dokument.beschreibung && (
+                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                      {dokument.beschreibung}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDownload(dokument)}
+                                    title="Herunterladen"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => handleDelete(dokument)}
+                                    title="Löschen"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
             </Card>
-          )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
