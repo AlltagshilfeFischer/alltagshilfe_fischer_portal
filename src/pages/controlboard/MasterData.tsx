@@ -1254,16 +1254,17 @@ export default function MasterData() {
                   <div>
                     <Label htmlFor="kasse_privat">Pflegekasse</Label>
                     <Select
-                      value={editingCustomer.kasse_privat || ''}
+                      value={editingCustomer.kasse_privat || '__none__'}
                       onValueChange={(value) => setEditingCustomer({
                         ...editingCustomer,
-                        kasse_privat: value
+                        kasse_privat: value === '__none__' ? null : value
                       })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Auswählen" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="__none__">Auswählen</SelectItem>
                         <SelectItem value="Kasse">Kasse</SelectItem>
                         <SelectItem value="Privat">Privat</SelectItem>
                         <SelectItem value="Verordnung">Verordnung</SelectItem>
@@ -1357,16 +1358,17 @@ export default function MasterData() {
                   <div>
                     <Label htmlFor="kopie_lw">Kopie LW</Label>
                     <Select
-                      value={editingCustomer.kopie_lw || ''}
+                      value={editingCustomer.kopie_lw || '__none__'}
                       onValueChange={(value) => setEditingCustomer({
                         ...editingCustomer,
-                        kopie_lw: value
+                        kopie_lw: value === '__none__' ? null : value
                       })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Auswählen" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="__none__">Auswählen</SelectItem>
                         <SelectItem value="Ja">Ja</SelectItem>
                         <SelectItem value="Nein">Nein</SelectItem>
                       </SelectContent>
