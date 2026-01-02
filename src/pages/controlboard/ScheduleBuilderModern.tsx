@@ -335,7 +335,8 @@ const ScheduleBuilderModern = () => {
   const stats = useMemo(() => {
     const total = appointments.length;
     const assigned = appointments.filter(app => app.mitarbeiter_id).length;
-    const unassigned = total - assigned;
+    // Use the filtered unassigned count (future + current month only)
+    const unassigned = unassignedAppointments.length;
     const conflicts = conflictingAppointments.size;
     const activeEmployees = employees.filter(e => e.ist_aktiv).length;
     const totalEmployees = employees.length;
@@ -352,7 +353,7 @@ const ScheduleBuilderModern = () => {
       totalEmployees,
       averageWorkload: avgWorkload
     };
-  }, [appointments, employees, conflictingAppointments]);
+  }, [appointments, employees, conflictingAppointments, unassignedAppointments]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
