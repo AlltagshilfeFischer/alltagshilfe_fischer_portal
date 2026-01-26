@@ -221,14 +221,14 @@ export default function QuickActionChat() {
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={hasMessages ? "Nachricht schreiben..." : "Was willst du nun tun?"}
-            rows={1}
+            rows={2}
             className={cn(
-              "w-full px-5 pt-4 pb-2",
+              "w-full px-6 pt-5 pb-3",
               "bg-transparent resize-none",
-              "text-foreground placeholder:text-muted-foreground/60",
+              "text-foreground placeholder:text-muted-foreground/70",
               "focus:outline-none",
-              "text-[15px] leading-relaxed",
-              "min-h-[48px] max-h-[120px]"
+              "text-base leading-relaxed font-medium",
+              "min-h-[72px] max-h-[160px]"
             )}
             style={{ 
               height: 'auto',
@@ -237,7 +237,7 @@ export default function QuickActionChat() {
             onInput={(e) => {
               const target = e.target as HTMLTextAreaElement;
               target.style.height = 'auto';
-              target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+              target.style.height = Math.min(target.scrollHeight, 160) + 'px';
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
