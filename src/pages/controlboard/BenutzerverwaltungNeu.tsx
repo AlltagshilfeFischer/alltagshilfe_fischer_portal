@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Trash2, UserX, UserCheck, Pencil } from 'lucide-react';
+import { AvatarUpload } from '@/components/mitarbeiter/AvatarUpload';
 
 interface PendingRegistration {
   id: string;
@@ -36,6 +37,7 @@ interface Mitarbeiter {
   zustaendigkeitsbereich: string | null;
   soll_wochenstunden: number | null;
   max_termine_pro_tag: number | null;
+  avatar_url: string | null;
   benutzer?: {
     email: string;
   };
@@ -402,15 +404,29 @@ export default function BenutzerverwaltungNeu() {
             <CardContent>
               <div className="space-y-2">
                 {mitarbeiter.length > 0 ? (
-                  mitarbeiter.map((m) => (
-                    <div key={m.id} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {m.vorname || m.nachname
-                            ? `${m.vorname || ''} ${m.nachname || ''}`.trim()
-                            : 'Unbekannt'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{m.benutzer?.email || 'Keine E-Mail'}</p>
+                  mitarbeiter.map((m) => {
+                    const fullName = m.vorname || m.nachname
+                      ? `${m.vorname || ''} ${m.nachname || ''}`.trim()
+                      : 'Unbekannt';
+                    return (
+                    <div key={m.id} className="flex justify-between items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <AvatarUpload
+                          mitarbeiterId={m.id}
+                          currentAvatarUrl={m.avatar_url}
+                          name={fullName}
+                          color={m.farbe_kalender || '#3B82F6'}
+                          size="md"
+                          onUploadComplete={() => loadData()}
+                          onRemove={() => loadData()}
+                        />
+                        <div>
+                          <p className="font-medium">{fullName}</p>
+                          <p className="text-sm text-muted-foreground">{m.benutzer?.email || 'Keine E-Mail'}</p>
+                          {m.telefon && (
+                            <p className="text-xs text-muted-foreground">{m.telefon}</p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={m.ist_aktiv ? 'default' : 'secondary'}>
@@ -451,7 +467,7 @@ export default function BenutzerverwaltungNeu() {
                         </Button>
                       </div>
                     </div>
-                  ))
+                  )})
                 ) : (
                   <p className="text-center text-muted-foreground py-8">
                     Keine Mitarbeiter vorhanden
@@ -523,6 +539,23 @@ export default function BenutzerverwaltungNeu() {
           </DialogHeader>
           {editingMitarbeiter && (
             <div className="grid gap-4 py-4">
+              {/* Avatar Upload Section */}
+              <div className="flex justify-center pb-4 border-b">
+                <div className="text-center">
+                  <AvatarUpload
+                    mitarbeiterId={editingMitarbeiter.id}
+                    currentAvatarUrl={editingMitarbeiter.avatar_url}
+                    name={`${editingMitarbeiter.vorname || ''} ${editingMitarbeiter.nachname || ''}`.trim() || 'Mitarbeiter'}
+                    color={editingMitarbeiter.farbe_kalender || '#3B82F6'}
+                    size="lg"
+                    onUploadComplete={() => loadData()}
+                    onRemove={() => loadData()}
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Hover für Upload-Optionen
+                  </p>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-vorname">Vorname</Label>
