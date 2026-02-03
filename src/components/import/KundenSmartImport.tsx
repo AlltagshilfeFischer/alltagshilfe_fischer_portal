@@ -126,8 +126,10 @@ export function KundenSmartImport({ open, onOpenChange }: KundenSmartImportProps
     queryClient.invalidateQueries({ queryKey: ['customers'] });
   };
 
+  const ImportComponent = SmartDataImport<KundenRow>;
+
   return (
-    <SmartDataImport<KundenRow>
+    <ImportComponent
       open={open}
       onOpenChange={onOpenChange}
       title="Kunden importieren"
@@ -136,7 +138,7 @@ export function KundenSmartImport({ open, onOpenChange }: KundenSmartImportProps
       onImport={handleImport}
       createEmptyRow={createEmptyRow}
       initialRowCount={20}
-      batchSize={200} // Larger batches for customers
+      batchSize={200}
     />
   );
 }

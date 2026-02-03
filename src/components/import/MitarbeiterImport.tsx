@@ -153,8 +153,10 @@ export function MitarbeiterImport({ open, onOpenChange }: MitarbeiterImportProps
     queryClient.invalidateQueries({ queryKey: ['mitarbeiter'] });
   };
 
+  const ImportComponent = SmartDataImport<MitarbeiterRow>;
+
   return (
-    <SmartDataImport<MitarbeiterRow>
+    <ImportComponent
       open={open}
       onOpenChange={onOpenChange}
       title="Mitarbeiter importieren"
@@ -163,7 +165,7 @@ export function MitarbeiterImport({ open, onOpenChange }: MitarbeiterImportProps
       onImport={handleImport}
       createEmptyRow={createEmptyRow}
       initialRowCount={10}
-      batchSize={50} // Process employees in smaller batches due to email sending
+      batchSize={50}
     />
   );
 }
