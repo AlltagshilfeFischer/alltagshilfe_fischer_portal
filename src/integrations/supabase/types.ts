@@ -14,6 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
+      abrechnungs_historie: {
+        Row: {
+          aktion: string
+          alter_status: Database["public"]["Enums"]["rechnung_status"] | null
+          created_at: string
+          details: Json | null
+          durchgefuehrt_am: string
+          durchgefuehrt_von: string | null
+          id: string
+          neuer_status: Database["public"]["Enums"]["rechnung_status"] | null
+          rechnung_id: string
+        }
+        Insert: {
+          aktion: string
+          alter_status?: Database["public"]["Enums"]["rechnung_status"] | null
+          created_at?: string
+          details?: Json | null
+          durchgefuehrt_am?: string
+          durchgefuehrt_von?: string | null
+          id?: string
+          neuer_status?: Database["public"]["Enums"]["rechnung_status"] | null
+          rechnung_id: string
+        }
+        Update: {
+          aktion?: string
+          alter_status?: Database["public"]["Enums"]["rechnung_status"] | null
+          created_at?: string
+          details?: Json | null
+          durchgefuehrt_am?: string
+          durchgefuehrt_von?: string | null
+          id?: string
+          neuer_status?: Database["public"]["Enums"]["rechnung_status"] | null
+          rechnung_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abrechnungs_historie_durchgefuehrt_von_fkey"
+            columns: ["durchgefuehrt_von"]
+            isOneToOne: false
+            referencedRelation: "benutzer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abrechnungs_historie_rechnung_id_fkey"
+            columns: ["rechnung_id"]
+            isOneToOne: false
+            referencedRelation: "rechnungen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      abrechnungsregeln: {
+        Row: {
+          beschreibung: string | null
+          created_at: string
+          gueltig_bis: string | null
+          gueltig_von: string
+          hoechstbetrag_jahr: number | null
+          hoechstbetrag_monat: number | null
+          id: string
+          ist_aktiv: boolean
+          kostentraeger_typ: Database["public"]["Enums"]["kostentraeger_typ"]
+          leistungsart: Database["public"]["Enums"]["leistungsart"]
+          max_pflegegrad: number | null
+          min_pflegegrad: number | null
+          stundensatz: number | null
+          updated_at: string
+        }
+        Insert: {
+          beschreibung?: string | null
+          created_at?: string
+          gueltig_bis?: string | null
+          gueltig_von?: string
+          hoechstbetrag_jahr?: number | null
+          hoechstbetrag_monat?: number | null
+          id?: string
+          ist_aktiv?: boolean
+          kostentraeger_typ: Database["public"]["Enums"]["kostentraeger_typ"]
+          leistungsart: Database["public"]["Enums"]["leistungsart"]
+          max_pflegegrad?: number | null
+          min_pflegegrad?: number | null
+          stundensatz?: number | null
+          updated_at?: string
+        }
+        Update: {
+          beschreibung?: string | null
+          created_at?: string
+          gueltig_bis?: string | null
+          gueltig_von?: string
+          hoechstbetrag_jahr?: number | null
+          hoechstbetrag_monat?: number | null
+          id?: string
+          ist_aktiv?: boolean
+          kostentraeger_typ?: Database["public"]["Enums"]["kostentraeger_typ"]
+          leistungsart?: Database["public"]["Enums"]["leistungsart"]
+          max_pflegegrad?: number | null
+          min_pflegegrad?: number | null
+          stundensatz?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           actor_benutzer_id: string | null
@@ -825,6 +927,203 @@ export type Database = {
           },
         ]
       }
+      rechnungen: {
+        Row: {
+          abrechnungszeitraum_bis: string
+          abrechnungszeitraum_von: string
+          bezahlt_am: string | null
+          brutto_betrag: number
+          created_at: string
+          empfaenger_adresse: string | null
+          empfaenger_name: string
+          erstellt_von: string | null
+          freigegeben_am: string | null
+          freigegeben_von: string | null
+          id: string
+          kostentraeger_id: string | null
+          mwst_betrag: number
+          mwst_satz: number
+          netto_betrag: number
+          privat_kunde_id: string | null
+          rechnungsnummer: string
+          status: Database["public"]["Enums"]["rechnung_status"]
+          updated_at: string
+          validierung_ergebnis: Json | null
+          validierung_warnungen: Json | null
+          versendet_am: string | null
+        }
+        Insert: {
+          abrechnungszeitraum_bis: string
+          abrechnungszeitraum_von: string
+          bezahlt_am?: string | null
+          brutto_betrag?: number
+          created_at?: string
+          empfaenger_adresse?: string | null
+          empfaenger_name: string
+          erstellt_von?: string | null
+          freigegeben_am?: string | null
+          freigegeben_von?: string | null
+          id?: string
+          kostentraeger_id?: string | null
+          mwst_betrag?: number
+          mwst_satz?: number
+          netto_betrag?: number
+          privat_kunde_id?: string | null
+          rechnungsnummer: string
+          status?: Database["public"]["Enums"]["rechnung_status"]
+          updated_at?: string
+          validierung_ergebnis?: Json | null
+          validierung_warnungen?: Json | null
+          versendet_am?: string | null
+        }
+        Update: {
+          abrechnungszeitraum_bis?: string
+          abrechnungszeitraum_von?: string
+          bezahlt_am?: string | null
+          brutto_betrag?: number
+          created_at?: string
+          empfaenger_adresse?: string | null
+          empfaenger_name?: string
+          erstellt_von?: string | null
+          freigegeben_am?: string | null
+          freigegeben_von?: string | null
+          id?: string
+          kostentraeger_id?: string | null
+          mwst_betrag?: number
+          mwst_satz?: number
+          netto_betrag?: number
+          privat_kunde_id?: string | null
+          rechnungsnummer?: string
+          status?: Database["public"]["Enums"]["rechnung_status"]
+          updated_at?: string
+          validierung_ergebnis?: Json | null
+          validierung_warnungen?: Json | null
+          versendet_am?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rechnungen_erstellt_von_fkey"
+            columns: ["erstellt_von"]
+            isOneToOne: false
+            referencedRelation: "benutzer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rechnungen_freigegeben_von_fkey"
+            columns: ["freigegeben_von"]
+            isOneToOne: false
+            referencedRelation: "benutzer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rechnungen_kostentraeger_id_fkey"
+            columns: ["kostentraeger_id"]
+            isOneToOne: false
+            referencedRelation: "kostentraeger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rechnungen_privat_kunde_id_fkey"
+            columns: ["privat_kunde_id"]
+            isOneToOne: false
+            referencedRelation: "kunden"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rechnungspositionen: {
+        Row: {
+          created_at: string
+          einzelbetrag: number
+          id: string
+          ist_gueltig: boolean
+          kunden_id: string
+          leistung_id: string | null
+          leistungsart: string
+          leistungsbeginn: string
+          leistungsdatum: string
+          leistungsende: string
+          mitarbeiter_id: string | null
+          rechnung_id: string
+          stunden: number
+          stundensatz: number
+          termin_id: string
+          validierung_hinweise: Json | null
+        }
+        Insert: {
+          created_at?: string
+          einzelbetrag?: number
+          id?: string
+          ist_gueltig?: boolean
+          kunden_id: string
+          leistung_id?: string | null
+          leistungsart: string
+          leistungsbeginn: string
+          leistungsdatum: string
+          leistungsende: string
+          mitarbeiter_id?: string | null
+          rechnung_id: string
+          stunden: number
+          stundensatz?: number
+          termin_id: string
+          validierung_hinweise?: Json | null
+        }
+        Update: {
+          created_at?: string
+          einzelbetrag?: number
+          id?: string
+          ist_gueltig?: boolean
+          kunden_id?: string
+          leistung_id?: string | null
+          leistungsart?: string
+          leistungsbeginn?: string
+          leistungsdatum?: string
+          leistungsende?: string
+          mitarbeiter_id?: string | null
+          rechnung_id?: string
+          stunden?: number
+          stundensatz?: number
+          termin_id?: string
+          validierung_hinweise?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rechnungspositionen_kunden_id_fkey"
+            columns: ["kunden_id"]
+            isOneToOne: false
+            referencedRelation: "kunden"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rechnungspositionen_leistung_id_fkey"
+            columns: ["leistung_id"]
+            isOneToOne: false
+            referencedRelation: "leistungen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rechnungspositionen_mitarbeiter_id_fkey"
+            columns: ["mitarbeiter_id"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rechnungspositionen_rechnung_id_fkey"
+            columns: ["rechnung_id"]
+            isOneToOne: false
+            referencedRelation: "rechnungen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rechnungspositionen_termin_id_fkey"
+            columns: ["termin_id"]
+            isOneToOne: false
+            referencedRelation: "termine"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       termin_aenderungen: {
         Row: {
           approved_at: string | null
@@ -1132,6 +1431,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      generate_rechnungsnummer: { Args: never; Returns: string }
       generate_termine_from_vorlagen: {
         Args: { p_from: string; p_to: string }
         Returns: number
@@ -1201,6 +1501,12 @@ export type Database = {
         | "pflegesachleistung"
         | "privat"
         | "sonstige"
+      rechnung_status:
+        | "entwurf"
+        | "freigegeben"
+        | "versendet"
+        | "bezahlt"
+        | "storniert"
       recurrence_interval: "none" | "weekly" | "biweekly" | "monthly"
       standort: "Hannover"
       termin_status:
@@ -1363,6 +1669,13 @@ export const Constants = {
         "pflegesachleistung",
         "privat",
         "sonstige",
+      ],
+      rechnung_status: [
+        "entwurf",
+        "freigegeben",
+        "versendet",
+        "bezahlt",
+        "storniert",
       ],
       recurrence_interval: ["none", "weekly", "biweekly", "monthly"],
       standort: ["Hannover"],
