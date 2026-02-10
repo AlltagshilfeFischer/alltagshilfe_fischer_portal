@@ -66,9 +66,9 @@ export default function BenutzerverwaltungNeu() {
   const [selectedMitarbeiter, setSelectedMitarbeiter] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingMitarbeiter, setEditingMitarbeiter] = useState<Mitarbeiter | null>(null);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: '', vorname: '', nachname: '' });
-  const [inviteLoading, setInviteLoading] = useState(false);
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
+  const [activateTarget, setActivateTarget] = useState<Mitarbeiter | null>(null);
+  const [activateEmail, setActivateEmail] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
@@ -430,23 +430,22 @@ export default function BenutzerverwaltungNeu() {
     }
   };
 
-  const handleInviteMitarbeiter = async () => {
-    if (!inviteForm.email) {
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: 'E-Mail-Adresse ist erforderlich.',
-      });
-      return;
-    }
+  // Open activate dialog for a specific mitarbeiter
+  const handleOpenActivateDialog = (m: Mitarbeiter) => {
+    setActivateTarget(m);
+    setActivateEmail('');
+    setActivateDialogOpen(true);
+  };
 
-    setInviteLoading(true);
+  const handleActivateFromDialog = async () => {
+    if (!activateTarget || !activateEmail) return;
+    
+    setActionLoading(activateTarget.id);
     try {
       const { data, error } = await supabase.functions.invoke('activate-mitarbeiter', {
         body: {
-          email: inviteForm.email,
-          vorname: inviteForm.vorname,
-          nachname: inviteForm.nachname
+          email: activateEmail,
+          mitarbeiter_id: activateTarget.id
         },
       });
 
@@ -456,22 +455,23 @@ export default function BenutzerverwaltungNeu() {
       }
 
       toast({
-        title: 'Erfolgreich',
-        description: data?.message || 'Mitarbeiter eingeladen.',
+        title: 'Konto aktiviert',
+        description: data?.message || 'Konto wurde erstellt und Passwort-E-Mail versendet.',
       });
 
-      setInviteDialogOpen(false);
-      setInviteForm({ email: '', vorname: '', nachname: '' });
+      setActivateDialogOpen(false);
+      setActivateTarget(null);
+      setActivateEmail('');
       loadData();
     } catch (error: any) {
-      console.error('Error inviting:', error);
+      console.error('Error activating:', error);
       toast({
         variant: 'destructive',
         title: 'Fehler',
-        description: error.message || 'Einladung fehlgeschlagen.',
+        description: error.message || 'Aktivierung fehlgeschlagen.',
       });
     } finally {
-      setInviteLoading(false);
+      setActionLoading(null);
     }
   };
 
@@ -760,7 +760,7 @@ export default function BenutzerverwaltungNeu() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Benutzerverwaltung</h1>
-          <p className="text-muted-foreground">Mitarbeiter verwalten und neue einladen</p>
+          <p className="text-muted-foreground">Mitarbeiter anlegen, Rollen zuweisen und Konten aktivieren</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           {/* Masteradmin Toggle */}
@@ -789,10 +789,6 @@ export default function BenutzerverwaltungNeu() {
           <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
             <Upload className="h-4 w-4" />
             Importieren
-          </Button>
-          <Button onClick={() => setInviteDialogOpen(true)} className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Mitarbeiter einladen
           </Button>
         </div>
       </div>
@@ -844,19 +840,23 @@ export default function BenutzerverwaltungNeu() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {uninvitedMitarbeiter.map((m) => (
+                {uninvitedMitarbeiter.map((m) => (
                 <UninvitedMitarbeiterRow
                   key={m.id}
                   mitarbeiter={m}
                   isSelected={selectedUninvited.has(m.id)}
                   onToggleSelect={() => toggleUninvitedSelection(m.id)}
                   actionLoading={actionLoading}
-                  onInvite={handleActivateEmployee}
+                  onActivate={handleOpenActivateDialog}
                   onEdit={handleEditMitarbeiter}
                   onDelete={(id) => {
                     setSelectedMitarbeiter(id);
                     setDeleteDialogOpen(true);
                   }}
+                  currentRole={m.benutzer_id ? (userRolesMap[m.benutzer_id] as UserRole) || null : null}
+                  onChangeRole={handleChangeRole}
+                  canAssignGF={masterUnlocked}
+                  canAssignRoles={masterUnlocked || isGeschaeftsfuehrer}
                 />
               ))}
             </div>
@@ -1119,57 +1119,42 @@ export default function BenutzerverwaltungNeu() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Invite Dialog */}
-      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+      {/* Activate Dialog */}
+      <Dialog open={activateDialogOpen} onOpenChange={setActivateDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Mitarbeiter einladen
+              <UserPlus className="h-5 w-5" />
+              Konto aktivieren
             </DialogTitle>
             <DialogDescription>
-              Der Mitarbeiter erhält eine E-Mail mit einem Link zur Passwort-Erstellung.
+              {activateTarget 
+                ? `Erstellt ein Benutzerkonto für ${activateTarget.vorname || ''} ${activateTarget.nachname || ''}. Der Mitarbeiter erhält eine E-Mail zum Passwort-Setzen.`
+                : 'Erstellt ein Benutzerkonto für den Mitarbeiter.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="invite-email">E-Mail-Adresse *</Label>
+              <Label htmlFor="activate-email">E-Mail-Adresse *</Label>
               <Input
-                id="invite-email"
+                id="activate-email"
                 type="email"
-                value={inviteForm.email}
-                onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                value={activateEmail}
+                onChange={(e) => setActivateEmail(e.target.value)}
                 placeholder="mitarbeiter@beispiel.de"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && activateEmail) handleActivateFromDialog();
+                }}
               />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="invite-vorname">Vorname</Label>
-                <Input
-                  id="invite-vorname"
-                  value={inviteForm.vorname}
-                  onChange={(e) => setInviteForm({ ...inviteForm, vorname: e.target.value })}
-                  placeholder="Max"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="invite-nachname">Nachname</Label>
-                <Input
-                  id="invite-nachname"
-                  value={inviteForm.nachname}
-                  onChange={(e) => setInviteForm({ ...inviteForm, nachname: e.target.value })}
-                  placeholder="Mustermann"
-                />
-              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setActivateDialogOpen(false)}>
               Abbrechen
             </Button>
-            <Button onClick={handleInviteMitarbeiter} disabled={inviteLoading}>
-              {inviteLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Einladung senden
+            <Button onClick={handleActivateFromDialog} disabled={!activateEmail || actionLoading === activateTarget?.id}>
+              {actionLoading === activateTarget?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Konto aktivieren
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1460,33 +1445,34 @@ function UninvitedMitarbeiterRow({
   isSelected,
   onToggleSelect,
   actionLoading, 
-  onInvite,
+  onActivate,
   onEdit, 
   onDelete,
+  currentRole,
+  onChangeRole,
+  canAssignGF,
+  canAssignRoles,
 }: {
   mitarbeiter: Mitarbeiter;
   isSelected: boolean;
   onToggleSelect: () => void;
   actionLoading: string | null;
-  onInvite: (m: Mitarbeiter, email: string) => void;
+  onActivate: (m: Mitarbeiter) => void;
   onEdit: (m: Mitarbeiter) => void;
   onDelete: (id: string) => void;
+  currentRole: UserRole | null;
+  onChangeRole: (mitarbeiterId: string, newRole: string) => void;
+  canAssignGF: boolean;
+  canAssignRoles: boolean;
 }) {
-  const [emailInput, setEmailInput] = useState('');
-  const [showEmailInput, setShowEmailInput] = useState(false);
-  
   const fullName = m.vorname || m.nachname
     ? `${m.vorname || ''} ${m.nachname || ''}`.trim()
     : 'Unbekannt';
 
-  const handleInviteClick = () => {
-    if (showEmailInput && emailInput) {
-      onInvite(m, emailInput);
-      setShowEmailInput(false);
-      setEmailInput('');
-    } else {
-      setShowEmailInput(true);
-    }
+  const roleLabelMap: Record<string, string> = {
+    geschaeftsfuehrer: 'Geschäftsführer',
+    admin: 'Manager',
+    mitarbeiter: 'Mitarbeiter',
   };
 
   return (
@@ -1505,8 +1491,36 @@ function UninvitedMitarbeiterRow({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
-            Nicht aktiviert
+          {/* Role selector for pre-assignment */}
+          {canAssignRoles ? (
+            <Select
+              value={currentRole || 'mitarbeiter'}
+              onValueChange={(value) => onChangeRole(m.id, value)}
+              disabled={actionLoading === m.id}
+            >
+              <SelectTrigger className="w-[150px] h-8 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <Shield className="h-3 w-3" />
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {canAssignGF && (
+                  <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>
+                )}
+                <SelectItem value="admin">Manager</SelectItem>
+                <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : currentRole ? (
+            <Badge variant="secondary">
+              <Shield className="h-3 w-3 mr-1" />
+              {roleLabelMap[currentRole] || currentRole}
+            </Badge>
+          ) : null}
+
+          <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">
+            Kein Konto
           </Badge>
           <Button
             variant="outline"
@@ -1527,55 +1541,22 @@ function UninvitedMitarbeiterRow({
         </div>
       </div>
       
-      {/* Email input for invitation */}
+      {/* Activate button */}
       <div className="flex gap-2 items-center pl-8">
-        {showEmailInput ? (
-          <>
-            <Input
-              type="email"
-              placeholder="E-Mail-Adresse eingeben..."
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-              className="flex-1"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && emailInput) {
-                  handleInviteClick();
-                }
-              }}
-            />
-            <Button
-              size="sm"
-              onClick={handleInviteClick}
-              disabled={!emailInput || actionLoading === m.id}
-            >
-              {actionLoading === m.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setShowEmailInput(false);
-                setEmailInput('');
-              }}
-            >
-              <XCircle className="h-4 w-4" />
-            </Button>
-          </>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleInviteClick}
-            className="gap-2"
-          >
-            <UserPlus className="h-4 w-4" />
-            Konto aktivieren
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onActivate(m)}
+          disabled={actionLoading === m.id}
+          className="gap-2"
+        >
+          {actionLoading === m.id ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <KeyRound className="h-4 w-4" />
+          )}
+          Konto aktivieren
+        </Button>
       </div>
     </div>
   );
