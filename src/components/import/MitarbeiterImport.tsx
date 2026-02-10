@@ -11,7 +11,7 @@ import { Loader2, Sparkles, UserPlus, Trash2, AlertCircle } from 'lucide-react';
 interface ParsedMitarbeiter {
   vorname: string;
   nachname: string;
-  email: string;
+  email?: string;
   telefon?: string;
   strasse?: string;
   plz?: string;
@@ -60,28 +60,21 @@ export function MitarbeiterImport({ open, onOpenChange }: MitarbeiterImportProps
   };
 
   const handleImport = async () => {
-    const valid = parsed.filter(m => m.vorname && m.nachname && m.email);
+    const valid = parsed.filter(m => m.vorname && m.nachname);
     if (!valid.length) {
-      toast({ title: 'Keine gültigen Einträge', description: 'Jeder Mitarbeiter benötigt Vorname, Nachname und E-Mail.', variant: 'destructive' });
+      toast({ title: 'Keine gültigen Einträge', description: 'Jeder Mitarbeiter benötigt mindestens Vorname und Nachname.', variant: 'destructive' });
       return;
     }
 
     setIsImporting(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      toast({ title: 'Nicht authentifiziert', variant: 'destructive' });
-      setIsImporting(false);
-      return;
-    }
-
     let success = 0;
     let failed = 0;
 
     for (const m of valid) {
       try {
-        const { error } = await supabase.functions.invoke('invite-mitarbeiter', {
-          body: {
-            email: m.email.trim(),
+        const { error } = await supabase
+          .from('mitarbeiter')
+          .insert({
             vorname: m.vorname.trim(),
             nachname: m.nachname.trim(),
             telefon: m.telefon?.trim() || null,
@@ -89,9 +82,8 @@ export function MitarbeiterImport({ open, onOpenChange }: MitarbeiterImportProps
             plz: m.plz?.trim() || null,
             stadt: m.stadt?.trim() || null,
             soll_wochenstunden: m.soll_wochenstunden || null,
-          },
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
+            ist_aktiv: true,
+          });
         if (error) throw error;
         success++;
       } catch {
@@ -100,11 +92,10 @@ export function MitarbeiterImport({ open, onOpenChange }: MitarbeiterImportProps
     }
 
     queryClient.invalidateQueries({ queryKey: ['mitarbeiter'] });
-    queryClient.invalidateQueries({ queryKey: ['pending-registrations'] });
 
     toast({
       title: failed ? 'Teilweiser Import' : 'Import erfolgreich',
-      description: `${success} Einladung${success !== 1 ? 'en' : ''} gesendet${failed ? `, ${failed} fehlgeschlagen` : ''}`,
+      description: `${success} Mitarbeiter angelegt${failed ? `, ${failed} fehlgeschlagen` : ''}`,
       variant: failed ? 'destructive' : 'default',
     });
 
@@ -118,8 +109,6 @@ export function MitarbeiterImport({ open, onOpenChange }: MitarbeiterImportProps
     onOpenChange(false);
   };
 
-  const missingEmails = parsed.filter(m => !m.email);
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
@@ -130,6 +119,7 @@ export function MitarbeiterImport({ open, onOpenChange }: MitarbeiterImportProps
           </DialogTitle>
           <DialogDescription>
             Geben Sie Mitarbeiterdaten in beliebigem Format ein – die KI erkennt und strukturiert sie automatisch.
+            Die Mitarbeiter werden direkt als Datensätze angelegt (ohne Einladung).
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +128,7 @@ export function MitarbeiterImport({ open, onOpenChange }: MitarbeiterImportProps
             <Textarea
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={`Beispiele:\n\nAnna Schmidt, anna@firma.de, Tel: 0511-12345\nMarkus Weber – markus.weber@test.de, 30 Std/Woche\n\nOder als Tabelle:\nVorname;Nachname;E-Mail\nLisa;Müller;lisa@test.de`}
+              placeholder={`Beispiele:\n\nAnna Schmidt, Tel: 0511-12345, 30 Std/Woche\nMarkus Weber, Musterstr. 5, 30159 Hannover\n\nOder als Tabelle:\nVorname;Nachname;Telefon\nLisa;Müller;0511-99999`}
               className="flex-1 min-h-[200px] font-mono text-sm"
             />
             <Button onClick={handleParse} disabled={!inputText.trim() || isParsing} className="w-full">
@@ -162,26 +152,19 @@ export function MitarbeiterImport({ open, onOpenChange }: MitarbeiterImportProps
               </Button>
             </div>
 
-            {missingEmails.length > 0 && (
-              <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-lg text-sm text-destructive">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {missingEmails.length} Mitarbeiter ohne E-Mail – werden übersprungen
-              </div>
-            )}
-
             <div className="flex-1 overflow-auto space-y-2 min-h-0">
               {parsed.map((m, i) => (
                 <div
                   key={i}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${!m.email ? 'border-destructive/30 bg-destructive/5 opacity-60' : 'bg-card'}`}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">
                       {m.vorname} {m.nachname}
                     </div>
                     <div className="text-sm text-muted-foreground truncate">
-                      {m.email || 'Keine E-Mail'}
-                      {m.telefon && ` · ${m.telefon}`}
+                      {m.email && `${m.email} · `}
+                      {m.telefon && `Tel: ${m.telefon}`}
                       {m.soll_wochenstunden && ` · ${m.soll_wochenstunden}h/Woche`}
                     </div>
                     {(m.strasse || m.stadt) && (
@@ -190,25 +173,22 @@ export function MitarbeiterImport({ open, onOpenChange }: MitarbeiterImportProps
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 ml-2">
-                    {!m.email && <Badge variant="destructive" className="text-xs">Keine E-Mail</Badge>}
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemove(i)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 ml-2" onClick={() => handleRemove(i)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
 
             <Button
               onClick={handleImport}
-              disabled={isImporting || !parsed.some(m => m.email)}
+              disabled={isImporting || !parsed.some(m => m.vorname && m.nachname)}
               className="w-full"
             >
               {isImporting ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Einladungen werden gesendet...</>
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Mitarbeiter werden angelegt...</>
               ) : (
-                <><UserPlus className="h-4 w-4 mr-2" /> {parsed.filter(m => m.email).length} Mitarbeiter einladen</>
+                <><UserPlus className="h-4 w-4 mr-2" /> {parsed.filter(m => m.vorname && m.nachname).length} Mitarbeiter anlegen</>
               )}
             </Button>
           </div>
