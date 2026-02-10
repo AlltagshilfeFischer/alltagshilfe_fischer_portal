@@ -8,23 +8,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Trash2, UserX, UserCheck, Pencil, Mail, Users, Search, Upload, Send, MailCheck, Shield, KeyRound, Lock, Unlock } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, UserX, UserCheck, Pencil, Users, Search, Upload, Send, Shield, KeyRound, Lock, Unlock, CheckCircle2, Mail, ArrowRight } from 'lucide-react';
 import { AvatarUpload } from '@/components/mitarbeiter/AvatarUpload';
 import { MitarbeiterImport } from '@/components/import/MitarbeiterImport';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useUserRole, type UserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
-
-interface PendingRegistration {
-  id: string;
-  email: string;
-  vorname: string | null;
-  nachname: string | null;
-  status: string;
-  created_at: string;
-}
 
 interface Mitarbeiter {
   id: string;
@@ -47,21 +37,12 @@ interface Mitarbeiter {
   };
 }
 
-interface UserRoleEntry {
-  user_id: string;
-  role: string;
-}
-
 export default function BenutzerverwaltungNeu() {
-  const [pendingBenutzer, setPendingBenutzer] = useState<PendingRegistration[]>([]);
   const [mitarbeiter, setMitarbeiter] = useState<Mitarbeiter[]>([]);
   const [userRolesMap, setUserRolesMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [selectedBenutzer, setSelectedBenutzer] = useState<string | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedMitarbeiter, setSelectedMitarbeiter] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -75,9 +56,8 @@ export default function BenutzerverwaltungNeu() {
   const [createUserForm, setCreateUserForm] = useState({ email: '', password: '', vorname: '', nachname: '', rolle: 'geschaeftsfuehrer' });
   const [createUserLoading, setCreateUserLoading] = useState(false);
   
-  // Multi-select states
+  // Multi-select
   const [selectedUninvited, setSelectedUninvited] = useState<Set<string>>(new Set());
-  const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
 
   const { toast } = useToast();
   const { isGeschaeftsfuehrer, isAdmin } = useUserRole();
@@ -116,53 +96,29 @@ export default function BenutzerverwaltungNeu() {
     loadData();
 
     const channel = supabase
-      .channel('registration-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'pending_registrations' },
-        () => loadData()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'mitarbeiter' },
-        () => loadData()
-      )
+      .channel('benutzerverwaltung-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mitarbeiter' }, () => loadData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'benutzer' }, () => loadData())
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const loadData = async () => {
     try {
-      const [registrationsResponse, mitarbeiterResponse, rolesResponse] = await Promise.all([
-        supabase
-          .from('pending_registrations')
-          .select('*')
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false }),
+      const [mitarbeiterResponse, rolesResponse] = await Promise.all([
         supabase
           .from('mitarbeiter')
-          .select(`
-            *,
-            benutzer:benutzer_id (
-              email
-            )
-          `)
+          .select(`*, benutzer:benutzer_id (email)`)
           .order('nachname', { ascending: true }),
         supabase
           .from('user_roles')
           .select('user_id, role')
       ]);
 
-      if (registrationsResponse.error) throw registrationsResponse.error;
       if (mitarbeiterResponse.error) throw mitarbeiterResponse.error;
-
-      setPendingBenutzer(registrationsResponse.data || []);
       setMitarbeiter(mitarbeiterResponse.data || []);
       
-      // Build a map: user_id -> highest role
       const rolesMap: Record<string, string> = {};
       if (rolesResponse.data) {
         for (const entry of rolesResponse.data) {
@@ -175,20 +131,10 @@ export default function BenutzerverwaltungNeu() {
       }
       setUserRolesMap(rolesMap);
       
-      // Clear selections that no longer exist
       setSelectedUninvited(prev => {
         const newSet = new Set<string>();
         prev.forEach(id => {
-          if (mitarbeiterResponse.data?.some(m => m.id === id && !m.benutzer_id)) {
-            newSet.add(id);
-          }
-        });
-        return newSet;
-      });
-      setSelectedPending(prev => {
-        const newSet = new Set<string>();
-        prev.forEach(id => {
-          if (registrationsResponse.data?.some(r => r.id === id)) {
+          if (mitarbeiterResponse.data?.some(m => m.id === id && (!m.benutzer_id || m.benutzer?.email?.includes('@placeholder.local')))) {
             newSet.add(id);
           }
         });
@@ -196,152 +142,46 @@ export default function BenutzerverwaltungNeu() {
       });
     } catch (error: any) {
       console.error('Error loading data:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: 'Daten konnten nicht geladen werden.',
-      });
+      toast({ variant: 'destructive', title: 'Fehler', description: 'Daten konnten nicht geladen werden.' });
     } finally {
       setLoading(false);
     }
   };
 
-  // Get employees without active auth account (no benutzer_id or placeholder)
+  // Employees without an active auth account
   const uninvitedMitarbeiter = mitarbeiter.filter(m => 
     !m.benutzer_id || m.benutzer?.email?.includes('@placeholder.local')
   );
 
-  const handleApprove = async (registration: PendingRegistration) => {
-    setActionLoading(registration.id);
-    try {
-      const { data, error } = await supabase.functions.invoke('approve-benutzer', {
-        body: {
-          registration_id: registration.id,
-          email: registration.email,
-          vorname: registration.vorname,
-          nachname: registration.nachname
-        },
-      });
+  // Employees with real auth accounts
+  const activatedMitarbeiter = mitarbeiter.filter(m => 
+    m.benutzer_id && !m.benutzer?.email?.includes('@placeholder.local')
+  );
 
-      if (error) {
-        const serverMsg = (data as any)?.error || (typeof data === 'string' ? data : null);
-        throw new Error(serverMsg || error.message);
-      }
+  const filteredUninvited = uninvitedMitarbeiter.filter(m => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    const name = `${m.vorname || ''} ${m.nachname || ''}`.toLowerCase();
+    return name.includes(q) || (m.telefon || '').includes(q);
+  });
 
-      toast({
-        title: 'Erfolgreich',
-        description: 'Benutzer wurde genehmigt und als Mitarbeiter aktiviert.',
-      });
-
-      loadData();
-    } catch (error: any) {
-      console.error('Error approving:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: error.message || 'Genehmigung fehlgeschlagen.',
-      });
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleBulkApprove = async () => {
-    if (selectedPending.size === 0) return;
-    
-    setBulkActionLoading(true);
-    const toApprove = pendingBenutzer.filter(p => selectedPending.has(p.id));
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const registration of toApprove) {
-      try {
-        const { data, error } = await supabase.functions.invoke('approve-benutzer', {
-          body: {
-            registration_id: registration.id,
-            email: registration.email,
-            vorname: registration.vorname,
-            nachname: registration.nachname
-          },
-        });
-
-        if (error) throw error;
-        successCount++;
-      } catch (error: any) {
-        console.error('Error approving:', error);
-        errorCount++;
-      }
-    }
-
-    toast({
-      title: 'Massenfreigabe abgeschlossen',
-      description: `${successCount} genehmigt, ${errorCount} fehlgeschlagen`,
-      variant: errorCount > 0 ? 'destructive' : 'default',
-    });
-
-    setSelectedPending(new Set());
-    loadData();
-    setBulkActionLoading(false);
-  };
-
-  const handleReject = async () => {
-    if (!selectedBenutzer) return;
-
-    setActionLoading(selectedBenutzer);
-    try {
-      const { data, error } = await supabase.functions.invoke('reject-benutzer', {
-        body: {
-          registration_id: selectedBenutzer,
-          reason: rejectionReason
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Erfolgreich',
-        description: 'Benutzer wurde abgelehnt.',
-      });
-
-      setRejectDialogOpen(false);
-      setSelectedBenutzer(null);
-      setRejectionReason('');
-      loadData();
-    } catch (error: any) {
-      console.error('Error rejecting:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: error.message || 'Ablehnung fehlgeschlagen.',
-      });
-    } finally {
-      setActionLoading(null);
-    }
-  };
+  const filteredActivated = activatedMitarbeiter.filter(m => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    const name = `${m.vorname || ''} ${m.nachname || ''}`.toLowerCase();
+    const email = m.benutzer?.email?.toLowerCase() || '';
+    return name.includes(q) || email.includes(q);
+  });
 
   const handleToggleActive = async (mitarbeiterId: string, currentStatus: boolean) => {
     setActionLoading(mitarbeiterId);
     try {
-      const { error } = await supabase
-        .from('mitarbeiter')
-        .update({ ist_aktiv: !currentStatus })
-        .eq('id', mitarbeiterId);
-
+      const { error } = await supabase.from('mitarbeiter').update({ ist_aktiv: !currentStatus }).eq('id', mitarbeiterId);
       if (error) throw error;
-
-      toast({
-        title: 'Erfolgreich',
-        description: `Mitarbeiter wurde ${!currentStatus ? 'aktiviert' : 'deaktiviert'}.`,
-      });
-
+      toast({ title: 'Erfolgreich', description: `Mitarbeiter wurde ${!currentStatus ? 'aktiviert' : 'deaktiviert'}.` });
       loadData();
     } catch (error: any) {
-      console.error('Error toggling employee status:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: error.message || 'Status konnte nicht geändert werden.',
-      });
+      toast({ variant: 'destructive', title: 'Fehler', description: error.message });
     } finally {
       setActionLoading(null);
     }
@@ -349,88 +189,55 @@ export default function BenutzerverwaltungNeu() {
 
   const handleDeleteEmployee = async () => {
     if (!selectedMitarbeiter) return;
-
     setActionLoading(selectedMitarbeiter);
     try {
-      const { data, error } = await supabase.functions.invoke('delete-mitarbeiter', {
-        body: { mitarbeiterId: selectedMitarbeiter },
-      });
-
-      if (error) {
-        const serverMsg = (data as any)?.error || (typeof data === 'string' ? data : null);
-        throw new Error(serverMsg || error.message);
-      }
-
-      toast({
-        title: 'Erfolgreich',
-        description: 'Mitarbeiter wurde komplett gelöscht.',
-      });
-
+      const { data, error } = await supabase.functions.invoke('delete-mitarbeiter', { body: { mitarbeiterId: selectedMitarbeiter } });
+      if (error) { throw new Error((data as any)?.error || error.message); }
+      toast({ title: 'Erfolgreich', description: 'Mitarbeiter wurde komplett gelöscht.' });
       setDeleteDialogOpen(false);
       setSelectedMitarbeiter(null);
       loadData();
     } catch (error: any) {
-      console.error('Error deleting employee:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: error.message || 'Löschen fehlgeschlagen.',
-      });
+      toast({ variant: 'destructive', title: 'Fehler', description: error.message });
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleEditMitarbeiter = (mitarbeiter: Mitarbeiter) => {
-    setEditingMitarbeiter(mitarbeiter);
+  const handleEditMitarbeiter = (m: Mitarbeiter) => {
+    setEditingMitarbeiter(m);
     setEditDialogOpen(true);
   };
 
   const handleSaveMitarbeiter = async () => {
     if (!editingMitarbeiter) return;
-
     setActionLoading(editingMitarbeiter.id);
     try {
-      const { error } = await supabase
-        .from('mitarbeiter')
-        .update({
-          vorname: editingMitarbeiter.vorname,
-          nachname: editingMitarbeiter.nachname,
-          telefon: editingMitarbeiter.telefon,
-          strasse: editingMitarbeiter.strasse,
-          stadt: editingMitarbeiter.stadt,
-          plz: editingMitarbeiter.plz,
-          farbe_kalender: editingMitarbeiter.farbe_kalender,
-          standort: editingMitarbeiter.standort,
-          zustaendigkeitsbereich: editingMitarbeiter.zustaendigkeitsbereich,
-          soll_wochenstunden: editingMitarbeiter.soll_wochenstunden,
-          max_termine_pro_tag: editingMitarbeiter.max_termine_pro_tag,
-        })
-        .eq('id', editingMitarbeiter.id);
-
+      const { error } = await supabase.from('mitarbeiter').update({
+        vorname: editingMitarbeiter.vorname,
+        nachname: editingMitarbeiter.nachname,
+        telefon: editingMitarbeiter.telefon,
+        strasse: editingMitarbeiter.strasse,
+        stadt: editingMitarbeiter.stadt,
+        plz: editingMitarbeiter.plz,
+        farbe_kalender: editingMitarbeiter.farbe_kalender,
+        standort: editingMitarbeiter.standort,
+        zustaendigkeitsbereich: editingMitarbeiter.zustaendigkeitsbereich,
+        soll_wochenstunden: editingMitarbeiter.soll_wochenstunden,
+        max_termine_pro_tag: editingMitarbeiter.max_termine_pro_tag,
+      }).eq('id', editingMitarbeiter.id);
       if (error) throw error;
-
-      toast({
-        title: 'Erfolgreich',
-        description: 'Mitarbeiter-Daten wurden aktualisiert.',
-      });
-
+      toast({ title: 'Erfolgreich', description: 'Mitarbeiter-Daten wurden aktualisiert.' });
       setEditDialogOpen(false);
       setEditingMitarbeiter(null);
       loadData();
     } catch (error: any) {
-      console.error('Error updating employee:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: error.message || 'Aktualisierung fehlgeschlagen.',
-      });
+      toast({ variant: 'destructive', title: 'Fehler', description: error.message });
     } finally {
       setActionLoading(null);
     }
   };
 
-  // Open activate dialog for a specific mitarbeiter
   const handleOpenActivateDialog = (m: Mitarbeiter) => {
     setActivateTarget(m);
     setActivateEmail('');
@@ -439,46 +246,26 @@ export default function BenutzerverwaltungNeu() {
 
   const handleActivateFromDialog = async () => {
     if (!activateTarget || !activateEmail) return;
-    
     setActionLoading(activateTarget.id);
     try {
       const { data, error } = await supabase.functions.invoke('activate-mitarbeiter', {
-        body: {
-          email: activateEmail,
-          mitarbeiter_id: activateTarget.id
-        },
+        body: { email: activateEmail, mitarbeiter_id: activateTarget.id },
       });
-
-      if (error) {
-        const serverMsg = (data as any)?.error || (typeof data === 'string' ? data : null);
-        throw new Error(serverMsg || error.message);
-      }
-
-      toast({
-        title: 'Konto aktiviert',
-        description: data?.message || 'Konto wurde erstellt und Passwort-E-Mail versendet.',
-      });
-
+      if (error) { throw new Error((data as any)?.error || error.message); }
+      toast({ title: 'Konto aktiviert', description: data?.message || 'Konto wurde erstellt und Passwort-E-Mail versendet.' });
       setActivateDialogOpen(false);
       setActivateTarget(null);
       setActivateEmail('');
       loadData();
     } catch (error: any) {
-      console.error('Error activating:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: error.message || 'Aktivierung fehlgeschlagen.',
-      });
+      toast({ variant: 'destructive', title: 'Fehler', description: error.message });
     } finally {
       setActionLoading(null);
     }
   };
 
-  // Bulk activate uninvited employees
   const handleBulkActivate = async () => {
     if (selectedUninvited.size === 0) return;
-    
     setBulkActionLoading(true);
     const toActivate = uninvitedMitarbeiter.filter(m => selectedUninvited.has(m.id));
     let successCount = 0;
@@ -492,34 +279,21 @@ export default function BenutzerverwaltungNeu() {
           errorCount++;
           continue;
         }
-
         const { data, error } = await supabase.functions.invoke('activate-mitarbeiter', {
-          body: {
-            email: m.benutzer.email,
-            mitarbeiter_id: m.id
-          },
+          body: { email: m.benutzer.email, mitarbeiter_id: m.id },
         });
-
         if (error) throw error;
         successCount++;
       } catch (error: any) {
-        console.error('Error activating:', error);
         errors.push(`${m.vorname} ${m.nachname}: ${error.message}`);
         errorCount++;
       }
     }
 
-    if (errorCount > 0 && errors.length > 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Aktivierung teilweise fehlgeschlagen',
-        description: `${successCount} erfolgreich, ${errorCount} fehlgeschlagen. ${errors.slice(0, 3).join('; ')}`,
-      });
+    if (errorCount > 0) {
+      toast({ variant: 'destructive', title: 'Teilweise fehlgeschlagen', description: `${successCount} erfolgreich, ${errorCount} fehlgeschlagen. ${errors.slice(0, 3).join('; ')}` });
     } else {
-      toast({
-        title: 'Konten aktiviert',
-        description: `${successCount} Konten erfolgreich aktiviert. Passwort-E-Mails versendet.`,
-      });
+      toast({ title: 'Konten aktiviert', description: `${successCount} Konten erfolgreich aktiviert. Passwort-E-Mails versendet.` });
     }
 
     setSelectedUninvited(new Set());
@@ -527,35 +301,65 @@ export default function BenutzerverwaltungNeu() {
     setBulkActionLoading(false);
   };
 
-  // Single activate for uninvited employee
-  const handleActivateEmployee = async (m: Mitarbeiter, email: string) => {
-    setActionLoading(m.id);
+  const handleChangeRole = async (mitarbeiterId: string, newRole: string) => {
+    setActionLoading(mitarbeiterId);
     try {
-      const { data, error } = await supabase.functions.invoke('activate-mitarbeiter', {
-        body: {
-          email: email,
-          mitarbeiter_id: m.id
-        },
-      });
+      const { data: mitarbeiterData } = await supabase
+        .from('mitarbeiter')
+        .select('id, benutzer_id, vorname, nachname')
+        .eq('id', mitarbeiterId)
+        .maybeSingle();
 
-      if (error) {
-        const serverMsg = (data as any)?.error || (typeof data === 'string' ? data : null);
-        throw new Error(serverMsg || error.message);
+      if (!mitarbeiterData) throw new Error('Mitarbeiter nicht gefunden.');
+
+      let benutzerId = mitarbeiterData.benutzer_id;
+
+      if (!benutzerId) {
+        const { data: existingBenutzer } = await supabase
+          .from('benutzer')
+          .select('id')
+          .eq('email', `pending-${mitarbeiterId}@placeholder.local`)
+          .maybeSingle();
+
+        if (existingBenutzer) {
+          benutzerId = existingBenutzer.id;
+        } else {
+          const newId = crypto.randomUUID();
+          const { error: createError } = await supabase.from('benutzer').insert({
+            id: newId,
+            email: `pending-${mitarbeiterId}@placeholder.local`,
+            vorname: mitarbeiterData.vorname,
+            nachname: mitarbeiterData.nachname,
+            rolle: newRole as any,
+            status: 'pending' as any,
+          });
+          if (createError) throw createError;
+          await supabase.from('mitarbeiter').update({ benutzer_id: newId }).eq('id', mitarbeiterId);
+          benutzerId = newId;
+        }
+      }
+
+      const { data: existingRole } = await supabase.from('user_roles').select('id').eq('user_id', benutzerId).maybeSingle();
+
+      if (existingRole) {
+        const { error: updateError } = await supabase.from('user_roles').update({ role: newRole as any }).eq('user_id', benutzerId);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase.from('user_roles').insert({ user_id: benutzerId, role: newRole as any });
+        if (insertError) throw insertError;
+      }
+
+      if (benutzerId) {
+        await supabase.from('benutzer').update({ rolle: newRole as any }).eq('id', benutzerId);
       }
 
       toast({
-        title: 'Konto aktiviert',
-        description: data?.message || 'Konto wurde erstellt und Passwort-E-Mail versendet.',
+        title: 'Rolle geändert',
+        description: `Rolle wurde auf "${newRole === 'geschaeftsfuehrer' ? 'Geschäftsführer' : newRole === 'admin' ? 'Manager' : 'Mitarbeiter'}" gesetzt.`,
       });
-
       loadData();
     } catch (error: any) {
-      console.error('Error activating:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: error.message || 'Aktivierung fehlgeschlagen.',
-      });
+      toast({ variant: 'destructive', title: 'Fehler', description: error.message });
     } finally {
       setActionLoading(null);
     }
@@ -577,203 +381,64 @@ export default function BenutzerverwaltungNeu() {
           rolle: createUserForm.rolle,
         },
       });
-      if (error) {
-        const serverMsg = (data as any)?.error || (typeof data === 'string' ? data : null);
-        throw new Error(serverMsg || error.message);
-      }
+      if (error) { throw new Error((data as any)?.error || error.message); }
       toast({ title: 'Erfolgreich', description: data?.message || 'Benutzer erstellt.' });
       setCreateUserDialogOpen(false);
       setCreateUserForm({ email: '', password: '', vorname: '', nachname: '', rolle: 'geschaeftsfuehrer' });
       loadData();
     } catch (error: any) {
-      console.error('Error creating user:', error);
-      toast({ variant: 'destructive', title: 'Fehler', description: error.message || 'Erstellung fehlgeschlagen.' });
+      toast({ variant: 'destructive', title: 'Fehler', description: error.message });
     } finally {
       setCreateUserLoading(false);
     }
   };
 
-  const handleChangeRole = async (mitarbeiterId: string, newRole: string) => {
-    setActionLoading(mitarbeiterId);
-    try {
-      // Find the mitarbeiter to get benutzer_id
-      const { data: mitarbeiterData } = await supabase
-        .from('mitarbeiter')
-        .select('id, benutzer_id, vorname, nachname')
-        .eq('id', mitarbeiterId)
-        .maybeSingle();
-
-      if (!mitarbeiterData) throw new Error('Mitarbeiter nicht gefunden.');
-
-      let benutzerId = mitarbeiterData.benutzer_id;
-
-      // If no benutzer record exists, create one for role pre-assignment
-      if (!benutzerId) {
-        // Check if benutzer with matching email exists
-        const { data: existingBenutzer } = await supabase
-          .from('benutzer')
-          .select('id')
-          .eq('email', `pending-${mitarbeiterId}@placeholder.local`)
-          .maybeSingle();
-
-        if (existingBenutzer) {
-          benutzerId = existingBenutzer.id;
-        } else {
-          // Create a placeholder benutzer record
-          const newId = crypto.randomUUID();
-          const { error: createError } = await supabase
-            .from('benutzer')
-            .insert({
-              id: newId,
-              email: `pending-${mitarbeiterId}@placeholder.local`,
-              vorname: mitarbeiterData.vorname,
-              nachname: mitarbeiterData.nachname,
-              rolle: newRole as any,
-              status: 'pending' as any,
-            });
-
-          if (createError) throw createError;
-
-          // Link mitarbeiter to the new benutzer
-          await supabase
-            .from('mitarbeiter')
-            .update({ benutzer_id: newId })
-            .eq('id', mitarbeiterId);
-
-          benutzerId = newId;
-        }
-      }
-
-      // Check if user already has a role entry
-      const { data: existingRole } = await supabase
-        .from('user_roles')
-        .select('id')
-        .eq('user_id', benutzerId)
-        .maybeSingle();
-
-      if (existingRole) {
-        const { error: updateError } = await supabase
-          .from('user_roles')
-          .update({ role: newRole as any })
-          .eq('user_id', benutzerId);
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabase
-          .from('user_roles')
-          .insert({ user_id: benutzerId, role: newRole as any });
-        if (insertError) throw insertError;
-      }
-
-      // Also update benutzer.rolle for consistency
-      if (benutzerId) {
-        await supabase
-          .from('benutzer')
-          .update({ rolle: newRole as any })
-          .eq('id', benutzerId);
-      }
-
-      toast({
-        title: 'Rolle geändert',
-        description: `Rolle wurde auf "${newRole === 'geschaeftsfuehrer' ? 'Geschäftsführer' : newRole === 'admin' ? 'Manager' : 'Mitarbeiter'}" gesetzt.`,
-      });
-
-      loadData();
-    } catch (error: any) {
-      console.error('Error changing role:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: error.message || 'Rollenänderung fehlgeschlagen.',
-      });
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const filteredMitarbeiter = mitarbeiter.filter(m => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    const fullName = `${m.vorname || ''} ${m.nachname || ''}`.toLowerCase();
-    const email = m.benutzer?.email?.toLowerCase() || '';
-    return fullName.includes(query) || email.includes(query);
-  });
-
-  // Show employees with real auth accounts in the main list
-  const invitedMitarbeiter = filteredMitarbeiter.filter(m => 
-    m.benutzer_id && !m.benutzer?.email?.includes('@placeholder.local')
-  );
-  const activeMitarbeiter = invitedMitarbeiter.filter(m => m.ist_aktiv);
-  const inactiveMitarbeiter = invitedMitarbeiter.filter(m => !m.ist_aktiv);
-
-  // Toggle selection helpers
   const toggleUninvitedSelection = (id: string) => {
     setSelectedUninvited(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
+      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
       return newSet;
     });
   };
 
   const toggleAllUninvited = () => {
-    if (selectedUninvited.size === uninvitedMitarbeiter.length) {
+    if (selectedUninvited.size === filteredUninvited.length) {
       setSelectedUninvited(new Set());
     } else {
-      setSelectedUninvited(new Set(uninvitedMitarbeiter.map(m => m.id)));
-    }
-  };
-
-  const togglePendingSelection = (id: string) => {
-    setSelectedPending(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  };
-
-  const toggleAllPending = () => {
-    if (selectedPending.size === pendingBenutzer.length) {
-      setSelectedPending(new Set());
-    } else {
-      setSelectedPending(new Set(pendingBenutzer.map(p => p.id)));
+      setSelectedUninvited(new Set(filteredUninvited.map(m => m.id)));
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
+  const roleLabelMap: Record<string, string> = {
+    geschaeftsfuehrer: 'Geschäftsführer',
+    admin: 'Manager',
+    mitarbeiter: 'Mitarbeiter',
+  };
+
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Benutzerverwaltung</h1>
-          <p className="text-muted-foreground">Mitarbeiter anlegen, Rollen zuweisen und Konten aktivieren</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Team-Verwaltung</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Mitarbeiter einpflegen, Rollen zuweisen und Zugänge freischalten
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {/* Masteradmin Toggle */}
           {canSeeMasterAdmin && (
             <Button
               variant={masterUnlocked ? 'default' : 'outline'}
-              onClick={() => {
-                if (masterUnlocked) {
-                  setMasterUnlocked(false);
-                } else {
-                  setMasterPasswordDialog(true);
-                }
-              }}
+              size="sm"
+              onClick={() => masterUnlocked ? setMasterUnlocked(false) : setMasterPasswordDialog(true)}
               className="gap-2"
             >
               {masterUnlocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
@@ -781,67 +446,122 @@ export default function BenutzerverwaltungNeu() {
             </Button>
           )}
           {masterUnlocked && (
-            <Button variant="outline" onClick={() => setCreateUserDialogOpen(true)} className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setCreateUserDialogOpen(true)} className="gap-2">
               <KeyRound className="h-4 w-4" />
               Benutzer erstellen
             </Button>
           )}
-          <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)} className="gap-2">
             <Upload className="h-4 w-4" />
             Importieren
           </Button>
         </div>
       </div>
 
-      {/* Import Dialog */}
-      <MitarbeiterImport 
-        open={importDialogOpen} 
-        onOpenChange={setImportDialogOpen} 
-      />
+      {/* Onboarding Progress Overview */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="border-l-4 border-l-amber-500">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <UserPlus className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{uninvitedMitarbeiter.length}</p>
+              <p className="text-xs text-muted-foreground">Warten auf Aktivierung</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-primary">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{activatedMitarbeiter.filter(m => m.ist_aktiv).length}</p>
+              <p className="text-xs text-muted-foreground">Aktive Benutzer</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-muted-foreground/30">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+              <Users className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{mitarbeiter.length}</p>
+              <p className="text-xs text-muted-foreground">Gesamt im Team</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Uninvited Employees Section */}
+      {/* Workflow hint */}
       {uninvitedMitarbeiter.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
-          <CardHeader className="pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <Card className="bg-muted/40 border-dashed">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="outline" className="gap-1"><span className="font-semibold text-foreground">1.</span> Einpflegen</Badge>
+              <ArrowRight className="h-3 w-3" />
+              <Badge variant="outline" className="gap-1"><span className="font-semibold text-foreground">2.</span> Rolle zuweisen</Badge>
+              <ArrowRight className="h-3 w-3" />
+              <Badge variant="outline" className="gap-1"><span className="font-semibold text-foreground">3.</span> Konto aktivieren</Badge>
+              <ArrowRight className="h-3 w-3" />
+              <Badge variant="outline" className="gap-1"><span className="font-semibold text-foreground">4.</span> E-Mail mit Link</Badge>
+              <ArrowRight className="h-3 w-3" />
+              <Badge variant="outline" className="gap-1"><span className="font-semibold text-foreground">5.</span> Passwort setzen</Badge>
+              <ArrowRight className="h-3 w-3" />
+              <Badge variant="secondary" className="gap-1">✓ Im System</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Team durchsuchen..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* Section: Noch nicht aktiviert */}
+      {filteredUninvited.length > 0 && (
+        <Card className="border-amber-200 dark:border-amber-900">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2">
                 <UserPlus className="h-5 w-5 text-amber-600" />
-                <CardTitle className="text-xl">Noch nicht aktiviert</CardTitle>
-                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
-                  {uninvitedMitarbeiter.length}
+                <CardTitle className="text-lg">Warten auf Aktivierung</CardTitle>
+                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+                  {filteredUninvited.length}
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleAllUninvited}
-                  className="gap-2"
-                >
-                  {selectedUninvited.size === uninvitedMitarbeiter.length ? 'Keine' : 'Alle'} auswählen
+                <Button variant="outline" size="sm" onClick={toggleAllUninvited}>
+                  {selectedUninvited.size === filteredUninvited.length ? 'Keine' : 'Alle'} auswählen
                 </Button>
                 <Button
+                  size="sm"
                   onClick={handleBulkActivate}
                   disabled={selectedUninvited.size === 0 || bulkActionLoading}
                   className="gap-2"
                 >
-                  {bulkActionLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
+                  {bulkActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   {selectedUninvited.size > 0 ? `${selectedUninvited.size} aktivieren` : 'Ausgewählte aktivieren'}
                 </Button>
               </div>
             </div>
             <CardDescription>
-              Diese Mitarbeiter wurden angelegt, haben aber noch kein aktives Benutzerkonto.
+              Diese Mitarbeiter sind angelegt, haben aber noch keinen Zugang zum System.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-                {uninvitedMitarbeiter.map((m) => (
-                <UninvitedMitarbeiterRow
+              {filteredUninvited.map((m) => (
+                <UninvitedRow
                   key={m.id}
                   mitarbeiter={m}
                   isSelected={selectedUninvited.has(m.id)}
@@ -849,14 +569,12 @@ export default function BenutzerverwaltungNeu() {
                   actionLoading={actionLoading}
                   onActivate={handleOpenActivateDialog}
                   onEdit={handleEditMitarbeiter}
-                  onDelete={(id) => {
-                    setSelectedMitarbeiter(id);
-                    setDeleteDialogOpen(true);
-                  }}
+                  onDelete={(id) => { setSelectedMitarbeiter(id); setDeleteDialogOpen(true); }}
                   currentRole={m.benutzer_id ? (userRolesMap[m.benutzer_id] as UserRole) || null : null}
                   onChangeRole={handleChangeRole}
                   canAssignGF={masterUnlocked}
                   canAssignRoles={masterUnlocked || isGeschaeftsfuehrer}
+                  roleLabelMap={roleLabelMap}
                 />
               ))}
             </div>
@@ -864,236 +582,52 @@ export default function BenutzerverwaltungNeu() {
         </Card>
       )}
 
-      {/* Main Layout: Two Columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Employee List (2/3 width) */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle className="text-xl">Alle Mitarbeiter</CardTitle>
-                  <Badge variant="secondary">{invitedMitarbeiter.length}</Badge>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Suchen..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 w-full sm:w-64"
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[calc(100vh-320px)] pr-4">
-                {/* Active Employees */}
-                {activeMitarbeiter.length > 0 && (
-                  <div className="space-y-2 mb-6">
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                      Aktive Mitarbeiter ({activeMitarbeiter.length})
-                    </h3>
-                    {activeMitarbeiter.map((m) => (
-                      <MitarbeiterRow
-                        key={m.id}
-                        mitarbeiter={m}
-                        actionLoading={actionLoading}
-                        onEdit={handleEditMitarbeiter}
-                        onToggleActive={handleToggleActive}
-                        onDelete={(id) => {
-                          setSelectedMitarbeiter(id);
-                          setDeleteDialogOpen(true);
-                        }}
-                        loadData={loadData}
-                        currentRole={m.benutzer_id ? (userRolesMap[m.benutzer_id] as UserRole) || 'mitarbeiter' : 'mitarbeiter'}
-                        onChangeRole={handleChangeRole}
-                        canAssignGF={masterUnlocked}
-                        canAssignRoles={masterUnlocked}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Inactive Employees */}
-                {inactiveMitarbeiter.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                      Inaktive Mitarbeiter ({inactiveMitarbeiter.length})
-                    </h3>
-                    {inactiveMitarbeiter.map((m) => (
-                      <MitarbeiterRow
-                        key={m.id}
-                        mitarbeiter={m}
-                        actionLoading={actionLoading}
-                        onEdit={handleEditMitarbeiter}
-                        onToggleActive={handleToggleActive}
-                        onDelete={(id) => {
-                          setSelectedMitarbeiter(id);
-                          setDeleteDialogOpen(true);
-                        }}
-                        loadData={loadData}
-                        currentRole={m.benutzer_id ? (userRolesMap[m.benutzer_id] as UserRole) || 'mitarbeiter' : 'mitarbeiter'}
-                        onChangeRole={handleChangeRole}
-                        canAssignGF={masterUnlocked}
-                        canAssignRoles={masterUnlocked}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {invitedMitarbeiter.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    {searchQuery ? 'Keine Mitarbeiter gefunden' : 'Keine eingeladenen Mitarbeiter vorhanden'}
-                  </p>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right: Pending Registrations (1/3 width) */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-amber-500" />
-                    <CardTitle className="text-xl">Ausstehend</CardTitle>
-                    {pendingBenutzer.length > 0 && (
-                      <Badge variant="destructive">{pendingBenutzer.length}</Badge>
-                    )}
-                  </div>
-                </div>
-                {pendingBenutzer.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleAllPending}
-                      className="gap-2"
-                    >
-                      {selectedPending.size === pendingBenutzer.length ? 'Keine' : 'Alle'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleBulkApprove}
-                      disabled={selectedPending.size === 0 || bulkActionLoading}
-                      className="gap-2"
-                    >
-                      {bulkActionLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <MailCheck className="h-4 w-4" />
-                      )}
-                      {selectedPending.size > 0 ? `${selectedPending.size} genehmigen` : 'Genehmigen'}
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <CardDescription>
-                Registrierungsanfragen prüfen
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[calc(100vh-420px)]">
-                {pendingBenutzer.length > 0 ? (
-                  <div className="space-y-3">
-                    {pendingBenutzer.map((benutzer) => (
-                      <Card key={benutzer.id} className="bg-muted/50">
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            <div className="flex items-start gap-3">
-                              <Checkbox
-                                checked={selectedPending.has(benutzer.id)}
-                                onCheckedChange={() => togglePendingSelection(benutzer.id)}
-                                className="mt-1"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium">
-                                  {benutzer.vorname || benutzer.nachname
-                                    ? `${benutzer.vorname || ''} ${benutzer.nachname || ''}`.trim()
-                                    : 'Kein Name'}
-                                </p>
-                                <p className="text-sm text-muted-foreground truncate">
-                                  {benutzer.email}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {new Date(benutzer.created_at).toLocaleDateString('de-DE')}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => handleApprove(benutzer)}
-                                disabled={actionLoading === benutzer.id}
-                                className="flex-1"
-                              >
-                                {actionLoading === benutzer.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <CheckCircle className="h-4 w-4" />
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => {
-                                  setSelectedBenutzer(benutzer.id);
-                                  setRejectDialogOpen(true);
-                                }}
-                                disabled={actionLoading === benutzer.id}
-                                className="flex-1"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>Keine ausstehenden Anfragen</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Reject Dialog */}
-      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Benutzer ablehnen</AlertDialogTitle>
-            <AlertDialogDescription>
-              Möchten Sie diesen Benutzer wirklich ablehnen?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 py-4">
-            <Label htmlFor="rejection-reason">Ablehnungsgrund (optional)</Label>
-            <Input
-              id="rejection-reason"
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Grund der Ablehnung..."
-            />
+      {/* Section: Aktive Teammitglieder */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Aktive Teammitglieder</CardTitle>
+            <Badge variant="secondary">{filteredActivated.length}</Badge>
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReject} className="bg-destructive text-destructive-foreground">
-              Ablehnen
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <CardDescription>
+            Mitarbeiter mit aktivem Benutzerkonto im System
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filteredActivated.length > 0 ? (
+            <div className="space-y-2">
+              {filteredActivated.map((m) => (
+                <ActivatedRow
+                  key={m.id}
+                  mitarbeiter={m}
+                  actionLoading={actionLoading}
+                  onEdit={handleEditMitarbeiter}
+                  onToggleActive={handleToggleActive}
+                  onDelete={(id) => { setSelectedMitarbeiter(id); setDeleteDialogOpen(true); }}
+                  loadData={loadData}
+                  currentRole={m.benutzer_id ? (userRolesMap[m.benutzer_id] as UserRole) || 'mitarbeiter' : 'mitarbeiter'}
+                  onChangeRole={handleChangeRole}
+                  canAssignGF={masterUnlocked}
+                  canAssignRoles={masterUnlocked}
+                  roleLabelMap={roleLabelMap}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>{searchQuery ? 'Keine Mitarbeiter gefunden' : 'Noch keine aktivierten Mitarbeiter'}</p>
+              {!searchQuery && uninvitedMitarbeiter.length > 0 && (
+                <p className="text-sm mt-1">Aktivieren Sie oben stehende Mitarbeiter, um Zugänge zu erstellen.</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Import Dialog */}
+      <MitarbeiterImport open={importDialogOpen} onOpenChange={setImportDialogOpen} />
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -1107,11 +641,7 @@ export default function BenutzerverwaltungNeu() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteEmployee} 
-              className="bg-destructive text-destructive-foreground"
-              disabled={actionLoading === selectedMitarbeiter}
-            >
+            <AlertDialogAction onClick={handleDeleteEmployee} className="bg-destructive text-destructive-foreground" disabled={actionLoading === selectedMitarbeiter}>
               {actionLoading === selectedMitarbeiter && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Endgültig löschen
             </AlertDialogAction>
@@ -1124,12 +654,12 @@ export default function BenutzerverwaltungNeu() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
+              <Mail className="h-5 w-5" />
               Konto aktivieren
             </DialogTitle>
             <DialogDescription>
-              {activateTarget 
-                ? `Erstellt ein Benutzerkonto für ${activateTarget.vorname || ''} ${activateTarget.nachname || ''}. Der Mitarbeiter erhält eine E-Mail zum Passwort-Setzen.`
+              {activateTarget
+                ? `Erstellt ein Benutzerkonto für ${activateTarget.vorname || ''} ${activateTarget.nachname || ''}. Der Mitarbeiter erhält eine E-Mail mit einem Link zum Passwort-Setzen. Beim ersten Login wird er aufgefordert, sein eigenes Passwort zu vergeben.`
                 : 'Erstellt ein Benutzerkonto für den Mitarbeiter.'}
             </DialogDescription>
           </DialogHeader>
@@ -1142,19 +672,25 @@ export default function BenutzerverwaltungNeu() {
                 value={activateEmail}
                 onChange={(e) => setActivateEmail(e.target.value)}
                 placeholder="mitarbeiter@beispiel.de"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && activateEmail) handleActivateFromDialog();
-                }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && activateEmail) handleActivateFromDialog(); }}
               />
+            </div>
+            <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">Was passiert:</p>
+              <ul className="list-disc list-inside space-y-0.5 text-xs">
+                <li>Ein Benutzerkonto wird erstellt</li>
+                <li>Eine E-Mail mit Passwort-Link wird versendet</li>
+                <li>Der Mitarbeiter setzt sein Passwort über den Link</li>
+                <li>Ab dann kann er sich im System anmelden</li>
+              </ul>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActivateDialogOpen(false)}>
-              Abbrechen
-            </Button>
-            <Button onClick={handleActivateFromDialog} disabled={!activateEmail || actionLoading === activateTarget?.id}>
+            <Button variant="outline" onClick={() => setActivateDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleActivateFromDialog} disabled={!activateEmail || actionLoading === activateTarget?.id} className="gap-2">
               {actionLoading === activateTarget?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Konto aktivieren
+              <Send className="h-4 w-4" />
+              Konto aktivieren & E-Mail senden
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1165,13 +701,10 @@ export default function BenutzerverwaltungNeu() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Mitarbeiter bearbeiten</DialogTitle>
-            <DialogDescription>
-              Stammdaten des Mitarbeiters anpassen
-            </DialogDescription>
+            <DialogDescription>Stammdaten des Mitarbeiters anpassen</DialogDescription>
           </DialogHeader>
           {editingMitarbeiter && (
             <div className="grid gap-4 py-4">
-              {/* Avatar Upload Section */}
               <div className="flex justify-center pb-4 border-b">
                 <div className="text-center">
                   <AvatarUpload
@@ -1183,128 +716,68 @@ export default function BenutzerverwaltungNeu() {
                     onUploadComplete={() => loadData()}
                     onRemove={() => loadData()}
                   />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Hover für Upload-Optionen
-                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">Hover für Upload-Optionen</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-vorname">Vorname</Label>
-                  <Input
-                    id="edit-vorname"
-                    value={editingMitarbeiter.vorname || ''}
-                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, vorname: e.target.value })}
-                  />
+                  <Label>Vorname</Label>
+                  <Input value={editingMitarbeiter.vorname || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, vorname: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-nachname">Nachname</Label>
-                  <Input
-                    id="edit-nachname"
-                    value={editingMitarbeiter.nachname || ''}
-                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, nachname: e.target.value })}
-                  />
+                  <Label>Nachname</Label>
+                  <Input value={editingMitarbeiter.nachname || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, nachname: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-telefon">Telefon</Label>
-                <Input
-                  id="edit-telefon"
-                  value={editingMitarbeiter.telefon || ''}
-                  onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, telefon: e.target.value })}
-                />
+                <Label>Telefon</Label>
+                <Input value={editingMitarbeiter.telefon || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, telefon: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
-                  <Label htmlFor="edit-strasse">Straße</Label>
-                  <Input
-                    id="edit-strasse"
-                    value={editingMitarbeiter.strasse || ''}
-                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, strasse: e.target.value })}
-                    placeholder="Straße und Hausnummer"
-                  />
+                  <Label>Straße</Label>
+                  <Input value={editingMitarbeiter.strasse || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, strasse: e.target.value })} placeholder="Straße und Hausnummer" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-plz">PLZ</Label>
-                  <Input
-                    id="edit-plz"
-                    value={editingMitarbeiter.plz || ''}
-                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, plz: e.target.value })}
-                    placeholder="PLZ"
-                  />
+                  <Label>PLZ</Label>
+                  <Input value={editingMitarbeiter.plz || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, plz: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-stadt">Stadt</Label>
-                  <Input
-                    id="edit-stadt"
-                    value={editingMitarbeiter.stadt || ''}
-                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, stadt: e.target.value })}
-                    placeholder="Stadt"
-                  />
+                  <Label>Stadt</Label>
+                  <Input value={editingMitarbeiter.stadt || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, stadt: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-farbe">Kalenderfarbe</Label>
-                  <Input
-                    id="edit-farbe"
-                    type="color"
-                    value={editingMitarbeiter.farbe_kalender || '#3B82F6'}
-                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, farbe_kalender: e.target.value })}
-                  />
+                  <Label>Kalenderfarbe</Label>
+                  <Input type="color" value={editingMitarbeiter.farbe_kalender || '#3B82F6'} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, farbe_kalender: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-standort">Standort</Label>
-                  <Select
-                    value={editingMitarbeiter.standort || 'Hannover'}
-                    onValueChange={(value: 'Hannover') => setEditingMitarbeiter({ ...editingMitarbeiter, standort: value })}
-                  >
-                    <SelectTrigger id="edit-standort">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Hannover">Hannover</SelectItem>
-                    </SelectContent>
+                  <Label>Standort</Label>
+                  <Select value={editingMitarbeiter.standort || 'Hannover'} onValueChange={(v: 'Hannover') => setEditingMitarbeiter({ ...editingMitarbeiter, standort: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="Hannover">Hannover</SelectItem></SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-zustaendigkeit">Zuständigkeitsbereich</Label>
-                <Input
-                  id="edit-zustaendigkeit"
-                  value={editingMitarbeiter.zustaendigkeitsbereich || ''}
-                  onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, zustaendigkeitsbereich: e.target.value })}
-                />
+                <Label>Zuständigkeitsbereich</Label>
+                <Input value={editingMitarbeiter.zustaendigkeitsbereich || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, zustaendigkeitsbereich: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-wochenstunden">Soll-Wochenstunden</Label>
-                  <Input
-                    id="edit-wochenstunden"
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={editingMitarbeiter.soll_wochenstunden || ''}
-                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, soll_wochenstunden: e.target.value ? parseFloat(e.target.value) : null })}
-                  />
+                  <Label>Soll-Wochenstunden</Label>
+                  <Input type="number" min="0" step="0.5" value={editingMitarbeiter.soll_wochenstunden || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, soll_wochenstunden: e.target.value ? parseFloat(e.target.value) : null })} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-max-termine">Max. Termine pro Tag</Label>
-                  <Input
-                    id="edit-max-termine"
-                    type="number"
-                    min="0"
-                    value={editingMitarbeiter.max_termine_pro_tag || ''}
-                    onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, max_termine_pro_tag: e.target.value ? parseInt(e.target.value) : null })}
-                  />
+                  <Label>Max. Termine pro Tag</Label>
+                  <Input type="number" min="0" value={editingMitarbeiter.max_termine_pro_tag || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, max_termine_pro_tag: e.target.value ? parseInt(e.target.value) : null })} />
                 </div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Abbrechen
-            </Button>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Abbrechen</Button>
             <Button onClick={handleSaveMitarbeiter} disabled={actionLoading === editingMitarbeiter?.id}>
               {actionLoading === editingMitarbeiter?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Speichern
@@ -1322,73 +795,42 @@ export default function BenutzerverwaltungNeu() {
               Benutzer manuell erstellen
             </DialogTitle>
             <DialogDescription>
-              Erstellt sofort ein vollständiges Konto mit E-Mail und Passwort. Der Benutzer kann das Passwort später über "Passwort vergessen" ändern.
+              Erstellt sofort ein vollständiges Konto mit E-Mail und Passwort.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="create-vorname">Vorname</Label>
-                <Input
-                  id="create-vorname"
-                  value={createUserForm.vorname}
-                  onChange={(e) => setCreateUserForm({ ...createUserForm, vorname: e.target.value })}
-                  placeholder="Max"
-                />
+                <Label>Vorname</Label>
+                <Input value={createUserForm.vorname} onChange={(e) => setCreateUserForm({ ...createUserForm, vorname: e.target.value })} placeholder="Max" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="create-nachname">Nachname</Label>
-                <Input
-                  id="create-nachname"
-                  value={createUserForm.nachname}
-                  onChange={(e) => setCreateUserForm({ ...createUserForm, nachname: e.target.value })}
-                  placeholder="Mustermann"
-                />
+                <Label>Nachname</Label>
+                <Input value={createUserForm.nachname} onChange={(e) => setCreateUserForm({ ...createUserForm, nachname: e.target.value })} placeholder="Mustermann" />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="create-email">E-Mail-Adresse *</Label>
-              <Input
-                id="create-email"
-                type="email"
-                value={createUserForm.email}
-                onChange={(e) => setCreateUserForm({ ...createUserForm, email: e.target.value })}
-                placeholder="benutzer@beispiel.de"
-              />
+              <Label>E-Mail-Adresse *</Label>
+              <Input type="email" value={createUserForm.email} onChange={(e) => setCreateUserForm({ ...createUserForm, email: e.target.value })} placeholder="benutzer@beispiel.de" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="create-password">Passwort *</Label>
-              <Input
-                id="create-password"
-                type="text"
-                value={createUserForm.password}
-                onChange={(e) => setCreateUserForm({ ...createUserForm, password: e.target.value })}
-                placeholder="Mindestens 6 Zeichen"
-              />
+              <Label>Passwort *</Label>
+              <Input type="text" value={createUserForm.password} onChange={(e) => setCreateUserForm({ ...createUserForm, password: e.target.value })} placeholder="Mindestens 6 Zeichen" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="create-rolle">Rolle</Label>
-              <Select
-                value={createUserForm.rolle}
-                onValueChange={(value) => setCreateUserForm({ ...createUserForm, rolle: value })}
-              >
-                <SelectTrigger id="create-rolle">
-                  <SelectValue />
-                </SelectTrigger>
+              <Label>Rolle</Label>
+              <Select value={createUserForm.rolle} onValueChange={(v) => setCreateUserForm({ ...createUserForm, rolle: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {masterUnlocked && (
-                    <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>
-                  )}
-                   <SelectItem value="admin">Manager</SelectItem>
+                  {masterUnlocked && <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>}
+                  <SelectItem value="admin">Manager</SelectItem>
                   <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateUserDialogOpen(false)}>
-              Abbrechen
-            </Button>
+            <Button variant="outline" onClick={() => setCreateUserDialogOpen(false)}>Abbrechen</Button>
             <Button onClick={handleCreateUserManual} disabled={createUserLoading}>
               {createUserLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Benutzer erstellen
@@ -1411,23 +853,18 @@ export default function BenutzerverwaltungNeu() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="master-password">Passwort</Label>
+              <Label>Passwort</Label>
               <Input
-                id="master-password"
                 type="password"
                 value={masterPasswordInput}
                 onChange={(e) => setMasterPasswordInput(e.target.value)}
                 placeholder="Master-Passwort eingeben"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleVerifyMasterPassword();
-                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleVerifyMasterPassword(); }}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setMasterPasswordDialog(false); setMasterPasswordInput(''); }}>
-              Abbrechen
-            </Button>
+            <Button variant="outline" onClick={() => { setMasterPasswordDialog(false); setMasterPasswordInput(''); }}>Abbrechen</Button>
             <Button onClick={handleVerifyMasterPassword} disabled={masterPasswordLoading || !masterPasswordInput}>
               {masterPasswordLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Freischalten
@@ -1439,162 +876,77 @@ export default function BenutzerverwaltungNeu() {
   );
 }
 
-// Component for uninvited employees
-function UninvitedMitarbeiterRow({ 
-  mitarbeiter: m, 
-  isSelected,
-  onToggleSelect,
-  actionLoading, 
-  onActivate,
-  onEdit, 
-  onDelete,
-  currentRole,
-  onChangeRole,
-  canAssignGF,
-  canAssignRoles,
+// ─── Uninvited Employee Row ───
+function UninvitedRow({
+  mitarbeiter: m, isSelected, onToggleSelect, actionLoading, onActivate, onEdit, onDelete,
+  currentRole, onChangeRole, canAssignGF, canAssignRoles, roleLabelMap,
 }: {
-  mitarbeiter: Mitarbeiter;
-  isSelected: boolean;
-  onToggleSelect: () => void;
-  actionLoading: string | null;
-  onActivate: (m: Mitarbeiter) => void;
-  onEdit: (m: Mitarbeiter) => void;
-  onDelete: (id: string) => void;
-  currentRole: UserRole | null;
-  onChangeRole: (mitarbeiterId: string, newRole: string) => void;
-  canAssignGF: boolean;
-  canAssignRoles: boolean;
+  mitarbeiter: Mitarbeiter; isSelected: boolean; onToggleSelect: () => void;
+  actionLoading: string | null; onActivate: (m: Mitarbeiter) => void;
+  onEdit: (m: Mitarbeiter) => void; onDelete: (id: string) => void;
+  currentRole: UserRole | null; onChangeRole: (id: string, role: string) => void;
+  canAssignGF: boolean; canAssignRoles: boolean; roleLabelMap: Record<string, string>;
 }) {
-  const fullName = m.vorname || m.nachname
-    ? `${m.vorname || ''} ${m.nachname || ''}`.trim()
-    : 'Unbekannt';
-
-  const roleLabelMap: Record<string, string> = {
-    geschaeftsfuehrer: 'Geschäftsführer',
-    admin: 'Manager',
-    mitarbeiter: 'Mitarbeiter',
-  };
+  const fullName = `${m.vorname || ''} ${m.nachname || ''}`.trim() || 'Unbekannt';
 
   return (
-    <div className="flex flex-col gap-2 p-4 border rounded-lg bg-background">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={onToggleSelect}
-          />
-          <div>
-            <p className="font-medium">{fullName}</p>
-            {m.telefon && (
-              <p className="text-sm text-muted-foreground">{m.telefon}</p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Role selector for pre-assignment */}
-          {canAssignRoles ? (
-            <Select
-              value={currentRole || 'mitarbeiter'}
-              onValueChange={(value) => onChangeRole(m.id, value)}
-              disabled={actionLoading === m.id}
-            >
-              <SelectTrigger className="w-[150px] h-8 text-xs">
-                <div className="flex items-center gap-1.5">
-                  <Shield className="h-3 w-3" />
-                  <SelectValue />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {canAssignGF && (
-                  <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>
-                )}
-                <SelectItem value="admin">Manager</SelectItem>
-                <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : currentRole ? (
-            <Badge variant="secondary">
-              <Shield className="h-3 w-3 mr-1" />
-              {roleLabelMap[currentRole] || currentRole}
-            </Badge>
-          ) : null}
-
-          <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">
-            Kein Konto
-          </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onEdit(m)}
-            disabled={actionLoading === m.id}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => onDelete(m.id)}
-            disabled={actionLoading === m.id}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 border rounded-lg bg-background hover:bg-muted/30 transition-colors">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <Checkbox checked={isSelected} onCheckedChange={onToggleSelect} />
+        <div className="min-w-0">
+          <p className="font-medium truncate">{fullName}</p>
+          {m.telefon && <p className="text-xs text-muted-foreground">{m.telefon}</p>}
         </div>
       </div>
-      
-      {/* Activate button */}
-      <div className="flex gap-2 items-center pl-8">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onActivate(m)}
-          disabled={actionLoading === m.id}
-          className="gap-2"
-        >
-          {actionLoading === m.id ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <KeyRound className="h-4 w-4" />
-          )}
-          Konto aktivieren
+      <div className="flex items-center gap-2 flex-wrap pl-7 sm:pl-0">
+        {canAssignRoles ? (
+          <Select
+            value={currentRole || 'mitarbeiter'}
+            onValueChange={(v) => onChangeRole(m.id, v)}
+            disabled={actionLoading === m.id}
+          >
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <div className="flex items-center gap-1.5">
+                <Shield className="h-3 w-3" />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {canAssignGF && <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>}
+              <SelectItem value="admin">Manager</SelectItem>
+              <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : currentRole ? (
+          <Badge variant="secondary"><Shield className="h-3 w-3 mr-1" />{roleLabelMap[currentRole] || currentRole}</Badge>
+        ) : null}
+        <Button variant="outline" size="sm" onClick={() => onActivate(m)} disabled={actionLoading === m.id} className="gap-1.5 text-xs">
+          {actionLoading === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
+          Aktivieren
+        </Button>
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onEdit(m)} disabled={actionLoading === m.id}>
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => onDelete(m.id)} disabled={actionLoading === m.id}>
+          <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>
   );
 }
 
-// Extracted component for employee rows
-function MitarbeiterRow({ 
-  mitarbeiter: m, 
-  actionLoading, 
-  onEdit, 
-  onToggleActive, 
-  onDelete,
-  loadData,
-  currentRole,
-  onChangeRole,
-  canAssignGF,
-  canAssignRoles,
+// ─── Activated Employee Row ───
+function ActivatedRow({
+  mitarbeiter: m, actionLoading, onEdit, onToggleActive, onDelete, loadData,
+  currentRole, onChangeRole, canAssignGF, canAssignRoles, roleLabelMap,
 }: {
-  mitarbeiter: Mitarbeiter;
-  actionLoading: string | null;
-  onEdit: (m: Mitarbeiter) => void;
-  onToggleActive: (id: string, status: boolean) => void;
-  onDelete: (id: string) => void;
-  loadData: () => void;
-  currentRole: UserRole | null;
-  onChangeRole: (userId: string, newRole: string) => void;
-  canAssignGF: boolean;
-  canAssignRoles: boolean;
+  mitarbeiter: Mitarbeiter; actionLoading: string | null;
+  onEdit: (m: Mitarbeiter) => void; onToggleActive: (id: string, status: boolean) => void;
+  onDelete: (id: string) => void; loadData: () => void;
+  currentRole: UserRole | null; onChangeRole: (id: string, role: string) => void;
+  canAssignGF: boolean; canAssignRoles: boolean; roleLabelMap: Record<string, string>;
 }) {
-  const fullName = m.vorname || m.nachname
-    ? `${m.vorname || ''} ${m.nachname || ''}`.trim()
-    : 'Unbekannt';
-
-  const roleLabelMap: Record<string, string> = {
-    geschaeftsfuehrer: 'Geschäftsführer',
-    admin: 'Manager',
-    mitarbeiter: 'Mitarbeiter',
-  };
+  const fullName = `${m.vorname || ''} ${m.nachname || ''}`.trim() || 'Unbekannt';
 
   const roleBadgeVariant = (role: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (role) {
@@ -1605,8 +957,8 @@ function MitarbeiterRow({
   };
 
   return (
-    <div className={`flex justify-between items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors ${!m.ist_aktiv ? 'opacity-60' : ''}`}>
-      <div className="flex items-center gap-4">
+    <div className={`flex flex-col sm:flex-row sm:items-center gap-2 p-3 border rounded-lg hover:bg-muted/30 transition-colors ${!m.ist_aktiv ? 'opacity-60' : ''}`}>
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         <AvatarUpload
           mitarbeiterId={m.id}
           currentAvatarUrl={m.avatar_url}
@@ -1616,32 +968,27 @@ function MitarbeiterRow({
           onUploadComplete={loadData}
           onRemove={loadData}
         />
-        <div>
-          <p className="font-medium">{fullName}</p>
-          <p className="text-sm text-muted-foreground">{m.benutzer?.email || 'Keine E-Mail'}</p>
-          {m.telefon && (
-            <p className="text-xs text-muted-foreground">{m.telefon}</p>
-          )}
+        <div className="min-w-0">
+          <p className="font-medium truncate">{fullName}</p>
+          <p className="text-xs text-muted-foreground truncate">{m.benutzer?.email || 'Keine E-Mail'}</p>
+          {m.telefon && <p className="text-xs text-muted-foreground">{m.telefon}</p>}
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        {/* Role selector */}
+      <div className="flex items-center gap-2 flex-wrap pl-11 sm:pl-0">
         {currentRole && canAssignRoles ? (
           <Select
             value={currentRole}
-            onValueChange={(value) => onChangeRole(m.id, value)}
+            onValueChange={(v) => onChangeRole(m.id, v)}
             disabled={actionLoading === m.id}
           >
-            <SelectTrigger className="w-[160px] h-8 text-xs">
+            <SelectTrigger className="w-[140px] h-8 text-xs">
               <div className="flex items-center gap-1.5">
                 <Shield className="h-3 w-3" />
                 <SelectValue />
               </div>
             </SelectTrigger>
             <SelectContent>
-              {canAssignGF && (
-                <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>
-              )}
+              {canAssignGF && <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>}
               <SelectItem value="admin">Manager</SelectItem>
               <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
             </SelectContent>
@@ -1652,39 +999,17 @@ function MitarbeiterRow({
             {roleLabelMap[currentRole] || currentRole}
           </Badge>
         ) : null}
-
         <Badge variant={m.ist_aktiv ? 'default' : 'secondary'}>
           {m.ist_aktiv ? 'Aktiv' : 'Inaktiv'}
         </Badge>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onEdit(m)}
-          disabled={actionLoading === m.id}
-        >
-          <Pencil className="h-4 w-4" />
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onEdit(m)} disabled={actionLoading === m.id}>
+          <Pencil className="h-3.5 w-3.5" />
         </Button>
-        <Button
-          variant={m.ist_aktiv ? 'outline' : 'default'}
-          size="sm"
-          onClick={() => onToggleActive(m.id, m.ist_aktiv)}
-          disabled={actionLoading === m.id}
-        >
-          {actionLoading === m.id ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : m.ist_aktiv ? (
-            <UserX className="h-4 w-4" />
-          ) : (
-            <UserCheck className="h-4 w-4" />
-          )}
+        <Button variant={m.ist_aktiv ? 'outline' : 'default'} size="icon" className="h-8 w-8" onClick={() => onToggleActive(m.id, m.ist_aktiv)} disabled={actionLoading === m.id}>
+          {actionLoading === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : m.ist_aktiv ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
         </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => onDelete(m.id)}
-          disabled={actionLoading === m.id}
-        >
-          <Trash2 className="h-4 w-4" />
+        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => onDelete(m.id)} disabled={actionLoading === m.id}>
+          <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>
