@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Trash2, UserX, UserCheck, Upload, Mail, LinkIcon } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Trash2, UserX, UserCheck, Upload, Mail, LinkIcon, KeyRound } from 'lucide-react';
 import { AvatarUpload } from '@/components/mitarbeiter/AvatarUpload';
 import { MitarbeiterImport } from '@/components/import/MitarbeiterImport';
 
@@ -344,8 +344,8 @@ export default function MitarbeiterVerwaltung() {
       if (data?.error) throw new Error(data.error);
 
       toast({
-        title: 'Einladung gesendet',
-        description: data?.message || `Einladung an ${inviteEmail} gesendet.`,
+        title: 'Konto aktiviert',
+        description: data?.message || `Konto für ${inviteEmail} aktiviert.`,
       });
 
       setInviteDialogOpen(false);
@@ -391,7 +391,7 @@ export default function MitarbeiterVerwaltung() {
     <div className="container mx-auto py-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Mitarbeiterverwaltung</h1>
-        <p className="text-muted-foreground">Mitarbeiter anlegen, verwalten und zur Registrierung einladen</p>
+        <p className="text-muted-foreground">Mitarbeiter anlegen, verwalten und Konten aktivieren</p>
       </div>
 
       <Tabs defaultValue="employees" className="w-full">
@@ -413,7 +413,7 @@ export default function MitarbeiterVerwaltung() {
           <Card>
             <CardHeader>
               <CardTitle>Alle Mitarbeiter</CardTitle>
-              <CardDescription>Mitarbeiter als Datensätze – können separat zur Registrierung eingeladen werden</CardDescription>
+              <CardDescription>Mitarbeiter als Datensätze – können separat aktiviert werden</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -466,10 +466,10 @@ export default function MitarbeiterVerwaltung() {
                           size="sm"
                           onClick={() => handleOpenInviteDialog(m)}
                           disabled={actionLoading === m.id}
-                          title="Zur Registrierung einladen"
+                          title="Konto aktivieren"
                         >
-                          <Mail className="h-4 w-4 mr-1" />
-                          Einladen
+                          <KeyRound className="h-4 w-4 mr-1" />
+                          Aktivieren
                         </Button>
                       )}
                       <Button
@@ -653,17 +653,17 @@ export default function MitarbeiterVerwaltung() {
         onOpenChange={setShowImportDialog} 
       />
 
-      {/* Invite Dialog */}
+      {/* Activate Dialog */}
       <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Mitarbeiter einladen
+              <KeyRound className="h-5 w-5" />
+              Konto aktivieren
             </DialogTitle>
             <DialogDescription>
-              Senden Sie eine Einladungs-E-Mail an <strong>{inviteMitarbeiterName}</strong>.
-              Der Link läuft nach 24 Stunden ab.
+              Erstellt ein Benutzerkonto für <strong>{inviteMitarbeiterName}</strong>.
+              Der Mitarbeiter erhält eine E-Mail zum Passwort-Setzen.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -688,8 +688,8 @@ export default function MitarbeiterVerwaltung() {
               disabled={!inviteEmail || actionLoading === inviteMitarbeiterId}
             >
               {actionLoading === inviteMitarbeiterId && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              <Mail className="h-4 w-4 mr-2" />
-              Einladung senden
+              <KeyRound className="h-4 w-4 mr-2" />
+              Konto aktivieren
             </Button>
           </DialogFooter>
         </DialogContent>
