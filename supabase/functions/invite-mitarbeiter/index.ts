@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verify admin role using verified JWT
+    // Verify admin role
     const authHeader = req.headers.get('Authorization') || '';
     if (!authHeader.startsWith('Bearer ')) {
       throw new Error('Not authenticated');
@@ -30,104 +30,80 @@ Deno.serve(async (req) => {
       const payload = JSON.parse(payloadJson);
       userId = payload.sub ?? null;
     } catch (e) {
-      console.error('JWT decode failed:', e);
       throw new Error('Not authenticated');
     }
-    if (!userId) {
-      throw new Error('Not authenticated');
-    }
+    if (!userId) throw new Error('Not authenticated');
 
-    // Check admin role (use is_admin_or_higher for geschaeftsfuehrer + admin)
     const { data: isAdmin, error: isAdminErr } = await supabaseAdmin.rpc('is_admin_or_higher', { _user_id: userId });
     if (isAdminErr || !isAdmin) {
-      console.error('Admin role check failed:', isAdminErr);
       throw new Error('Not authorized - admin role required');
     }
 
-    // Get request body
-    const { email, vorname, nachname } = await req.json();
+    const { mitarbeiter_id, email } = await req.json();
 
-    if (!email) {
-      throw new Error('E-Mail-Adresse ist erforderlich');
+    if (!mitarbeiter_id || !email) {
+      throw new Error('mitarbeiter_id und email sind erforderlich');
     }
 
-    console.log('Creating pending registration for:', { email, vorname, nachname });
+    // Verify mitarbeiter exists and has no benutzer_id yet
+    const { data: mitarbeiter, error: mitErr } = await supabaseAdmin
+      .from('mitarbeiter')
+      .select('id, vorname, nachname, benutzer_id')
+      .eq('id', mitarbeiter_id)
+      .single();
 
-    // Check if already exists in pending_registrations
-    const { data: existingPending } = await supabaseAdmin
-      .from('pending_registrations')
-      .select('id, status')
-      .eq('email', email.toLowerCase())
-      .maybeSingle();
-
-    if (existingPending) {
-      if (existingPending.status === 'pending') {
-        throw new Error('Diese E-Mail-Adresse hat bereits eine ausstehende Registrierungsanfrage');
-      }
-      // If rejected, allow re-invite by updating the existing record
+    if (mitErr || !mitarbeiter) {
+      throw new Error('Mitarbeiter nicht gefunden');
     }
 
-    // Check if user already exists as approved benutzer
-    const { data: existingBenutzer } = await supabaseAdmin
-      .from('benutzer')
-      .select('id, status')
-      .eq('email', email.toLowerCase())
-      .maybeSingle();
-
-    if (existingBenutzer && existingBenutzer.status === 'approved') {
-      throw new Error('Diese E-Mail-Adresse ist bereits als Benutzer registriert');
+    if (mitarbeiter.benutzer_id) {
+      throw new Error('Dieser Mitarbeiter hat bereits ein Benutzerkonto');
     }
 
-    // Create or update pending registration entry
-    // This creates the entry in the "pending" section for admin approval
-    const { error: pendingError } = await supabaseAdmin
+    console.log('Inviting mitarbeiter:', { mitarbeiter_id, email, vorname: mitarbeiter.vorname, nachname: mitarbeiter.nachname });
+
+    // Create pending registration to track the invite
+    await supabaseAdmin
       .from('pending_registrations')
       .upsert({
         email: email.toLowerCase(),
-        vorname: vorname || null,
-        nachname: nachname || null,
+        vorname: mitarbeiter.vorname || null,
+        nachname: mitarbeiter.nachname || null,
         status: 'pending',
         ignored: false,
         rejection_reason: null,
         reviewed_at: null,
-        reviewed_by: null
+        reviewed_by: null,
       }, { onConflict: 'email' });
 
-    if (pendingError) {
-      console.error('Pending registration error:', pendingError);
-      throw new Error(`Registrierungsanfrage konnte nicht erstellt werden: ${pendingError.message}`);
-    }
-
-    console.log('Pending registration created for:', email);
-
-    // Send invite email so the user knows they were invited
+    // Send invite email with mitarbeiter_id in metadata so we can link on registration
     const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: `${Deno.env.get('SITE_URL') || 'https://easy-assist-hub.lovable.app'}/auth`,
       data: {
-        vorname: vorname || '',
-        nachname: nachname || '',
-        invited: true
+        vorname: mitarbeiter.vorname || '',
+        nachname: mitarbeiter.nachname || '',
+        invited: true,
+        mitarbeiter_id: mitarbeiter_id,
       }
     });
 
     if (inviteError) {
       console.error('Invite email error:', inviteError);
-      // Still successful - pending registration was created
       return new Response(
         JSON.stringify({ 
-          success: true, 
-          message: 'Mitarbeiter wurde zur Genehmigungsliste hinzugefügt. Einladungs-E-Mail konnte nicht gesendet werden.',
+          success: false, 
+          error: `Einladungs-E-Mail konnte nicht gesendet werden: ${inviteError.message}`,
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    console.log('Invite email sent successfully to:', email);
+    console.log('Invite email sent to:', email);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Einladung gesendet! Der Mitarbeiter erscheint nach Registrierung in der Genehmigungsliste.',
+        message: `Einladung an ${email} gesendet. Der Link läuft nach 24 Stunden ab.`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );

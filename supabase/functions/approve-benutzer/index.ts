@@ -143,19 +143,58 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to upsert benutzer: ${benutzerError.message}`);
     }
 
-    // Upsert into mitarbeiter table
-    const { error: mitarbeiterError } = await supabaseAdmin
-      .from('mitarbeiter')
-      .upsert({
-        benutzer_id: targetUserId!,
-        vorname: vorname || registration.vorname || null,
-        nachname: nachname || registration.nachname || null,
-        ist_aktiv: true
-      }, { onConflict: 'benutzer_id' });
+    // Check if there's an existing mitarbeiter record to link
+    // First check user metadata for mitarbeiter_id (from invite flow)
+    let linkedMitarbeiterId: string | null = null;
+    
+    // Try to get mitarbeiter_id from the auth user's metadata
+    const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(targetUserId!);
+    const metaMitarbeiterId = authUserData?.user?.user_metadata?.mitarbeiter_id;
+    
+    if (metaMitarbeiterId) {
+      // Verify the mitarbeiter exists and has no benutzer_id yet
+      const { data: existingMit } = await supabaseAdmin
+        .from('mitarbeiter')
+        .select('id, benutzer_id')
+        .eq('id', metaMitarbeiterId)
+        .maybeSingle();
+      
+      if (existingMit && !existingMit.benutzer_id) {
+        linkedMitarbeiterId = existingMit.id;
+      }
+    }
 
-    if (mitarbeiterError) {
-      console.error('Mitarbeiter upsert error:', mitarbeiterError);
-      throw new Error(`Failed to upsert mitarbeiter: ${mitarbeiterError.message}`);
+    if (linkedMitarbeiterId) {
+      // Link existing mitarbeiter record to this user
+      const { error: mitarbeiterError } = await supabaseAdmin
+        .from('mitarbeiter')
+        .update({
+          benutzer_id: targetUserId!,
+          ist_aktiv: true
+        })
+        .eq('id', linkedMitarbeiterId);
+
+      if (mitarbeiterError) {
+        console.error('Mitarbeiter link error:', mitarbeiterError);
+        throw new Error(`Failed to link mitarbeiter: ${mitarbeiterError.message}`);
+      }
+      console.log('Linked auth user to existing mitarbeiter:', linkedMitarbeiterId);
+    } else {
+      // Create new mitarbeiter record
+      const { error: mitarbeiterError } = await supabaseAdmin
+        .from('mitarbeiter')
+        .upsert({
+          benutzer_id: targetUserId!,
+          vorname: vorname || registration.vorname || null,
+          nachname: nachname || registration.nachname || null,
+          ist_aktiv: true
+        }, { onConflict: 'benutzer_id' });
+
+      if (mitarbeiterError) {
+        console.error('Mitarbeiter upsert error:', mitarbeiterError);
+        throw new Error(`Failed to upsert mitarbeiter: ${mitarbeiterError.message}`);
+      }
+      console.log('Created new mitarbeiter record for user:', targetUserId);
     }
 
     // Update registration status to approved
