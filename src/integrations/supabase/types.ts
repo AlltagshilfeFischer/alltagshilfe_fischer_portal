@@ -841,12 +841,16 @@ export type Database = {
           avatar_url: string | null
           benutzer_id: string | null
           created_at: string
+          employment_type: string | null
           farbe_kalender: string | null
+          hourly_rate: number | null
           id: string
+          is_bookable: boolean
           ist_aktiv: boolean
           max_termine_pro_tag: number | null
           nachname: string | null
           plz: string | null
+          qualification: string | null
           soll_wochenstunden: number | null
           stadt: string | null
           standort: Database["public"]["Enums"]["standort"] | null
@@ -861,12 +865,16 @@ export type Database = {
           avatar_url?: string | null
           benutzer_id?: string | null
           created_at?: string
+          employment_type?: string | null
           farbe_kalender?: string | null
+          hourly_rate?: number | null
           id?: string
+          is_bookable?: boolean
           ist_aktiv?: boolean
           max_termine_pro_tag?: number | null
           nachname?: string | null
           plz?: string | null
+          qualification?: string | null
           soll_wochenstunden?: number | null
           stadt?: string | null
           standort?: Database["public"]["Enums"]["standort"] | null
@@ -881,12 +889,16 @@ export type Database = {
           avatar_url?: string | null
           benutzer_id?: string | null
           created_at?: string
+          employment_type?: string | null
           farbe_kalender?: string | null
+          hourly_rate?: number | null
           id?: string
+          is_bookable?: boolean
           ist_aktiv?: boolean
           max_termine_pro_tag?: number | null
           nachname?: string | null
           plz?: string | null
+          qualification?: string | null
           soll_wochenstunden?: number | null
           stadt?: string | null
           standort?: Database["public"]["Enums"]["standort"] | null

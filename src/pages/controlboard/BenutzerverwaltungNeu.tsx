@@ -167,12 +167,11 @@ export default function BenutzerverwaltungNeu() {
     }
   };
 
-  const handleDeleteEmployee = async () => {
+  const handleDeactivateEmployee = async () => {
     if (!selectedMitarbeiter) return;
-    // Check if protected
     const targetMa = [...uninvitedMitarbeiter, ...activatedMitarbeiter].find(m => m.id === selectedMitarbeiter);
     if (targetMa && isProtectedUser(targetMa)) {
-      toast({ variant: 'destructive', title: 'Geschützt', description: 'Dieser System-Account kann nicht gelöscht werden.' });
+      toast({ variant: 'destructive', title: 'Geschützt', description: 'Dieser System-Account kann nicht deaktiviert werden.' });
       setDeleteDialogOpen(false);
       return;
     }
@@ -183,7 +182,7 @@ export default function BenutzerverwaltungNeu() {
         const errMsg = typeof data === 'object' && data?.error ? data.error : error.message;
         throw new Error(errMsg);
       }
-      toast({ title: 'Erfolgreich', description: 'Mitarbeiter wurde komplett gelöscht.' });
+      toast({ title: 'Erfolgreich', description: 'Mitarbeiter wurde deaktiviert.' });
       setDeleteDialogOpen(false);
       setSelectedMitarbeiter(null);
       loadData();
@@ -604,21 +603,21 @@ export default function BenutzerverwaltungNeu() {
       {/* Import Dialog */}
       <MitarbeiterImport open={importDialogOpen} onOpenChange={setImportDialogOpen} />
 
-      {/* Delete Dialog */}
+      {/* Deactivate Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mitarbeiter komplett löschen</AlertDialogTitle>
+            <AlertDialogTitle>Mitarbeiter deaktivieren</AlertDialogTitle>
             <AlertDialogDescription>
-              Sind Sie sicher? Dabei werden gelöscht: Auth-User, Benutzer-Eintrag, 
-              Mitarbeiter-Eintrag, alle Termine und Änderungsanträge.
+              Sind Sie sicher? Der Mitarbeiter wird deaktiviert und kann sich nicht mehr anmelden.
+              Die Daten bleiben für die Revisionssicherheit erhalten.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteEmployee} className="bg-destructive text-destructive-foreground" disabled={actionLoading === selectedMitarbeiter}>
+            <AlertDialogAction onClick={handleDeactivateEmployee} className="bg-destructive text-destructive-foreground" disabled={actionLoading === selectedMitarbeiter}>
               {actionLoading === selectedMitarbeiter && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Endgültig löschen
+              Deaktivieren
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -872,8 +871,8 @@ function UninvitedRow({
           <Pencil className="h-3.5 w-3.5" />
         </Button>
         {canDelete && !isProtected && (
-          <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => onDelete(m.id)} disabled={actionLoading === m.id}>
-            <Trash2 className="h-3.5 w-3.5" />
+          <Button variant="outline" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(m.id)} disabled={actionLoading === m.id} title="Deaktivieren">
+            <UserX className="h-3.5 w-3.5" />
           </Button>
         )}
       </div>
@@ -957,8 +956,8 @@ function ActivatedRow({
           {actionLoading === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : m.ist_aktiv ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
         </Button>
         {canDelete && !isProtected && (
-          <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => onDelete(m.id)} disabled={actionLoading === m.id}>
-            <Trash2 className="h-3.5 w-3.5" />
+          <Button variant="outline" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(m.id)} disabled={actionLoading === m.id} title="Deaktivieren">
+            <UserX className="h-3.5 w-3.5" />
           </Button>
         )}
       </div>

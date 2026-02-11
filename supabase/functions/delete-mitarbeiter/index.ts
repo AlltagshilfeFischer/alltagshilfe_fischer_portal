@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       .rpc('can_delete', { _user_id: user.id })
 
     if (!canDelete) {
-      return new Response(JSON.stringify({ error: 'Not authorized - only Geschäftsführer can delete' }), {
+      return new Response(JSON.stringify({ error: 'Not authorized - only Geschäftsführer can deactivate' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     // Get the mitarbeiter to find benutzer_id
     const { data: mitarbeiter, error: mitarbeiterError } = await supabaseAdmin
       .from('mitarbeiter')
-      .select('benutzer_id')
+      .select('benutzer_id, ist_aktiv')
       .eq('id', mitarbeiterId)
       .single()
 
@@ -78,64 +78,59 @@ Deno.serve(async (req) => {
 
       const protectedEmails = ['admin@af-verwaltung.de']
       if (benutzer && protectedEmails.includes(benutzer.email?.toLowerCase())) {
-        return new Response(JSON.stringify({ error: 'Dieser System-Account ist geschützt und kann nicht gelöscht werden.' }), {
+        return new Response(JSON.stringify({ error: 'Dieser System-Account ist geschützt und kann nicht deaktiviert werden.' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
+
+      // Check if this is the last active GF
+      const { data: isGF } = await supabaseAdmin
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', mitarbeiter.benutzer_id)
+        .eq('role', 'geschaeftsfuehrer')
+        .maybeSingle()
+
+      if (isGF) {
+        const { data: activeGFs } = await supabaseAdmin
+          .from('user_roles')
+          .select('user_id, benutzer:user_id(status)')
+          .eq('role', 'geschaeftsfuehrer')
+          .neq('user_id', mitarbeiter.benutzer_id)
+
+        const otherActiveGFs = (activeGFs || []).filter(
+          (gf: any) => gf.benutzer?.status === 'approved'
+        )
+
+        if (otherActiveGFs.length === 0) {
+          return new Response(JSON.stringify({ error: 'Der letzte aktive Geschäftsführer kann nicht deaktiviert werden.' }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+      }
     }
 
-    const benutzerId = mitarbeiter.benutzer_id
-
-    // Delete all termin_aenderungen related to this mitarbeiter
-    await supabaseAdmin
-      .from('termin_aenderungen')
-      .delete()
-      .or(`old_mitarbeiter_id.eq.${mitarbeiterId},new_mitarbeiter_id.eq.${mitarbeiterId}`)
-
-    // Delete all termine for this mitarbeiter
-    await supabaseAdmin
-      .from('termine')
-      .delete()
-      .eq('mitarbeiter_id', mitarbeiterId)
-
-    // Delete mitarbeiter_verfuegbarkeit
-    await supabaseAdmin
-      .from('mitarbeiter_verfuegbarkeit')
-      .delete()
-      .eq('mitarbeiter_id', mitarbeiterId)
-
-    // Delete mitarbeiter_abwesenheiten
-    await supabaseAdmin
-      .from('mitarbeiter_abwesenheiten')
-      .delete()
-      .eq('mitarbeiter_id', mitarbeiterId)
-
-    // Delete from mitarbeiter table
-    const { error: deleteMitarbeiterError } = await supabaseAdmin
+    // SOFT DELETE: Set ist_aktiv = false instead of physical deletion
+    const { error: deactivateError } = await supabaseAdmin
       .from('mitarbeiter')
-      .delete()
+      .update({ ist_aktiv: false })
       .eq('id', mitarbeiterId)
 
-    if (deleteMitarbeiterError) {
-      return new Response(JSON.stringify({ error: deleteMitarbeiterError.message }), {
+    if (deactivateError) {
+      return new Response(JSON.stringify({ error: deactivateError.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Delete from benutzer table if benutzer_id exists
-    if (benutzerId) {
+    // Also deactivate the benutzer record if it exists
+    if (mitarbeiter.benutzer_id) {
       await supabaseAdmin
         .from('benutzer')
-        .delete()
-        .eq('id', benutzerId)
-
-      // Delete auth user
-      const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(benutzerId)
-      if (deleteAuthError) {
-        console.error('Error deleting auth user:', deleteAuthError)
-      }
+        .update({ status: 'rejected' })
+        .eq('id', mitarbeiter.benutzer_id)
     }
 
     return new Response(JSON.stringify({ success: true }), {
