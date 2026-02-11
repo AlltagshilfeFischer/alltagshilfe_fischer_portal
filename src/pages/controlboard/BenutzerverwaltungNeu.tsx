@@ -412,7 +412,7 @@ export default function BenutzerverwaltungNeu() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Team-Verwaltung</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Mitarbeiter einpflegen, Rollen zuweisen und Zugänge freischalten
+            Mitarbeiter einpflegen, Rollen zuweisen und Zugänge erstellen
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
