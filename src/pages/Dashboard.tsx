@@ -9,7 +9,7 @@ import Billing from './controlboard/Billing';
 import Leistungsnachweise from './controlboard/Leistungsnachweise';
 import Dokumentenverwaltung from './controlboard/Dokumentenverwaltung';
 import MitarbeiterStart from './MitarbeiterStart';
-import PendingApproval from './PendingApproval';
+
 import Settings from './Settings';
 import { useUserRole } from '@/hooks/useUserRole';
 
@@ -25,7 +25,16 @@ export default function Dashboard() {
   }
 
   if (role === null) {
-    return <PendingApproval />;
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-semibold">Kein Zugriff</h2>
+          <p className="text-muted-foreground">
+            Ihrem Konto wurde noch keine Rolle zugewiesen. Bitte kontaktieren Sie den Administrator.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (role === 'mitarbeiter') {

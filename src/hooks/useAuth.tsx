@@ -96,18 +96,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
-    // If signup succeeded, update pending_registrations with the names
-    if (data?.user) {
-      await supabase
-        .from('pending_registrations')
-        .upsert({
-          email: email,
-          vorname: vorname || null,
-          nachname: nachname || null,
-          status: 'pending'
-        }, { onConflict: 'email' });
-    }
-
     return { error: null };
   };
 

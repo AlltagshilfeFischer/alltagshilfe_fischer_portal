@@ -27,26 +27,7 @@ export function useUserRole() {
       }
 
       try {
-        // 1. Check approval status in benutzer table
-        const { data: benutzerData, error: benutzerError } = await supabase
-          .from('benutzer')
-          .select('status, id')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (!mountedRef.current) return;
-        if (benutzerError) throw benutzerError;
-
-        // Not in benutzer table OR not approved yet => not authorized
-        if (!benutzerData || benutzerData.status !== 'approved') {
-          setRole(null);
-          setRoles([]);
-          setMitarbeiterId(null);
-          setLoading(false);
-          return;
-        }
-
-        // 2. Fetch roles from secure user_roles table
+        // Fetch roles from secure user_roles table
         const { data: userRoles, error: rolesError } = await supabase
           .from('user_roles')
           .select('role')
