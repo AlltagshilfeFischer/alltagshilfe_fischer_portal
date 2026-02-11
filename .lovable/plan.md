@@ -1,73 +1,129 @@
 
 
-# Leistungsnachweis-System: Aufgeteilte Implementierungs-Prompts
+# RBAC-Architektur anpassen: Rollensystem modernisieren
 
-Deine Anforderungen sind komplex und umfassen mehrere Bereiche. Hier sind sie in **4 getrennte, aufeinander aufbauende Prompts** zerlegt:
+## Ist-Zustand (Was bereits existiert)
 
----
+Das System hat bereits eine solide Basis:
+- **`app_role` Enum**: `geschaeftsfuehrer`, `admin`, `mitarbeiter`
+- **`user_roles` Tabelle** mit RLS-Policies und Audit-Logging
+- **Security-Definer-Funktionen**: `has_role()`, `is_admin_or_higher()`, `is_geschaeftsfuehrer()`, `can_delete()`
+- **`benutzer` Tabelle** fuer Benutzerprofile (getrennt von auth.users)
+- **`useUserRole` Hook** im Frontend
+- **Supabase Auth** fuer JWT-basierte Authentifizierung (kein eigenes Passwort-Hashing noetig)
 
-## Prompt 1: Termin-Status erweitern (Basis)
+## Mapping: Neues Prompt vs. bestehende Rollen
 
-**Ziel:** Neue Termin-Status-Typen einfuehren, die zwischen "nicht angetroffen" und "puenktlich abgesagt" unterscheiden.
+| Prompt-Rolle | Bestehende Rolle | Aenderung |
+|---|---|---|
+| StandortSuperadmin | `geschaeftsfuehrer` | Umbenennung im UI, DB-Wert bleibt |
+| Disponent | `admin` | Umbenennung im UI zu "Disponent" (statt "Manager") |
+| Mitarbeiter | `mitarbeiter` | Bleibt gleich |
+| Buchhaltung | -- | Neuer Enum-Wert `buchhaltung` |
 
-**Was gemacht wird:**
-- Datenbank-Enum `termin_status` um zwei Werte erweitern: `nicht_angetroffen` (eigenverschuldet durch Kunden, wird abgerechnet) und `abgesagt_rechtzeitig` (korrekt abgesagt, nur Info, keine Abrechnung)
-- Kalender-Ansicht und Termin-Detail-Dialog aktualisieren: farbliche Labels und Icons fuer die neuen Status
-- Der bestehende "Nicht geklappt zuschulden des Kunden"-Dialog wird auf den neuen Status `nicht_angetroffen` umgestellt
-- Neuer Button "Rechtzeitig abgesagt" neben dem bestehenden Absage-Button
+## Was NICHT geaendert wird (bereits korrekt)
 
----
-
-## Prompt 2: Leistungsnachweis-Tabelle und Datenmodell
-
-**Ziel:** Datenbank-Tabelle `leistungsnachweise` erstellen und Grundlogik implementieren.
-
-**Was gemacht wird:**
-- Neue Tabelle `leistungsnachweise` mit: Kunde, Monat/Jahr, geplante Stunden, geleistete Stunden, Status (entwurf/offen/unterschrieben/abgeschlossen), abweichende Rechnungsadresse (Boolean + Adressfelder), privat (Boolean), Empfaenger-Info (Kostentraeger-Referenz oder Privatperson), Unterschrift-Daten (Zeitstempel, digital signiert durch), vorausgefuellte GF-Unterschrift (Template-Feld)
-- RLS-Policies: Admins voll, Mitarbeiter koennen Leistungsnachweise ihrer (jemals) zugeordneten Kunden lesen
-- Automatische Generierung: Pro Kunde pro Monat wird ein Leistungsnachweis erstellt, der alle Termine des Monats aggregiert
-
----
-
-## Prompt 3: Leistungsnachweis-UI (Controlboard-Seite)
-
-**Ziel:** Neue Seite "Leistungsnachweise" im Controlboard mit Uebersicht und Detail-Ansicht.
-
-**Was gemacht wird:**
-- Neuer Sidebar-Eintrag "Leistungsnachweise" im Controlboard
-- Uebersichtsseite: Gruppiert nach Kunde, pro Kunde pro Monat ein Block mit allen Terminen (Status-Labels: stattgefunden, nicht angetroffen, rechtzeitig abgesagt)
-- Detail-Ansicht pro Leistungsnachweis: geplante vs. geleistete Stunden, Termin-Liste, Checkbox "Abweichende Rechnungsadresse" (zeigt Adressfelder wenn aktiviert), Checkbox "Privat" (aendert Empfaenger auf Privatperson statt Kasse)
-- PDF-/Druck-Ansicht des Leistungsnachweises mit vorausgefuellter GF-Unterschrift
+- Supabase Auth bleibt bestehen (kein eigenes JWT/bcrypt noetig)
+- `user_roles` Tabelle bleibt (bereits korrekt aufgebaut)
+- Keine `users`-Tabelle mit `password_hash` (Supabase Auth uebernimmt das)
+- Kein Rate-Limiting auf Login (Supabase Auth macht das automatisch)
+- Keine eigenen API-Endpoints (wir nutzen Supabase RLS + Edge Functions)
 
 ---
 
-## Prompt 4: Unterschrift-Flow (Mitarbeiter-Ansicht)
+## Schritt 1: Datenbank-Migration
 
-**Ziel:** Separater Unterschrift-Bildschirm fuer den Mitarbeiter vor Ort beim Kunden.
+### 1a. Enum erweitern
+- `app_role` Enum um `buchhaltung` erweitern
 
-**Was gemacht wird:**
-- Mitarbeiter-Dashboard: Bereich "Leistungsnachweise" zeigt alle Kunden, mit denen der Mitarbeiter je Kontakt hatte
-- Unterschrift-Screen (separate Ansicht, nicht auf dem Dokument): Text "Ich bestaetige, dass folgende Termine stattgefunden haben..." mit Auflistung der bisherigen und geplanten Termine des aktuellen Monats
-- Touch-faehiges Unterschriftfeld (Canvas-basiert)
-- Nach Unterschrift: Status des Leistungsnachweises auf "unterschrieben" setzen, Unterschrift-Bild speichern
+### 1b. Permissions-Tabellen vorbereiten (optional, fuer Zukunft)
+- Tabelle `permissions` erstellen: `id`, `name` (unique), `beschreibung`
+- Tabelle `role_permissions` erstellen: `role` (app_role), `permission_id` (FK), Primary Key auf Kombination
+- Initial-Seed mit Berechtigungen wie:
+  - `users.create`, `users.deactivate`, `users.assign_roles`
+  - `einsaetze.planen`, `einsaetze.lesen`
+  - `kunden.verwalten`, `kunden.lesen`
+  - `mitarbeiter.lesen`
+  - `reports.lesen`
+  - `einstellungen.aendern`
+  - `rechnungen.lesen`, `rechnungen.verwalten`
+  - `zeiterfassung.eigen`
+  - `dokumentation.eigen`
+
+### 1c. Security-Definer-Funktionen erweitern
+- `has_permission(_user_id uuid, _permission text)` erstellen: prueft ob einer der Rollen des Users die gewuenschte Permission hat
+- Bestehende Funktionen (`is_admin_or_higher`, etc.) bleiben fuer Rueckwaertskompatibilitaet
 
 ---
 
-## Technische Abhaengigkeiten
+## Schritt 2: useUserRole Hook erweitern
+
+- `buchhaltung` Rolle in die Hierarchie einbauen (zwischen mitarbeiter und admin)
+- Neue Helper: `isDisponent`, `isBuchhaltung`
+- `getRoleLabel` aktualisieren:
+  - `geschaeftsfuehrer` -> "StandortSuperadmin"
+  - `admin` -> "Disponent"
+  - `mitarbeiter` -> "Mitarbeiter"
+  - `buchhaltung` -> "Buchhaltung"
+- Optional: `hasPermission()` Funktion die gegen die `role_permissions` Tabelle prueft
+
+---
+
+## Schritt 3: Sidebar dynamisch machen
+
+Statt hardcoded `role === 'mitarbeiter'` Check wird die Sidebar rollenbasiert aufgebaut:
 
 ```text
-Prompt 1 (Status-Erweiterung)
-    |
-    v
-Prompt 2 (Datenmodell)
-    |
-    v
-Prompt 3 (Admin-UI)  +  Prompt 4 (Mitarbeiter-Unterschrift)
-         (parallel moeglich)
+StandortSuperadmin: Dashboard, Dienstplan, Kunden, Mitarbeiter, Dokumente, Leistungen, Einstellungen
+Disponent:          Dashboard, Dienstplan, Kunden (lesen), Mitarbeiter (lesen)
+Mitarbeiter:        Dashboard (eigene Termine)
+Buchhaltung:        Dashboard, Leistungen & Abrechnungen
 ```
 
-## Empfohlene Reihenfolge
+Die Sidebar-Items werden mit einer `requiredRoles`-Liste versehen und dynamisch gefiltert.
 
-Prompt 1 zuerst ausfuehren, da alle weiteren Schritte auf den erweiterten Termin-Status aufbauen. Danach Prompt 2 fuer das Datenmodell. Prompts 3 und 4 koennen danach in beliebiger Reihenfolge umgesetzt werden.
+---
 
-Soll ich mit **Prompt 1** (Termin-Status erweitern) beginnen?
+## Schritt 4: Benutzerverwaltung anpassen
+
+- `roleLabelMap` aktualisieren mit neuen Labels
+- Rollen-Dropdown erweitern um `buchhaltung`
+- Berechtigungen fuer Rollenvergabe:
+  - Nur `geschaeftsfuehrer` (StandortSuperadmin) kann Rollen vergeben
+  - Nur `geschaeftsfuehrer` kann User deaktivieren/loeschen
+  - Disponent hat KEINEN Zugriff auf Benutzerverwaltung
+
+---
+
+## Schritt 5: Dashboard-Routing anpassen
+
+- `Dashboard.tsx`: Buchhaltung bekommt eigene Route mit eingeschraenkter Ansicht
+- Disponent bekommt Zugriff auf Dienstplan und Kunden/Mitarbeiter (nur lesen)
+
+---
+
+## Schritt 6: RLS-Policies erweitern
+
+- Bestehende Policies nutzen bereits `is_admin_or_higher()` - diese Funktion muss entscheiden ob `buchhaltung` ebenfalls Admin-Level hat (nein, nur fuer Rechnungen)
+- Neue Policy fuer `rechnungen` und `rechnungspositionen`: Buchhaltung darf lesen und Status verwalten
+- `abrechnungsregeln`: Buchhaltung darf lesen
+
+---
+
+## Technische Details
+
+### Dateien die geaendert werden:
+1. **Migration SQL** - Enum erweitern, Permissions-Tabellen, Security-Definer
+2. `src/hooks/useUserRole.tsx` - Neue Rollen, Labels, Helper
+3. `src/components/dashboard/AppSidebar.tsx` - Dynamische Navigation
+4. `src/pages/Dashboard.tsx` - Routing fuer Buchhaltung/Disponent
+5. `src/pages/controlboard/BenutzerverwaltungNeu.tsx` - Labels, Dropdown
+6. Ggf. `src/pages/MitarbeiterStart.tsx` - Umbenennung
+
+### Was NICHT angefasst wird:
+- `src/integrations/supabase/client.ts` (auto-generiert)
+- `src/integrations/supabase/types.ts` (auto-generiert)
+- `.env` (auto-generiert)
+- Edge Functions (bleiben kompatibel)
+- Bestehende RLS-Policies (bleiben durch Rueckwaertskompatibilitaet der Helper-Funktionen erhalten)
+
