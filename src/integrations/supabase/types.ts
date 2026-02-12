@@ -1628,6 +1628,7 @@ export type Database = {
         Returns: boolean
       }
       is_geschaeftsfuehrer: { Args: { _user_id: string }; Returns: boolean }
+      is_globaladmin: { Args: { _user_id: string }; Returns: boolean }
       reject_termin_change: {
         Args: { p_reason: string; p_request_id: string }
         Returns: boolean
@@ -1645,7 +1646,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "geschaeftsfuehrer" | "admin" | "mitarbeiter" | "buchhaltung"
+      app_role:
+        | "geschaeftsfuehrer"
+        | "admin"
+        | "mitarbeiter"
+        | "buchhaltung"
+        | "globaladmin"
       approval_status: "pending" | "approved" | "rejected"
       benutzer_status: "pending" | "approved" | "rejected"
       kostentraeger_typ:
@@ -1685,7 +1691,12 @@ export type Database = {
         | "bezahlt"
         | "nicht_angetroffen"
         | "abgesagt_rechtzeitig"
-      user_rolle: "geschaeftsfuehrer" | "admin" | "mitarbeiter" | "buchhaltung"
+      user_rolle:
+        | "geschaeftsfuehrer"
+        | "admin"
+        | "mitarbeiter"
+        | "buchhaltung"
+        | "globaladmin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1813,7 +1824,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["geschaeftsfuehrer", "admin", "mitarbeiter", "buchhaltung"],
+      app_role: [
+        "geschaeftsfuehrer",
+        "admin",
+        "mitarbeiter",
+        "buchhaltung",
+        "globaladmin",
+      ],
       approval_status: ["pending", "approved", "rejected"],
       benutzer_status: ["pending", "approved", "rejected"],
       kostentraeger_typ: [
@@ -1858,7 +1875,13 @@ export const Constants = {
         "nicht_angetroffen",
         "abgesagt_rechtzeitig",
       ],
-      user_rolle: ["geschaeftsfuehrer", "admin", "mitarbeiter", "buchhaltung"],
+      user_rolle: [
+        "geschaeftsfuehrer",
+        "admin",
+        "mitarbeiter",
+        "buchhaltung",
+        "globaladmin",
+      ],
     },
   },
 } as const

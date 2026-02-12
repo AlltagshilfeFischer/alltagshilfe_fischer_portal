@@ -329,7 +329,7 @@ export default function BenutzerverwaltungNeu() {
         await supabase.from('benutzer').update({ rolle: newRole as any }).eq('id', benutzerId);
       }
 
-      const roleLabels: Record<string, string> = { geschaeftsfuehrer: 'Admin', admin: 'Manager', buchhaltung: 'Buchhaltung', mitarbeiter: 'Mitarbeiter' };
+      const roleLabels: Record<string, string> = { globaladmin: 'Admin', geschaeftsfuehrer: 'Geschäftsführer', admin: 'Disponent', buchhaltung: 'Buchhaltung', mitarbeiter: 'Mitarbeiter' };
       toast({
         title: 'Rolle geändert',
         description: `Rolle wurde auf "${roleLabels[newRole] || newRole}" gesetzt.`,
@@ -398,8 +398,9 @@ export default function BenutzerverwaltungNeu() {
   }
 
   const roleLabelMap: Record<string, string> = {
-    geschaeftsfuehrer: 'Admin',
-    admin: 'Manager',
+    globaladmin: 'Admin',
+    geschaeftsfuehrer: 'Geschäftsführer',
+    admin: 'Disponent',
     buchhaltung: 'Buchhaltung',
     mitarbeiter: 'Mitarbeiter',
   };
@@ -796,8 +797,8 @@ export default function BenutzerverwaltungNeu() {
               <Select value={createUserForm.rolle} onValueChange={(v) => setCreateUserForm({ ...createUserForm, rolle: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {isGeschaeftsfuehrer && <SelectItem value="geschaeftsfuehrer">Admin</SelectItem>}
-                  <SelectItem value="admin">Manager</SelectItem>
+                  {isGeschaeftsfuehrer && <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>}
+                  <SelectItem value="admin">Disponent</SelectItem>
                   <SelectItem value="buchhaltung">Buchhaltung</SelectItem>
                   <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
                 </SelectContent>
@@ -854,8 +855,8 @@ function UninvitedRow({
               </div>
             </SelectTrigger>
             <SelectContent>
-              {canAssignGF && <SelectItem value="geschaeftsfuehrer">Admin</SelectItem>}
-              <SelectItem value="admin">Manager</SelectItem>
+              {canAssignGF && <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>}
+              <SelectItem value="admin">Disponent</SelectItem>
               <SelectItem value="buchhaltung">Buchhaltung</SelectItem>
               <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
             </SelectContent>
@@ -893,9 +894,12 @@ function ActivatedRow({
 }) {
   const fullName = `${m.vorname || ''} ${m.nachname || ''}`.trim() || 'Unbekannt';
 
+  const isGlobalAdminUser = currentRole === 'globaladmin';
+
   const roleBadgeVariant = (role: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (role) {
-      case 'geschaeftsfuehrer': return 'destructive';
+      case 'globaladmin': return 'destructive';
+      case 'geschaeftsfuehrer': return 'default';
       case 'admin': return 'default';
       case 'buchhaltung': return 'outline';
       default: return 'secondary';
@@ -921,7 +925,12 @@ function ActivatedRow({
         </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap pl-11 sm:pl-0">
-        {currentRole && canAssignRoles ? (
+        {isGlobalAdminUser ? (
+          <Badge variant="destructive">
+            <Shield className="h-3 w-3 mr-1" />
+            Admin (geschützt)
+          </Badge>
+        ) : currentRole && canAssignRoles ? (
           <Select
             value={currentRole}
             onValueChange={(v) => onChangeRole(m.id, v)}
@@ -934,8 +943,8 @@ function ActivatedRow({
               </div>
             </SelectTrigger>
             <SelectContent>
-              {canAssignGF && <SelectItem value="geschaeftsfuehrer">Admin</SelectItem>}
-              <SelectItem value="admin">Manager</SelectItem>
+              {canAssignGF && <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>}
+              <SelectItem value="admin">Disponent</SelectItem>
               <SelectItem value="buchhaltung">Buchhaltung</SelectItem>
               <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
             </SelectContent>
@@ -949,13 +958,17 @@ function ActivatedRow({
         <Badge variant={m.ist_aktiv ? 'default' : 'secondary'}>
           {m.ist_aktiv ? 'Aktiv' : 'Inaktiv'}
         </Badge>
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onEdit(m)} disabled={actionLoading === m.id}>
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
-        <Button variant={m.ist_aktiv ? 'outline' : 'default'} size="icon" className="h-8 w-8" onClick={() => onToggleActive(m.id, m.ist_aktiv)} disabled={actionLoading === m.id}>
-          {actionLoading === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : m.ist_aktiv ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
-        </Button>
-        {canDelete && !isProtected && (
+        {!isGlobalAdminUser && (
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onEdit(m)} disabled={actionLoading === m.id}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {!isGlobalAdminUser && (
+          <Button variant={m.ist_aktiv ? 'outline' : 'default'} size="icon" className="h-8 w-8" onClick={() => onToggleActive(m.id, m.ist_aktiv)} disabled={actionLoading === m.id}>
+            {actionLoading === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : m.ist_aktiv ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+          </Button>
+        )}
+        {canDelete && !isProtected && !isGlobalAdminUser && (
           <Button variant="outline" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(m.id)} disabled={actionLoading === m.id} title="Deaktivieren">
             <UserX className="h-3.5 w-3.5" />
           </Button>
