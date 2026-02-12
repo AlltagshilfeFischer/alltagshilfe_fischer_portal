@@ -70,6 +70,7 @@ export default function Dashboard() {
   }
 
   if (role === 'admin') {
+    // Disponent: Einsatzplanung, keine Userverwaltung
     return (
       <DashboardLayout>
         <Routes>
@@ -85,7 +86,7 @@ export default function Dashboard() {
     );
   }
 
-  // StandortSuperadmin (geschaeftsfuehrer): Vollzugriff
+  // GlobalAdmin oder Geschäftsführer: Vollzugriff
   return (
     <DashboardLayout>
       <Routes>

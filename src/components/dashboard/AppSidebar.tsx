@@ -30,20 +30,20 @@ interface SidebarItem {
 }
 
 const dashboardItems: SidebarItem[] = [
-  { title: 'Dashboard', url: '/dashboard', icon: Home, requiredRoles: ['geschaeftsfuehrer', 'admin', 'buchhaltung', 'mitarbeiter'] },
+  { title: 'Dashboard', url: '/dashboard', icon: Home, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin', 'buchhaltung', 'mitarbeiter'] },
 ];
 
 const controlboardItems: SidebarItem[] = [
-  { title: 'Dienstplan', url: '/dashboard/controlboard/schedule-builder', icon: Calendar, requiredRoles: ['geschaeftsfuehrer', 'admin'] },
-  { title: 'Kunden/Neukunden', url: '/dashboard/controlboard/master-data', icon: Users, requiredRoles: ['geschaeftsfuehrer', 'admin'] },
-  { title: 'Mitarbeiter', url: '/dashboard/controlboard/admin', icon: UserCog, requiredRoles: ['geschaeftsfuehrer'] },
-  { title: 'Dokumentenverwaltung', url: '/dashboard/controlboard/dokumentenverwaltung', icon: FolderOpen, requiredRoles: ['geschaeftsfuehrer', 'admin'] },
-  { title: 'Leistungsnachweise', url: '/dashboard/controlboard/leistungsnachweise', icon: ClipboardCheck, requiredRoles: ['geschaeftsfuehrer', 'admin'] },
-  { title: 'Leistungen & Abrechnungen', url: '/dashboard/controlboard/billing', icon: FileText, requiredRoles: ['geschaeftsfuehrer', 'admin', 'buchhaltung'] },
+  { title: 'Dienstplan', url: '/dashboard/controlboard/schedule-builder', icon: Calendar, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin'] },
+  { title: 'Kunden/Neukunden', url: '/dashboard/controlboard/master-data', icon: Users, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin'] },
+  { title: 'Mitarbeiter', url: '/dashboard/controlboard/admin', icon: UserCog, requiredRoles: ['globaladmin', 'geschaeftsfuehrer'] },
+  { title: 'Dokumentenverwaltung', url: '/dashboard/controlboard/dokumentenverwaltung', icon: FolderOpen, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin'] },
+  { title: 'Leistungsnachweise', url: '/dashboard/controlboard/leistungsnachweise', icon: ClipboardCheck, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin'] },
+  { title: 'Leistungen & Abrechnungen', url: '/dashboard/controlboard/billing', icon: FileText, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin', 'buchhaltung'] },
 ];
 
 const systemItems: SidebarItem[] = [
-  { title: 'Einstellungen', url: '/dashboard/settings', icon: Settings, requiredRoles: ['geschaeftsfuehrer'] },
+  { title: 'Einstellungen', url: '/dashboard/settings', icon: Settings, requiredRoles: ['globaladmin', 'geschaeftsfuehrer'] },
 ];
 
 function filterByRole(items: SidebarItem[], roles: UserRole[]): SidebarItem[] {

@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
-// Rollen: geschaeftsfuehrer (höchste), admin, buchhaltung, mitarbeiter
-export type UserRole = 'geschaeftsfuehrer' | 'admin' | 'buchhaltung' | 'mitarbeiter' | null;
+// Hierarchie: globaladmin > geschaeftsfuehrer > admin (Disponent) > mitarbeiter, buchhaltung
+export type UserRole = 'globaladmin' | 'geschaeftsfuehrer' | 'admin' | 'buchhaltung' | 'mitarbeiter' | null;
 
 export function useUserRole() {
   const { user } = useAuth();
@@ -27,7 +27,6 @@ export function useUserRole() {
       }
 
       try {
-        // Fetch roles from secure user_roles table
         const { data: userRoles, error: rolesError } = await supabase
           .from('user_roles')
           .select('role')
@@ -39,9 +38,10 @@ export function useUserRole() {
         const roleList = (userRoles || []).map(r => r.role as UserRole);
         setRoles(roleList);
 
-        // Determine primary role (highest privilege)
-        // Hierarchie: geschaeftsfuehrer > admin > buchhaltung > mitarbeiter
-        if (roleList.includes('geschaeftsfuehrer')) {
+        // Primäre Rolle bestimmen (höchste Berechtigung)
+        if (roleList.includes('globaladmin')) {
+          setRole('globaladmin');
+        } else if (roleList.includes('geschaeftsfuehrer')) {
           setRole('geschaeftsfuehrer');
         } else if (roleList.includes('admin')) {
           setRole('admin');
@@ -53,9 +53,8 @@ export function useUserRole() {
           setRole(null);
         }
 
-        // 3. Mitarbeiter-ID laden für Rollen die Einsätze haben können
-        // Admin/Disponent ist KEIN Mitarbeiter (kein Einsatz im Dienstplan)
-        // Geschäftsführer und Mitarbeiter können Einsätze haben
+        // Mitarbeiter-ID laden: GlobalAdmin ist NICHT buchbar
+        // GF und Mitarbeiter können Einsätze haben
         if (roleList.includes('geschaeftsfuehrer') || roleList.includes('mitarbeiter')) {
           const { data: mitarbeiterData } = await supabase
             .from('mitarbeiter')
@@ -90,29 +89,36 @@ export function useUserRole() {
     };
   }, [user]);
 
-  // Helper functions for role checks
-  // Admin (geschaeftsfuehrer): Voller Zugriff inkl. Löschen - feste Rolle
-  const isGeschaeftsfuehrer = role === 'geschaeftsfuehrer';
+  // === ROLLEN-CHECKS ===
   
-  // Manager (admin) oder höher: Einsatzplanung, Kunden/Mitarbeiter lesen
-  const isAdmin = role === 'geschaeftsfuehrer' || role === 'admin';
+  // GlobalAdmin (Root): Uneingeschränkte Rechte, fixer User
+  const isGlobalAdmin = role === 'globaladmin';
   
-  // Manager-spezifisch
+  // Geschäftsführer ODER höher
+  const isGeschaeftsfuehrer = role === 'globaladmin' || role === 'geschaeftsfuehrer';
+  
+  // Disponent (admin) oder höher: Einsatzplanung, Kunden/Mitarbeiter
+  const isAdmin = role === 'globaladmin' || role === 'geschaeftsfuehrer' || role === 'admin';
+  
+  // Disponent-spezifisch (nur admin-Rolle, ohne GF/GlobalAdmin)
   const isDisponent = role === 'admin';
   
-  // Buchhaltung: Rechnungen lesen/verwalten
+  // Buchhaltung
   const isBuchhaltung = roles.includes('buchhaltung');
   
-  // Für Rückwärtskompatibilität
+  // Rückwärtskompatibilität
   const isManager = isAdmin;
   
-  // Kann löschen: Nur Admin (geschaeftsfuehrer)
-  const canDelete = role === 'geschaeftsfuehrer';
+  // Kann deaktivieren/soft-delete: GlobalAdmin und GF
+  const canDelete = role === 'globaladmin' || role === 'geschaeftsfuehrer';
   
-  // Ist Mitarbeiter im Sinne von Einsätzen (GF oder mitarbeiter, NICHT Manager)
+  // Kann User verwalten (erstellen, Rollen vergeben): GlobalAdmin und GF
+  const canManageUsers = role === 'globaladmin' || role === 'geschaeftsfuehrer';
+  
+  // Ist buchbarer Mitarbeiter (GF oder mitarbeiter, NICHT GlobalAdmin/Disponent/Buchhaltung)
   const isEmployee = role === 'mitarbeiter' || role === 'geschaeftsfuehrer';
   
-  // Hat Zugriff auf das System (irgendeine Rolle)
+  // Hat Zugriff auf das System
   const isAuthenticated = role !== null;
   
   const hasRole = (checkRole: UserRole) => roles.includes(checkRole);
@@ -120,8 +126,9 @@ export function useUserRole() {
   // Rollen-Label für UI
   const getRoleLabel = (r: UserRole): string => {
     switch (r) {
-      case 'geschaeftsfuehrer': return 'Admin';
-      case 'admin': return 'Manager';
+      case 'globaladmin': return 'Admin';
+      case 'geschaeftsfuehrer': return 'Geschäftsführer';
+      case 'admin': return 'Disponent';
       case 'buchhaltung': return 'Buchhaltung';
       case 'mitarbeiter': return 'Mitarbeiter';
       default: return 'Unbekannt';
@@ -131,8 +138,9 @@ export function useUserRole() {
   // Rollen-Badge-Variante für UI
   const getRoleBadgeVariant = (r: UserRole): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (r) {
-      case 'geschaeftsfuehrer': return 'destructive';
-      case 'admin': return 'default';
+      case 'globaladmin': return 'destructive';
+      case 'geschaeftsfuehrer': return 'default';
+      case 'admin': return 'secondary';
       case 'buchhaltung': return 'outline';
       case 'mitarbeiter': return 'secondary';
       default: return 'outline';
@@ -145,12 +153,14 @@ export function useUserRole() {
     loading, 
     mitarbeiterId,
     // Helper
+    isGlobalAdmin,
     isGeschaeftsfuehrer,
     isAdmin,
     isDisponent,
     isBuchhaltung,
-    isManager, // Rückwärtskompatibilität
+    isManager,
     canDelete,
+    canManageUsers,
     isEmployee,
     isAuthenticated,
     hasRole,
