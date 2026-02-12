@@ -1,5 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import DashboardHome from './DashboardHome';
 import ScheduleBuilderModern from './controlboard/ScheduleBuilderModern';
 import MasterData from './controlboard/MasterData';
@@ -15,6 +18,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 export default function Dashboard() {
   const { role, loading } = useUserRole();
+  const { signOut } = useAuth();
 
   if (loading) {
     return (
@@ -32,6 +36,10 @@ export default function Dashboard() {
           <p className="text-muted-foreground">
             Ihrem Konto wurde noch keine Rolle zugewiesen. Bitte kontaktieren Sie den Administrator.
           </p>
+          <Button variant="outline" onClick={() => signOut()} className="mt-4">
+            <LogOut className="mr-2 h-4 w-4" />
+            Abmelden
+          </Button>
         </div>
       </div>
     );
