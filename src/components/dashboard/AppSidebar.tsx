@@ -9,6 +9,7 @@ import {
   UserCog,
   FolderOpen,
   ClipboardCheck,
+  UserCircle,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -31,6 +32,7 @@ interface SidebarItem {
 
 const dashboardItems: SidebarItem[] = [
   { title: 'Dashboard', url: '/dashboard', icon: Home, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin', 'buchhaltung', 'mitarbeiter'] },
+  { title: 'Mein Bereich', url: '/dashboard/mein-bereich', icon: UserCircle, requiredRoles: ['globaladmin', 'geschaeftsfuehrer'] },
 ];
 
 const controlboardItems: SidebarItem[] = [
