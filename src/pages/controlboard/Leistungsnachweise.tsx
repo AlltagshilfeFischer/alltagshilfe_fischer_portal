@@ -16,7 +16,7 @@ import {
   FileText, Eye, Printer, Calendar, Clock,
   CheckCircle2, XCircle, AlertTriangle, Loader2, RefreshCw,
   Search, ArrowUpDown, ChevronLeft, ChevronRight, X,
-  User, TrendingUp, FileCheck, PenLine
+  User, TrendingUp, FileCheck, PenLine, Send
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -58,6 +58,7 @@ interface Termin {
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode; dotColor: string }> = {
   entwurf: { label: 'Entwurf', variant: 'secondary', icon: <PenLine className="h-3 w-3" />, dotColor: 'bg-muted-foreground' },
+  veröffentlicht: { label: 'Veröffentlicht', variant: 'outline', icon: <Send className="h-3 w-3" />, dotColor: 'bg-primary' },
   offen: { label: 'Offen', variant: 'outline', icon: <Clock className="h-3 w-3" />, dotColor: 'bg-warning' },
   unterschrieben: { label: 'Unterschrieben', variant: 'default', icon: <CheckCircle2 className="h-3 w-3" />, dotColor: 'bg-success' },
   abgeschlossen: { label: 'Abgeschlossen', variant: 'default', icon: <FileCheck className="h-3 w-3" />, dotColor: 'bg-success' },
@@ -233,7 +234,25 @@ export default function Leistungsnachweise() {
     }
   });
 
-  // Helpers
+  // Publish mutation
+  const publishMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('leistungsnachweise')
+        .update({ status: 'veröffentlicht' })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Leistungsnachweis veröffentlicht – Mitarbeiter kann jetzt die Unterschrift einholen');
+      queryClient.invalidateQueries({ queryKey: ['leistungsnachweise'] });
+    },
+    onError: (err) => {
+      toast.error('Fehler', { description: err instanceof Error ? err.message : 'Unbekannt' });
+    }
+  });
+
+
   const getKundeName = (kundenId: string) => {
     const k = kunden?.find(c => c.id === kundenId);
     if (!k) return 'Unbekannt';
@@ -381,6 +400,7 @@ export default function Leistungsnachweise() {
               <SelectContent>
                 <SelectItem value="alle">Alle Status</SelectItem>
                 <SelectItem value="entwurf">Entwurf</SelectItem>
+                <SelectItem value="veröffentlicht">Veröffentlicht</SelectItem>
                 <SelectItem value="offen">Offen</SelectItem>
                 <SelectItem value="unterschrieben">Unterschrieben</SelectItem>
                 <SelectItem value="abgeschlossen">Abgeschlossen</SelectItem>
@@ -425,6 +445,7 @@ export default function Leistungsnachweise() {
                       <span className="flex items-center gap-1">Status <ArrowUpDown className="h-3 w-3" /></span>
                     </TableHead>
                     <TableHead>Signiert</TableHead>
+                    <TableHead className="text-right">Aktion</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -458,6 +479,22 @@ export default function Leistungsnachweise() {
                             <CheckCircle2 className="h-4 w-4 text-success" />
                           ) : (
                             <Clock className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {ln.status === 'entwurf' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                publishMutation.mutate(ln.id);
+                              }}
+                              disabled={publishMutation.isPending}
+                            >
+                              <Send className="h-3 w-3" /> Veröffentlichen
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
