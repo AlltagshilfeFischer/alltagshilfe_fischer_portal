@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
 import { MyChangeRequests } from '@/components/mitarbeiter/MyChangeRequests';
 import { TerminBestaetigung } from '@/components/mitarbeiter/TerminBestaetigung';
+import { LeistungsnachweisSignature } from '@/components/mitarbeiter/LeistungsnachweisSignature';
 import { EmployeeWeekCalendar } from '@/components/schedule/EmployeeWeekCalendar';
 import { EmployeeChangeRequestDialog } from '@/components/schedule/EmployeeChangeRequestDialog';
 
@@ -130,6 +131,9 @@ export default function MitarbeiterDashboard() {
 
       {/* Offene Terminbestätigungen */}
       <TerminBestaetigung appointments={appointments} onUpdate={loadData} />
+
+      {/* Leistungsnachweise zur Unterschrift */}
+      <LeistungsnachweisSignature />
 
       {/* Week Navigation */}
       <Card>

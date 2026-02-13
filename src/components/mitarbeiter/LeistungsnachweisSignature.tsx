@@ -74,7 +74,7 @@ export function LeistungsnachweisSignature() {
       const { data, error } = await supabase
         .from('leistungsnachweise')
         .select('*')
-        .in('status', ['entwurf', 'offen', 'unterschrieben'])
+        .in('status', ['veröffentlicht', 'unterschrieben'])
         .order('jahr', { ascending: false })
         .order('monat', { ascending: false });
       if (error) throw error;
@@ -224,7 +224,7 @@ export function LeistungsnachweisSignature() {
     );
   }
 
-  const pendingNachweise = nachweise?.filter(n => n.status !== 'unterschrieben') || [];
+  const pendingNachweise = nachweise?.filter(n => n.status === 'veröffentlicht') || [];
   const signedNachweise = nachweise?.filter(n => n.status === 'unterschrieben') || [];
 
   return (
