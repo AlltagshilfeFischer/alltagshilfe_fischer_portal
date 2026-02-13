@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import DashboardHome from './DashboardHome';
+import MitarbeiterDashboard from './MitarbeiterDashboard';
 import ScheduleBuilderModern from './controlboard/ScheduleBuilderModern';
 import MasterData from './controlboard/MasterData';
 import NewEntries from './controlboard/NewEntries';
@@ -91,6 +92,7 @@ export default function Dashboard() {
     <DashboardLayout>
       <Routes>
         <Route path="/" element={<DashboardHome />} />
+        <Route path="/mein-bereich" element={<MitarbeiterDashboard />} />
         <Route path="/controlboard/schedule-builder" element={<ScheduleBuilderModern />} />
         <Route path="/controlboard/master-data" element={<MasterData />} />
         <Route path="/controlboard/new-entries" element={<NewEntries />} />
