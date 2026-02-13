@@ -82,9 +82,18 @@ export function CustomerSearchCombobox({
   useEffect(() => {
     if (open) {
       updatePosition();
-      setTimeout(() => inputRef.current?.focus(), 50);
+      // Use a longer timeout to ensure the portal is rendered before focusing
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [open, updatePosition]);
+
+  // Prevent all events from bubbling to the Dialog's focus trap
+  const stopPropagation = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
 
   return (
     <div className="relative w-full">
@@ -106,6 +115,10 @@ export function CustomerSearchCombobox({
           ref={dropdownRef}
           style={dropdownStyle}
           className="bg-popover border border-border rounded-md shadow-lg overflow-hidden"
+          onPointerDown={stopPropagation}
+          onMouseDown={stopPropagation}
+          onFocusCapture={stopPropagation}
+          onClick={stopPropagation}
         >
           <div className="flex items-center border-b px-3 py-2">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
@@ -115,7 +128,13 @@ export function CustomerSearchCombobox({
               placeholder="Kunden suchen..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              onKeyDown={(e) => {
+                // Prevent dialog from intercepting keyboard events
+                e.stopPropagation();
+              }}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
+              autoComplete="off"
+              autoFocus
             />
           </div>
           <div className="max-h-60 overflow-y-auto">
@@ -129,7 +148,9 @@ export function CustomerSearchCombobox({
                   key={customer.id}
                   type="button"
                   className="flex items-center w-full px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     onValueChange(customer.id);
                     setOpen(false);
                     setSearchQuery('');
