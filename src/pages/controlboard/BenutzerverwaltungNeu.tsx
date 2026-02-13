@@ -714,7 +714,7 @@ export default function BenutzerverwaltungNeu() {
 
       {/* Create User Manual Dialog */}
       <Dialog open={createUserDialogOpen} onOpenChange={setCreateUserDialogOpen}>
-        <DialogContent>
+        <DialogContent className="z-[201] overflow-visible">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="h-5 w-5" />
