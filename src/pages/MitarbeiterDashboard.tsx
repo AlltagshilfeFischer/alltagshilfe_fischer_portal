@@ -114,12 +114,12 @@ export default function MitarbeiterDashboard() {
   const isGF = isGeschaeftsfuehrer;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">
+    <div className="w-full space-y-4 sm:space-y-6">
+      <div className="mb-2 sm:mb-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
           {isGF ? 'Mein Bereich' : 'Mein Kalender'}
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">
           {isGF
             ? 'Ihre persönlichen Termine, Abwesenheiten und Aufgaben'
             : 'Ihre Termine im Überblick'}
@@ -137,21 +137,22 @@ export default function MitarbeiterDashboard() {
 
       {/* Week Navigation */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+              className="shrink-0"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Vorherige Woche
+              <ChevronLeft className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Vorherige Woche</span>
             </Button>
-            <div className="text-center">
-              <h2 className="text-lg font-semibold">
+            <div className="text-center min-w-0">
+              <h2 className="text-base sm:text-lg font-semibold">
                 KW {format(weekDates[0], 'w', { locale: de })}
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {format(weekDates[0], 'dd.MM.', { locale: de })} - {format(weekDates[6], 'dd.MM.yyyy', { locale: de })}
               </p>
             </div>
@@ -159,9 +160,10 @@ export default function MitarbeiterDashboard() {
               variant="outline"
               size="sm"
               onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+              className="shrink-0"
             >
-              Nächste Woche
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <span className="hidden sm:inline">Nächste Woche</span>
+              <ChevronRight className="h-4 w-4 sm:ml-1" />
             </Button>
           </div>
         </CardContent>
