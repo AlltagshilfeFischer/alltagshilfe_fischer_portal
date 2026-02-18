@@ -1058,10 +1058,10 @@ export default function CreateCustomerWizard({
               </div>
             </div>
 
-            {/* Wochenmatrix */}
+            {/* Zeitfenster */}
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
-                <Label className="text-lg font-semibold">Passende Zeiten (Wochenmatrix)</Label>
+                <Label className="text-lg font-semibold">Passende Zeiten (Zeitfenster)</Label>
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -1072,132 +1072,78 @@ export default function CreateCustomerWizard({
                     <Sparkles className="h-4 w-4 mr-1" />
                     KI-Zeitfenster
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCustomerData({
+                        ...customerData,
+                        zeitfenster: [...customerData.zeitfenster, { wochentag: 1, von: '08:00', bis: '12:00' }]
+                      });
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Manuell
+                  </Button>
                 </div>
               </div>
 
-              {/* Clickable matrix */}
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="text-left text-xs font-medium text-muted-foreground p-2 w-24"></th>
-                      {[1, 2, 3, 4, 5, 6, 0].map(day => (
-                        <th key={day} className="text-center text-xs font-medium text-muted-foreground p-2">
-                          {WEEKDAY_SHORT[day]}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {SHIFT_BLOCKS.map(shift => (
-                      <tr key={shift.key}>
-                        <td className="text-xs font-medium text-muted-foreground p-2">
-                          {shift.label}
-                          <span className="block text-[10px] text-muted-foreground/60">{shift.von}–{shift.bis}</span>
-                        </td>
-                        {[1, 2, 3, 4, 5, 6, 0].map(day => {
-                          const isActive = weekMatrix[day]?.[shift.key];
-                          return (
-                            <td key={day} className="p-1 text-center">
-                              <button
-                                type="button"
-                                onClick={() => toggleMatrixCell(day, shift.key)}
-                                className={`w-full h-10 rounded-md border text-xs font-medium transition-all ${
-                                  isActive
-                                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                                    : 'bg-background border-border hover:bg-muted hover:border-primary/40'
-                                }`}
-                              >
-                                {isActive ? '✓' : ''}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Additional manual time windows */}
-              <div className="flex items-center justify-between pt-2">
-                <p className="text-xs text-muted-foreground">Oder individuelle Zeitfenster hinzufügen:</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setCustomerData({
-                      ...customerData,
-                      zeitfenster: [...customerData.zeitfenster, { wochentag: 1, von: '08:00', bis: '12:00' }]
-                    });
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Manuell
-                </Button>
-              </div>
-
-              {customerData.zeitfenster.filter(z => {
-                return !SHIFT_BLOCKS.some(s => s.von === z.von && s.bis === z.bis);
-              }).map((zeitfenster, index) => {
-                const realIndex = customerData.zeitfenster.indexOf(zeitfenster);
-                return (
-                  <div key={realIndex} className="grid grid-cols-[1fr,1fr,1fr,auto] gap-2 items-end p-3 border rounded-lg">
-                    <div>
-                      <Label className="text-xs">Wochentag</Label>
-                      <select
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-                        value={zeitfenster.wochentag}
-                        onChange={(e) => {
-                          const updated = [...customerData.zeitfenster];
-                          updated[realIndex] = { ...updated[realIndex], wochentag: parseInt(e.target.value) };
-                          setCustomerData({ ...customerData, zeitfenster: updated });
-                        }}
-                      >
-                        {[0,1,2,3,4,5,6].map(d => (
-                          <option key={d} value={d}>{WEEKDAY_NAMES[d]}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Von</Label>
-                      <Input
-                        type="time"
-                        value={zeitfenster.von || ''}
-                        onChange={(e) => {
-                          const updated = [...customerData.zeitfenster];
-                          updated[realIndex] = { ...updated[realIndex], von: e.target.value };
-                          setCustomerData({ ...customerData, zeitfenster: updated });
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Bis</Label>
-                      <Input
-                        type="time"
-                        value={zeitfenster.bis || ''}
-                        onChange={(e) => {
-                          const updated = [...customerData.zeitfenster];
-                          updated[realIndex] = { ...updated[realIndex], bis: e.target.value };
-                          setCustomerData({ ...customerData, zeitfenster: updated });
-                        }}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        const updated = customerData.zeitfenster.filter((_, i) => i !== realIndex);
+              {customerData.zeitfenster.map((zeitfenster, index) => (
+                <div key={index} className="grid grid-cols-[1fr,1fr,1fr,auto] gap-2 items-end p-3 border rounded-lg">
+                  <div>
+                    <Label className="text-xs">Wochentag</Label>
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                      value={zeitfenster.wochentag}
+                      onChange={(e) => {
+                        const updated = [...customerData.zeitfenster];
+                        updated[index] = { ...updated[index], wochentag: parseInt(e.target.value) };
                         setCustomerData({ ...customerData, zeitfenster: updated });
                       }}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                      {[1,2,3,4,5,6,0].map(d => (
+                        <option key={d} value={d}>{WEEKDAY_NAMES[d]}</option>
+                      ))}
+                    </select>
                   </div>
-                );
-              })}
+                  <div>
+                    <Label className="text-xs">Von</Label>
+                    <Input
+                      type="time"
+                      value={zeitfenster.von || ''}
+                      onChange={(e) => {
+                        const updated = [...customerData.zeitfenster];
+                        updated[index] = { ...updated[index], von: e.target.value };
+                        setCustomerData({ ...customerData, zeitfenster: updated });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Bis</Label>
+                    <Input
+                      type="time"
+                      value={zeitfenster.bis || ''}
+                      onChange={(e) => {
+                        const updated = [...customerData.zeitfenster];
+                        updated[index] = { ...updated[index], bis: e.target.value };
+                        setCustomerData({ ...customerData, zeitfenster: updated });
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const updated = customerData.zeitfenster.filter((_, i) => i !== index);
+                      setCustomerData({ ...customerData, zeitfenster: updated });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
 
               {customerData.zeitfenster.length > 0 && (
                 <div className="text-xs text-muted-foreground">
