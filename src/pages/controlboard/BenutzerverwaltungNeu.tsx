@@ -293,6 +293,26 @@ export default function BenutzerverwaltungNeu() {
     }
   };
 
+  const handleResendInvite = async (m: Mitarbeiter) => {
+    if (!m.benutzer_id || !m.benutzer?.email) return;
+    setActionLoading(m.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('activate-mitarbeiter', {
+        body: { email: m.benutzer.email, mitarbeiter_id: m.id },
+      });
+      if (error) {
+        const errMsg = typeof data === 'object' && data?.error ? data.error : error.message;
+        throw new Error(errMsg);
+      }
+      toast({ title: 'Einladung erneut gesendet', description: 'Die Aktivierungsmail wurde erneut versendet.' });
+      loadData();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Fehler', description: error.message });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Bulk activate is only available when each selected employee will be individually activated via dialog
   // Since bulk activate needs an email for each, we show a warning instead
   const handleBulkActivate = async () => {
@@ -474,6 +494,7 @@ export default function BenutzerverwaltungNeu() {
                     actionLoading={actionLoading}
                     onEdit={handleEditMitarbeiter}
                     onActivate={handleOpenActivateDialog}
+                    onResendInvite={handleResendInvite}
                     onDeactivate={(id) => { setSelectedMitarbeiter(id); setDeactivateDialogOpen(true); }}
                     onDelete={(id) => { setSelectedMitarbeiter(id); setDeleteDialogOpen(true); }}
                     isProtected={isProtectedUser(m)}
@@ -789,11 +810,12 @@ export default function BenutzerverwaltungNeu() {
 
 // ─── Unified Employee Row ───
 function EmployeeRow({
-  mitarbeiter: m, hasAccount, actionLoading, onEdit, onActivate, onDeactivate, onDelete,
+  mitarbeiter: m, hasAccount, actionLoading, onEdit, onActivate, onResendInvite, onDeactivate, onDelete,
   isProtected, loadData, currentRole, onChangeRole, canAssignGF, canAssignRoles, canDelete, roleLabelMap,
 }: {
   mitarbeiter: Mitarbeiter; hasAccount: boolean; actionLoading: string | null;
   onEdit: (m: Mitarbeiter) => void; onActivate: (m: Mitarbeiter) => void;
+  onResendInvite: (m: Mitarbeiter) => void;
   onDeactivate: (id: string) => void; onDelete: (id: string) => void;
   isProtected?: boolean; loadData: () => void;
   currentRole: UserRole | null; onChangeRole: (id: string, role: string) => void;
@@ -886,6 +908,13 @@ function EmployeeRow({
           <Button variant="outline" size="sm" onClick={() => onActivate(m)} disabled={actionLoading === m.id} className="gap-1.5 text-xs">
             {actionLoading === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
             Aktivieren
+          </Button>
+        )}
+
+        {hasAccount && m.benutzer?.status === 'eingeladen' && (
+          <Button variant="outline" size="sm" onClick={() => onResendInvite(m)} disabled={actionLoading === m.id} className="gap-1.5 text-xs">
+            {actionLoading === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+            Erneut einladen
           </Button>
         )}
 
