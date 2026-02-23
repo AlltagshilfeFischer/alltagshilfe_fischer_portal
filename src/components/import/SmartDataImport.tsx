@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Textarea } from '@/components/ui/textarea';
 import { AlertCircle, Check, Plus, Trash2, Sparkles, Loader2, Upload, FileSpreadsheet, ClipboardPaste } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -749,7 +749,7 @@ export function SmartDataImport<T extends DataRow>({
             </div>
 
             {/* Table */}
-            <ScrollArea className="flex-1 border rounded-md">
+            <div className="flex-1 border rounded-md overflow-auto min-h-0">
               <div
                 ref={tableRef}
                 className="focus:outline-none"
@@ -757,14 +757,14 @@ export function SmartDataImport<T extends DataRow>({
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
               >
-                <table className="w-full border-collapse text-sm">
+                <table className="border-collapse text-sm" style={{ minWidth: columns.reduce((sum, c) => sum + (c.width || 100), 60) }}>
                   <thead className="sticky top-0 bg-muted z-10">
                     <tr>
                       <th className="w-10 px-2 py-2 text-center text-muted-foreground">#</th>
                       {columns.map(col => (
                         <th
                           key={col.key}
-                          className="px-2 py-2 text-left font-medium"
+                          className="px-2 py-2 text-left font-medium whitespace-nowrap"
                           style={{ minWidth: col.width || 100 }}
                         >
                           <div className="flex items-center gap-1">
@@ -840,7 +840,7 @@ export function SmartDataImport<T extends DataRow>({
                   </tbody>
                 </table>
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Error Summary */}
             {errorRows.length > 0 && (

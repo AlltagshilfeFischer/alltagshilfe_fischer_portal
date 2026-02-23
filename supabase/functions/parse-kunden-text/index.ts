@@ -24,7 +24,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
+        max_tokens: 16000,
         messages: [
           {
             role: "system",
@@ -54,7 +55,8 @@ WICHTIG:
 - Wenn "Aktiv" steht → kategorie "Kunde", wenn "Inaktiv" → kategorie "Interessent"
 - Pflegegrad als Zahl (0-5)
 - Wenn keine E-Mail angegeben ist, generiere KEINE
-- Angehörige-Info als Text zusammenfassen`,
+
+EXTREM WICHTIG: Extrahiere ALLE Kunden aus dem Text, auch wenn es 50+ sind. Überspringe KEINE Einträge. Gib JEDEN einzelnen Kunden zurück.`,
           },
           {
             role: "user",

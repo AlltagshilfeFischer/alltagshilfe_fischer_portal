@@ -24,7 +24,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
+        max_tokens: 16000,
         messages: [
           {
             role: "system",
@@ -52,6 +53,8 @@ Wochentage als Zahlen: Mo=1, Di=2, Mi=3, Do=4, Fr=5, Sa=6, So=0.
 
 Wenn Schichtnummern angegeben sind, erzeuge für jeden Wochentag und jede Schicht einen Eintrag in "verfuegbarkeit" mit wochentag, von, bis.
 Wenn KEINE Schichtnummern angegeben sind (z.B. nur "Di,Mi"), erzeuge Einträge für den ganzen Tag (08:30-17:00) an diesen Tagen.
+
+EXTREM WICHTIG: Extrahiere ALLE Mitarbeiter aus dem Text, auch wenn es 30+ sind. Überspringe KEINE Einträge. Gib JEDEN einzelnen Mitarbeiter zurück.
 
 Erkenne verschiedene Formate: Listen, Tabellen, Fließtext, CSV, etc.`,
           },

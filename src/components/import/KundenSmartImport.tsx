@@ -141,7 +141,7 @@ export function KundenSmartImport({ open, onOpenChange }: KundenSmartImportProps
       columns={COLUMNS}
       onImport={handleImport}
       createEmptyRow={createEmptyRow}
-      initialRowCount={20}
+      initialRowCount={50}
       batchSize={200}
       aiParseFunction="parse-kunden-text"
       aiParseResultKey="kunden"
