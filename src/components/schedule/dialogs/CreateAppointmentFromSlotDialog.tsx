@@ -64,7 +64,7 @@ export function CreateAppointmentFromSlotDialog({
   const [mitarbeiterId, setMitarbeiterId] = useState(prefilledData.employeeId);
   const [date, setDate] = useState<Date>(prefilledData.date);
   const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
+  const [endTime, setEndTime] = useState('10:30');
 
   // Recurring appointment state
   const [recurringKundenId, setRecurringKundenId] = useState('');
@@ -72,7 +72,7 @@ export function CreateAppointmentFromSlotDialog({
   const [wochentag, setWochentag] = useState(prefilledData.date.getDay());
   const [intervall, setIntervall] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly');
   const [recurringStartTime, setRecurringStartTime] = useState('09:00');
-  const [dauerMinuten, setDauerMinuten] = useState(60);
+  const [dauerMinuten, setDauerMinuten] = useState(90);
   const [gueltigVon, setGueltigVon] = useState<Date>(prefilledData.date);
   const [gueltigBis, setGueltigBis] = useState<Date | undefined>();
   const [notizen, setNotizen] = useState('');
@@ -93,14 +93,14 @@ export function CreateAppointmentFromSlotDialog({
     setMitarbeiterId(prefilledData.employeeId);
     setDate(prefilledData.date);
     setStartTime('09:00');
-    setEndTime('10:00');
+    setEndTime('10:30');
     
     setRecurringKundenId('');
     setRecurringMitarbeiterId(prefilledData.employeeId);
     setWochentag(prefilledData.date.getDay());
     setIntervall('weekly');
     setRecurringStartTime('09:00');
-    setDauerMinuten(60);
+    setDauerMinuten(90);
     setGueltigVon(prefilledData.date);
     setGueltigBis(undefined);
     setNotizen('');
@@ -200,7 +200,7 @@ export function CreateAppointmentFromSlotDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto z-[201]" onPointerDownOutside={(e) => e.preventDefault()} onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Neuen Termin erstellen</DialogTitle>
           <DialogDescription>
@@ -280,7 +280,7 @@ export function CreateAppointmentFromSlotDialog({
                 <SelectTrigger id="single-mitarbeiter">
                   <SelectValue placeholder="Mitarbeiter auswählen" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[202]">
                   {employees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
                       {employee.name}
@@ -305,7 +305,7 @@ export function CreateAppointmentFromSlotDialog({
                     {date ? format(date, 'PPP', { locale: de }) : <span>Datum wählen</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 z-[202]" align="start">
                   <Calendar
                     mode="single"
                     selected={date}
@@ -384,7 +384,7 @@ export function CreateAppointmentFromSlotDialog({
                 <SelectTrigger id="recurring-mitarbeiter">
                   <SelectValue placeholder="Mitarbeiter auswählen" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[202]">
                   {employees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
                       {employee.name}
@@ -401,7 +401,7 @@ export function CreateAppointmentFromSlotDialog({
                   <SelectTrigger id="wochentag">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[202]">
                     {WEEKDAYS.map((day) => (
                       <SelectItem key={day.value} value={day.value.toString()}>
                         {day.label}
@@ -417,7 +417,7 @@ export function CreateAppointmentFromSlotDialog({
                   <SelectTrigger id="intervall">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[202]">
                     {INTERVALS.map((int) => (
                       <SelectItem key={int.value} value={int.value}>
                         {int.label}
@@ -468,7 +468,7 @@ export function CreateAppointmentFromSlotDialog({
                       {gueltigVon ? format(gueltigVon, 'PPP', { locale: de }) : <span>Datum wählen</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-[202]" align="start">
                     <Calendar
                       mode="single"
                       selected={gueltigVon}
@@ -495,7 +495,7 @@ export function CreateAppointmentFromSlotDialog({
                       {gueltigBis ? format(gueltigBis, 'PPP', { locale: de }) : <span>Unbegrenzt</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-[202]" align="start">
                     <Calendar
                       mode="single"
                       selected={gueltigBis}

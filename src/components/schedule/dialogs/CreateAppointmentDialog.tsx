@@ -38,7 +38,7 @@ export function CreateAppointmentDialog({
   const [mitarbeiterId, setMitarbeiterId] = useState<string>('unassigned');
   const [date, setDate] = useState<Date>();
   const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
+  const [endTime, setEndTime] = useState('10:30');
   const [loading, setLoading] = useState(false);
   const [isNewInteressent, setIsNewInteressent] = useState(false);
   const [newInteressentName, setNewInteressentName] = useState('');
@@ -101,7 +101,7 @@ export function CreateAppointmentDialog({
       setMitarbeiterId('unassigned');
       setDate(undefined);
       setStartTime('09:00');
-      setEndTime('10:00');
+      setEndTime('10:30');
       setIsNewInteressent(false);
       setNewInteressentName('');
       onOpenChange(false);
@@ -114,7 +114,7 @@ export function CreateAppointmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl z-[201]" onPointerDownOutside={(e) => e.preventDefault()} onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Neuen Termin erstellen</DialogTitle>
           <p className="sr-only" id="create-appointment-desc">Einzeltermin mit Datum und Uhrzeit anlegen</p>
@@ -165,7 +165,7 @@ export function CreateAppointmentDialog({
                 <SelectTrigger>
                   <SelectValue placeholder="Nicht zugewiesen (später zuweisen)" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[202]">
                   <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
                   {employees
                     .filter((emp) => emp)
@@ -193,7 +193,7 @@ export function CreateAppointmentDialog({
                   {date ? format(date, 'PPP', { locale: de }) : 'Datum wählen'}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 z-[202]" align="start">
                 <Calendar
                   mode="single"
                   selected={date}
