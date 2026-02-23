@@ -95,10 +95,23 @@ const ScheduleBuilderModern = () => {
     try {
       const { data: employeesData, error: employeesError } = await supabase
         .from('mitarbeiter')
-        .select('*, benutzer!inner(*)')
+        .select('*, benutzer(*)')
+        .eq('ist_aktiv', true)
         .order('created_at', { ascending: true });
       
       if (employeesError) throw employeesError;
+
+      const transformedEmployees: Employee[] = employeesData?.map((emp: any) => {
+        const benutzer = emp.benutzer;
+        const fullName = benutzer?.vorname && benutzer?.nachname 
+          ? `${benutzer.vorname} ${benutzer.nachname}` 
+          : [emp.vorname, emp.nachname].filter(Boolean).join(' ') || `Mitarbeiter ${emp.id.slice(0, 8)}`;
+        return {
+          ...emp,
+          name: fullName,
+          rolle: benutzer?.rolle || undefined,
+        };
+      }) || [];
 
       const { data: customersData, error: customersError } = await supabase
         .from('kunden')
@@ -118,18 +131,6 @@ const ScheduleBuilderModern = () => {
         .order('start_at');
       
       if (appointmentsError) throw appointmentsError;
-
-      const transformedEmployees: Employee[] = employeesData?.map((emp: any) => {
-        const benutzer = emp.benutzer;
-        const fullName = benutzer?.vorname && benutzer?.nachname 
-          ? `${benutzer.vorname} ${benutzer.nachname}` 
-          : `Mitarbeiter ${emp.id.slice(0, 8)}`;
-        return {
-          ...emp,
-          name: fullName,
-          rolle: benutzer?.rolle || undefined,
-        };
-      }) || [];
 
       const transformedAppointments: LocalAppointment[] = appointmentsData?.map((app: any) => {
         const empData = app.employee;
