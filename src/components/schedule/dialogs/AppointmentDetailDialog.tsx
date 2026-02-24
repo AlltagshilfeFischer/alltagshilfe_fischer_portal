@@ -468,17 +468,19 @@ export function AppointmentDetailDialog({
         </DialogHeader>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-4">
+        <div className="flex flex-wrap gap-2 pt-4">
           <Button
+            size="sm"
             variant="outline"
             onClick={() => setShowCancelDialog(true)}
             disabled={loading || ['cancelled', 'nicht_angetroffen', 'abgesagt_rechtzeitig'].includes(editedAppointment.status)}
-            className="w-full border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 hover:border-red-300 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60"
+            className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 hover:border-red-300 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60"
           >
-            <X className="h-4 w-4 mr-2" />
+            <X className="h-3.5 w-3.5 mr-1.5" />
             Absagen
           </Button>
           <Button
+            size="sm"
             variant="outline"
             onClick={() => {
               const startDate = new Date(editedAppointment.start_at);
@@ -487,27 +489,29 @@ export function AppointmentDetailDialog({
               setShowRescheduleDialog(true);
             }}
             disabled={loading || ['cancelled', 'nicht_angetroffen', 'abgesagt_rechtzeitig'].includes(editedAppointment.status)}
-            className="w-full border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 hover:border-blue-300 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400 dark:hover:bg-blue-950/60"
+            className="border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 hover:border-blue-300 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400 dark:hover:bg-blue-950/60"
           >
-            <Clock className="h-4 w-4 mr-2" />
+            <Clock className="h-3.5 w-3.5 mr-1.5" />
             Verschieben
           </Button>
           <Button
+            size="sm"
             variant="outline"
             onClick={() => setShowCustomerFaultDialog(true)}
             disabled={loading || ['cancelled', 'nicht_angetroffen', 'abgesagt_rechtzeitig'].includes(editedAppointment.status)}
-            className="w-full border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 hover:border-amber-300 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400 dark:hover:bg-amber-950/60"
+            className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 hover:border-amber-300 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400 dark:hover:bg-amber-950/60"
           >
-            <AlertTriangle className="h-4 w-4 mr-2" />
+            <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
             Nicht angetroffen
           </Button>
           <Button
+            size="sm"
             variant="outline"
             onClick={handleTimelyCancel}
             disabled={loading || ['cancelled', 'nicht_angetroffen', 'abgesagt_rechtzeitig'].includes(editedAppointment.status)}
-            className="w-full border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400 dark:hover:bg-slate-800/60"
+            className="border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400 dark:hover:bg-slate-800/60"
           >
-            <AlertCircle className="h-4 w-4 mr-2" />
+            <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
             Rechtzeitig abgesagt
           </Button>
         </div>
