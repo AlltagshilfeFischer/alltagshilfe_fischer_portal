@@ -8,8 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Switch } from '@/components/ui/switch';
-import { Settings2, GripVertical } from 'lucide-react';
+
+import { Settings2, GripVertical, Eye, EyeOff } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -83,26 +83,43 @@ function SortablePopoverItem({ emp, isHidden, onToggle }: { emp: Employee; isHid
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm",
-        isHidden && "opacity-50",
-        isDragging && "opacity-50 bg-muted shadow-sm z-50"
+        'group flex items-center gap-3 rounded-lg border border-border/60 bg-card px-3 py-2.5 transition-colors',
+        isHidden && 'opacity-70',
+        isDragging && 'opacity-85 bg-muted shadow-sm ring-1 ring-primary/30 z-50'
       )}
     >
-      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground">
-        <GripVertical className="h-3.5 w-3.5" />
-      </div>
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground"
+        aria-label={`Reihenfolge für ${emp.name} ändern`}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+
       <div
-        className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+        className="h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-semibold text-primary-foreground shrink-0"
         style={{ backgroundColor: emp.farbe_kalender || 'hsl(var(--primary))' }}
       >
         {initials}
       </div>
-      <span className="flex-1 truncate text-xs">{emp.name}</span>
-      <Switch
-        checked={!isHidden}
-        onCheckedChange={onToggle}
-        className="h-4 w-7 data-[state=checked]:bg-primary"
-      />
+
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-sm font-medium text-foreground">{emp.name}</p>
+        <p className="text-xs text-muted-foreground">{isHidden ? 'Ausgeblendet' : 'Sichtbar im Kalender'}</p>
+      </div>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onToggle}
+        className="h-8 w-8 shrink-0 rounded-md text-muted-foreground hover:text-foreground"
+        aria-label={isHidden ? `${emp.name} einblenden` : `${emp.name} ausblenden`}
+      >
+        {isHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </Button>
     </div>
   );
 }
@@ -130,9 +147,7 @@ export function ProScheduleCalendar({
   );
 
   const sortedAllEmployees = useMemo(() => {
-    const list = (allEmployees || employees).filter(e => e.ist_aktiv);
-    const orderMap = new Map(employees.map((e, i) => [e.id, i]));
-    return [...list].sort((a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999));
+    return [...(allEmployees || employees)].filter((e) => e.ist_aktiv);
   }, [allEmployees, employees]);
 
   const handlePopoverDragEnd = (event: DragEndEvent) => {
@@ -203,13 +218,15 @@ export function ProScheduleCalendar({
                   <Settings2 className="h-3.5 w-3.5" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="start" className="w-64 p-2" sideOffset={8}>
-                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-2 pb-2">
-                  Mitarbeiter verwalten
+              <PopoverContent align="start" className="w-80 p-0" sideOffset={8}>
+                <div className="border-b border-border bg-muted/30 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mitarbeiter verwalten</p>
+                  <p className="text-xs text-muted-foreground mt-1">Ziehen zum Sortieren · Auge zum Ein-/Ausblenden</p>
                 </div>
+
                 <DndContext sensors={popoverSensors} collisionDetection={closestCenter} onDragEnd={handlePopoverDragEnd}>
                   <SortableContext items={sortedAllEmployees.map(e => e.id)} strategy={verticalListSortingStrategy}>
-                    <div className="max-h-[300px] overflow-y-auto space-y-0.5">
+                    <div className="max-h-[360px] overflow-y-auto p-3 space-y-2 bg-popover">
                       {sortedAllEmployees.map((emp) => (
                         <SortablePopoverItem
                           key={emp.id}
