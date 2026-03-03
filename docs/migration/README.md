@@ -1,8 +1,8 @@
-# Migration zu Lovable Cloud
+# Supabase Cloud Migration
 
 ## Übersicht
 
-Diese Dokumentation beschreibt die Schritte zur Migration vom externen Supabase-Projekt zu Lovable Cloud.
+Diese Dokumentation beschreibt die Schritte zur Migration zwischen Supabase-Projekten.
 
 ## Dateien in diesem Ordner
 
@@ -31,22 +31,22 @@ Diese Dokumentation beschreibt die Schritte zur Migration vom externen Supabase-
    - Gehe zu Auth > Users: https://supabase.com/dashboard/project/nabodbmvfrhhrjeiiimm/auth/users
    - Exportiere die Benutzerliste (Email-Adressen notieren)
 
-### Phase 2: Supabase trennen
+### Phase 2: Altes Supabase-Projekt trennen
 
-1. Öffne die **Lovable Projekteinstellungen**
+1. Öffne die Projekteinstellungen
 2. Gehe zu **Backend/Supabase**
 3. Klicke auf **"Disconnect"** bzw. **"Trennen"**
 4. Bestätige die Trennung
 
-### Phase 3: Lovable Cloud aktivieren
+### Phase 3: Neues Supabase-Projekt einrichten
 
-1. In den Projekteinstellungen: **"Enable Lovable Cloud"** klicken
+1. Neues Supabase-Projekt erstellen
 2. Warte bis das neue Backend bereit ist
-3. Die Edge Functions werden automatisch neu deployed
+3. Die Edge Functions müssen neu deployed werden
 
 ### Phase 4: Schema aufbauen
 
-1. Öffne den neuen **Cloud SQL Editor** in Lovable
+1. Öffne den **SQL Editor** im neuen Supabase-Projekt
 2. Führe `01_SCHEMA_BACKUP.sql` aus
 3. Das komplette Schema wird erstellt
 
@@ -56,13 +56,13 @@ Diese Dokumentation beschreibt die Schritte zur Migration vom externen Supabase-
 ```sql
 -- Beispiel für Benutzer
 INSERT INTO public.benutzer (id, email, rolle, status, vorname, nachname)
-VALUES 
+VALUES
   ('uuid-1', 'admin@example.com', 'admin', 'approved', 'Max', 'Mustermann'),
   ('uuid-2', 'mitarbeiter@example.com', 'mitarbeiter', 'approved', 'Anna', 'Schmidt');
 ```
 
 **Option B: Via CSV Import**
-- Lovable Cloud unterstützt CSV-Import über die UI
+- Supabase unterstützt CSV-Import über die UI
 
 ### Phase 6: Benutzer neu einladen
 
@@ -91,8 +91,8 @@ Da Auth-Daten nicht übertragbar sind:
 - [ ] CSVs/JSONs lokal gespeichert
 - [ ] Storage-Dateien heruntergeladen
 - [ ] Benutzerliste notiert
-- [ ] Supabase getrennt
-- [ ] Lovable Cloud aktiviert
+- [ ] Altes Supabase getrennt
+- [ ] Neues Supabase-Projekt erstellt
 - [ ] Schema-SQL ausgeführt
 - [ ] Daten importiert
 - [ ] Storage-Bucket erstellt

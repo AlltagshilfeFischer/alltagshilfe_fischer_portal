@@ -1,5 +1,5 @@
 -- ============================================
--- VOLLSTÄNDIGES SCHEMA-BACKUP für Lovable Cloud Migration
+-- VOLLSTÄNDIGES SCHEMA-BACKUP für Supabase Migration
 -- Projekt: EasyAssist Hub
 -- Datum: 2026-01-23
 -- ============================================

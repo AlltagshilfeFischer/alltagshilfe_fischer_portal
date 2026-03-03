@@ -22,16 +22,9 @@ Deno.serve(async (req) => {
       throw new Error('Not authenticated');
     }
     const token = authHeader.slice('Bearer '.length).trim();
-    let callerId: string | null = null;
-    try {
-      const payloadBase64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      const payloadJson = atob(payloadBase64);
-      const payload = JSON.parse(payloadJson);
-      callerId = payload.sub ?? null;
-    } catch (e) {
-      throw new Error('Not authenticated');
-    }
-    if (!callerId) throw new Error('Not authenticated');
+    const { data: callerData, error: callerError } = await supabaseAdmin.auth.getUser(token);
+    if (callerError || !callerData?.user) throw new Error('Not authenticated');
+    const callerId = callerData.user.id;
 
     const { data: isAdmin, error: isAdminErr } = await supabaseAdmin.rpc('is_admin_or_higher', { _user_id: callerId });
     if (isAdminErr || !isAdmin) {
@@ -186,7 +179,7 @@ Deno.serve(async (req) => {
     }
 
     // Generate password reset link and send via Resend
-    const siteUrl = Deno.env.get('SITE_URL') || `https://easy-assist-hub.lovable.app`;
+    const siteUrl = Deno.env.get('SITE_URL') || `https://easy-assist-hub.de`;
     
     const { data: linkData, error: genLinkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
@@ -279,8 +272,9 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error:', error);
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   }

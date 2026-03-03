@@ -64,7 +64,6 @@ const AuthPage = () => {
         description: "Prüfen Sie Ihren Posteingang für den Passwort-Reset-Link.",
       });
       setShowPasswordReset(false);
-      setShowPasswordReset(false);
     }
     
     setLoading(false);
@@ -83,7 +82,7 @@ const AuthPage = () => {
           </a>
           <div className="flex items-center gap-3 mb-2">
             <img 
-              src="/lovable-uploads/891b224f-e6be-40c4-bfcb-acf04320f118.png" 
+              src="/uploads/891b224f-e6be-40c4-bfcb-acf04320f118.png" 
               alt="Alltagshilfe Fischer Logo" 
               className="h-10 w-10 object-contain"
             />

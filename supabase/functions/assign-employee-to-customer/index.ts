@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -125,22 +125,22 @@ serve(async (req) => {
       availability: verfuegbarkeitMap.get(m.id) || []
     }));
 
-    console.log('Calling Lovable AI for employee matching...');
+    console.log('Calling AI for employee matching...');
 
-    // Call Lovable AI for intelligent matching
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    // Call AI for intelligent matching
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured");
     }
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         messages: [
           { 
             role: "system", 
@@ -211,7 +211,7 @@ Welcher Mitarbeiter passt am besten?`
       
       if (aiResponse.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Lovable AI Guthaben aufgebraucht, bitte aufladen" }),
+          JSON.stringify({ error: "KI-Kontingent aufgebraucht, bitte später versuchen" }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }

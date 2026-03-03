@@ -1,5 +1,5 @@
 -- ============================================
--- DATEN-EXPORT QUERIES für Lovable Cloud Migration
+-- DATEN-EXPORT QUERIES für Supabase Migration
 -- Projekt: EasyAssist Hub
 -- Datum: 2026-01-23
 -- ============================================
@@ -7,7 +7,7 @@
 -- ANLEITUNG:
 -- 1. Führe diese Queries in der Supabase SQL-Editor aus
 -- 2. Exportiere jede Tabelle als CSV/JSON
--- 3. Nach Lovable Cloud Migration: Importiere die Daten
+-- 3. Nach der Migration: Importiere die Daten
 -- ============================================
 
 -- ============================================

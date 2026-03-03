@@ -24,23 +24,6 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const exampleSnippets = [
-    "morgen um 14 Uhr",
-    "jeden Montag um 10 Uhr",
-    "nächste Woche Dienstag 15:30",
-    "Mittwoch 9 Uhr",
-    "täglich um 8 Uhr",
-    "jeden Donnerstag 16 Uhr",
-    "Freitag nachmittag",
-    "für 60 Minuten",
-    "90 Minuten",
-    "für 2 Stunden",
-  ];
-
-  const addSnippet = (snippet: string) => {
-    setPrompt(prev => prev ? `${prev} ${snippet}` : snippet);
-  };
-
   const loadCustomersAndEmployees = async () => {
     try {
       const [customersData, employeesData] = await Promise.all([
@@ -128,7 +111,7 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
       } else if (error.message?.includes('Payment') || error.message?.includes('402')) {
         toast({
           title: 'Guthaben aufgebraucht',
-          description: 'Bitte füge Lovable AI Guthaben hinzu.',
+          description: 'Bitte kontaktiere den Administrator.',
           variant: 'destructive'
         });
       } else {
