@@ -46,6 +46,12 @@ interface LeistungsnachweisRow {
   unterschrift_kunde_durch: string | null;
   unterschrift_gf_template: string | null;
   unterschrift_gf_name: string | null;
+  cb_kombinationsleistung: boolean;
+  cb_entlastungsleistung: boolean;
+  cb_verhinderungspflege: boolean;
+  cb_haushaltshilfe: boolean;
+  cb_deckeln_45b: boolean;
+  cb_deckeln_45b_betrag: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -150,7 +156,7 @@ export default function Leistungsnachweise() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('kunden')
-        .select('id, vorname, nachname, name, pflegegrad, stunden_kontingent_monat, strasse, plz, stadt, adresse, geburtsdatum, pflegekasse, versichertennummer')
+        .select('id, vorname, nachname, name, pflegegrad, stunden_kontingent_monat, strasse, plz, stadt, adresse, geburtsdatum, pflegekasse, versichertennummer, verhinderungspflege_aktiv, pflegesachleistung_aktiv, kasse_privat')
         .eq('aktiv', true)
         .order('nachname');
       if (error) throw error;
@@ -504,6 +510,27 @@ export default function Leistungsnachweise() {
       setTimeout(initCanvas, 100);
     }
   }, [showDetail, selectedLN?.status, initCanvas]);
+
+  // Pre-fill billing checkboxes from customer data when opening an entwurf
+  useEffect(() => {
+    if (!showDetail || !selectedLN || !kunden) return;
+    const noneSet = !selectedLN.cb_kombinationsleistung && !selectedLN.cb_entlastungsleistung &&
+      !selectedLN.cb_verhinderungspflege && !selectedLN.cb_haushaltshilfe &&
+      !selectedLN.cb_deckeln_45b && !selectedLN.ist_privat;
+    if (!noneSet) return;
+
+    const kunde = kunden.find(k => k.id === selectedLN.kunden_id);
+    if (!kunde) return;
+
+    const updates: Partial<LeistungsnachweisRow> = {};
+    if (kunde.verhinderungspflege_aktiv) updates.cb_verhinderungspflege = true;
+    if (kunde.pflegesachleistung_aktiv) updates.cb_kombinationsleistung = true;
+    if (kunde.kasse_privat === 'Privat') updates.ist_privat = true;
+
+    if (Object.keys(updates).length > 0) {
+      setSelectedLN(prev => prev ? { ...prev, ...updates } : null);
+    }
+  }, [showDetail, selectedLN?.id]);
 
   // Dienstplan link with week param
   const getDienstplanLink = () => {
@@ -888,6 +915,65 @@ export default function Leistungsnachweise() {
 
                   <Separator />
 
+                  {/* Leistungstöpfe / Abrechnungs-Checkboxen */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-foreground">Leistungsart / Abrechnung</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id="cb-kombi"
+                          checked={selectedLN.cb_kombinationsleistung}
+                          onCheckedChange={(checked) => setSelectedLN({ ...selectedLN, cb_kombinationsleistung: !!checked })}
+                        />
+                        <Label htmlFor="cb-kombi" className="text-sm">Kombinationsleistung §38 SGB XI</Label>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id="cb-entlastung"
+                          checked={selectedLN.cb_entlastungsleistung}
+                          onCheckedChange={(checked) => setSelectedLN({ ...selectedLN, cb_entlastungsleistung: !!checked })}
+                        />
+                        <Label htmlFor="cb-entlastung" className="text-sm">Entlastungsleistung §45b SGB XI</Label>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id="cb-vhp"
+                          checked={selectedLN.cb_verhinderungspflege}
+                          onCheckedChange={(checked) => setSelectedLN({ ...selectedLN, cb_verhinderungspflege: !!checked })}
+                        />
+                        <Label htmlFor="cb-vhp" className="text-sm">Verhinderungspflege §39 SGB XI</Label>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id="cb-hh"
+                          checked={selectedLN.cb_haushaltshilfe}
+                          onCheckedChange={(checked) => setSelectedLN({ ...selectedLN, cb_haushaltshilfe: !!checked })}
+                        />
+                        <Label htmlFor="cb-hh" className="text-sm">Haushaltshilfe §38 SGB XI</Label>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id="cb-deckeln"
+                          checked={selectedLN.cb_deckeln_45b}
+                          onCheckedChange={(checked) => setSelectedLN({ ...selectedLN, cb_deckeln_45b: !!checked })}
+                        />
+                        <Label htmlFor="cb-deckeln" className="text-sm">Deckeln §45b</Label>
+                        {selectedLN.cb_deckeln_45b && (
+                          <Input
+                            type="number"
+                            className="h-7 w-24 text-sm"
+                            value={selectedLN.cb_deckeln_45b_betrag ?? ''}
+                            onChange={e => setSelectedLN({ ...selectedLN, cb_deckeln_45b_betrag: e.target.value ? Number(e.target.value) : null })}
+                            placeholder="EUR"
+                          />
+                        )}
+                        <span className="text-xs text-muted-foreground">Rest privat</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
                   {/* Edit Options */}
                   <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-foreground">Einstellungen</h3>
@@ -961,6 +1047,12 @@ export default function Leistungsnachweise() {
                       ist_privat: selectedLN.ist_privat,
                       privat_empfaenger_name: selectedLN.privat_empfaenger_name,
                       unterschrift_gf_name: selectedLN.unterschrift_gf_name,
+                      cb_kombinationsleistung: selectedLN.cb_kombinationsleistung,
+                      cb_entlastungsleistung: selectedLN.cb_entlastungsleistung,
+                      cb_verhinderungspflege: selectedLN.cb_verhinderungspflege,
+                      cb_haushaltshilfe: selectedLN.cb_haushaltshilfe,
+                      cb_deckeln_45b: selectedLN.cb_deckeln_45b,
+                      cb_deckeln_45b_betrag: selectedLN.cb_deckeln_45b_betrag,
                     });
                   }}
                   disabled={updateMutation.isPending}
