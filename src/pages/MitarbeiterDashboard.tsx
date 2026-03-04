@@ -13,6 +13,7 @@ import { AbwesenheitGenehmigung } from '@/components/mitarbeiter/AbwesenheitGene
 import { MeineDokumente } from '@/components/mitarbeiter/MeineDokumente';
 import { EmployeeWeekCalendar } from '@/components/schedule/calendar/EmployeeWeekCalendar';
 import { EmployeeChangeRequestDialog } from '@/components/schedule/dialogs/EmployeeChangeRequestDialog';
+import { KundenInfoDialog } from '@/components/mitarbeiter/KundenInfoDialog';
 import { getWeekDates, getWeekNumber, formatDE } from '@/utils/date';
 import type { Appointment, EmployeeSummary } from '@/types/domain';
 
@@ -24,6 +25,7 @@ export default function MitarbeiterDashboard() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showChangeRequestDialog, setShowChangeRequestDialog] = useState(false);
+  const [showKundenInfoDialog, setShowKundenInfoDialog] = useState(false);
 
   const loadData = async () => {
     if (!mitarbeiterId) return;
@@ -42,7 +44,7 @@ export default function MitarbeiterDashboard() {
         .from('termine')
         .select(`
           id, titel, start_at, end_at, status, mitarbeiter_id, kunden_id,
-          customer:kunden(id, name, farbe_kalender)
+          customer:kunden(id, name, vorname, nachname, farbe_kalender, strasse, plz, stadt, stadtteil, telefonnr, pflegegrad, pflegekasse, versichertennummer, sonstiges)
         `)
         .eq('mitarbeiter_id', mitarbeiterId)
         .order('start_at', { ascending: true });
@@ -72,6 +74,11 @@ export default function MitarbeiterDashboard() {
 
   const handleEditAppointment = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
+    setShowKundenInfoDialog(true);
+  };
+
+  const handleOpenChangeRequest = () => {
+    setShowKundenInfoDialog(false);
     setShowChangeRequestDialog(true);
   };
 
@@ -159,6 +166,17 @@ export default function MitarbeiterDashboard() {
 
       {/* Change Requests - nur für Mitarbeiter, nicht für GF (GF genehmigt diese) */}
       {!isGF && <MyChangeRequests />}
+
+      {/* Kunden-Info Dialog */}
+      <KundenInfoDialog
+        isOpen={showKundenInfoDialog}
+        onClose={() => {
+          setShowKundenInfoDialog(false);
+          setSelectedAppointment(null);
+        }}
+        appointment={selectedAppointment}
+        onChangeRequest={handleOpenChangeRequest}
+      />
 
       {/* Change Request Dialog */}
       {mitarbeiterId && (
