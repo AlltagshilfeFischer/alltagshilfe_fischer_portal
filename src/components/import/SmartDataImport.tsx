@@ -775,17 +775,32 @@ export function SmartDataImport<T extends DataRow>({
   };
 
   // ─── Import ───────────────────────────────────────────────────────
-  const validRows = rows.filter(row => {
+  // Build effective rows including any uncommitted edit currently in the input
+  const effectiveRows = editingCell
+    ? rows.map((row, i) => {
+        if (i !== editingCell.row) return row;
+        const updated = { ...row, [columns[editingCell.col].key]: editValue } as T;
+        updated.errors = validateRow(updated);
+        return updated;
+      })
+    : rows;
+
+  const validRows = effectiveRows.filter(row => {
     const hasRequired = columns.filter(c => c.required).every(c => String(row[c.key] ?? '').trim());
     return hasRequired && row.errors.length === 0;
   });
 
-  const errorRows = rows.filter(row => {
+  const errorRows = effectiveRows.filter(row => {
     const hasAnyData = columns.some(c => String(row[c.key] ?? '').trim());
     return hasAnyData && row.errors.length > 0;
   });
 
   const handleImport = async () => {
+    // Auto-commit any pending edit before importing
+    if (editingCell) {
+      updateCell(editingCell.row, columns[editingCell.col].key, editValue);
+      setEditingCell(null);
+    }
     if (validRows.length === 0) { toast.error('Keine gültigen Daten zum Importieren'); return; }
     setIsImporting(true);
     try {
@@ -1046,7 +1061,15 @@ export function SmartDataImport<T extends DataRow>({
                               style={{ minWidth: col.width ?? 100 }}
                               onMouseDown={(e) => handleCellMouseDown(ri, ci, e)}
                               onMouseEnter={() => handleCellMouseEnter(ri, ci)}
-                              onDoubleClick={() => { startEdit(ri, ci); clearSelectionModes(); }}
+                              onClick={(e) => {
+                                // Single click enters edit mode directly (no double-click needed)
+                                // Skip if modifier keys held (used for range selection)
+                                if (e.shiftKey || e.ctrlKey || e.metaKey) return;
+                                if (editingCell?.row !== ri || editingCell?.col !== ci) {
+                                  startEdit(ri, ci);
+                                  clearSelectionModes();
+                                }
+                              }}
                               onContextMenu={(e) => handleCellContextMenu(ri, ci, e)}
                             >
                               {isEditing ? (
