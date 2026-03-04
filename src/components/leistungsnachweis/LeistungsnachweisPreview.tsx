@@ -30,6 +30,12 @@ interface LeistungsnachweisData {
   abweichende_rechnungsadresse: boolean;
   unterschrift_kunde_bild: string | null;
   unterschrift_gf_name: string | null;
+  cb_kombinationsleistung?: boolean;
+  cb_entlastungsleistung?: boolean;
+  cb_verhinderungspflege?: boolean;
+  cb_haushaltshilfe?: boolean;
+  cb_deckeln_45b?: boolean;
+  cb_deckeln_45b_betrag?: number | null;
 }
 
 interface Props {
@@ -50,7 +56,7 @@ export default function LeistungsnachweisPreview({ kunde, nachweis, termine }: P
   const adresse = kunde.adresse || [kunde.strasse, [kunde.plz, kunde.stadt].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   const geburtsdatum = kunde.geburtsdatum ? format(new Date(kunde.geburtsdatum), 'dd.MM.yyyy') : '';
 
-  // Build day map: day number -> { uhrzeit, stunden }
+  // Build day map
   const dayMap = new Map<number, { uhrzeit: string; stunden: string }>();
   let totalStunden = 0;
 
@@ -62,7 +68,6 @@ export default function LeistungsnachweisPreview({ kunde, nachweis, termine }: P
     const uhrzeit = `${format(start, 'HH:mm')}-${format(end, 'HH:mm')}`;
     const hours = t.iststunden ?? ((end.getTime() - start.getTime()) / 3600000);
     totalStunden += hours;
-    // If multiple termine on same day, append
     const existing = dayMap.get(day);
     if (existing) {
       dayMap.set(day, {
@@ -76,18 +81,6 @@ export default function LeistungsnachweisPreview({ kunde, nachweis, termine }: P
 
   const daysInMonth = new Date(nachweis.jahr, nachweis.monat, 0).getDate();
   const leftDays = Array.from({ length: 15 }, (_, i) => i + 1);
-  const rightDays = Array.from({ length: daysInMonth - 15 }, (_, i) => i + 16);
-  // Pad right to 16 rows for visual alignment
-  while (rightDays.length < 16) rightDays.push(0);
-
-  const rows = leftDays.map((ld, i) => ({
-    leftDay: ld,
-    rightDay: rightDays[i] || 0,
-  }));
-  // If right has more than 15
-  while (rows.length < rightDays.length) {
-    rows.push({ leftDay: 0, rightDay: rightDays[rows.length] || 0 });
-  }
 
   const renderDayCell = (day: number) => {
     if (day === 0 || day > daysInMonth) return { tag: '', uhrzeit: '', std: '' };
@@ -98,6 +91,11 @@ export default function LeistungsnachweisPreview({ kunde, nachweis, termine }: P
       std: entry?.stunden || '',
     };
   };
+
+  // Format deckeln betrag
+  const deckelnLabel = nachweis.cb_deckeln_45b
+    ? `Deckeln §45b ${nachweis.cb_deckeln_45b_betrag ? nachweis.cb_deckeln_45b_betrag + ' EUR' : '_____ EUR'} Rest privat`
+    : 'Deckeln §45b _____ EUR Rest privat';
 
   return (
     <div className="print-area bg-white text-black" style={{ width: '210mm', minHeight: '297mm', padding: '12mm 15mm', fontFamily: 'Arial, sans-serif', fontSize: '10px', lineHeight: '1.4', margin: '0 auto' }}>
@@ -197,22 +195,22 @@ export default function LeistungsnachweisPreview({ kunde, nachweis, termine }: P
         Die Leistungen sind nach §4 Nr. 16 Buchst. g UstG von der Umsatzsteuer befreit.
       </p>
 
-      {/* Leistungsart Checkboxen */}
+      {/* Leistungsart Checkboxen – driven by nachweis data */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5mm', fontSize: '9px', marginBottom: '3mm' }}>
         <label style={checkboxLabel}>
-          <CheckboxPrint checked={false} /> Kombinationsleistung §38 SGB XI
+          <CheckboxPrint checked={!!nachweis.cb_kombinationsleistung} /> Kombinationsleistung §38 SGB XI
         </label>
         <label style={checkboxLabel}>
-          <CheckboxPrint checked={false} /> Entlastungsleistung §45b SGB XI
+          <CheckboxPrint checked={!!nachweis.cb_entlastungsleistung} /> Entlastungsleistung §45b SGB XI
         </label>
         <label style={checkboxLabel}>
-          <CheckboxPrint checked={false} /> Verhinderungspflege §39 SGB XI
+          <CheckboxPrint checked={!!nachweis.cb_verhinderungspflege} /> Verhinderungspflege §39 SGB XI
         </label>
         <label style={checkboxLabel}>
-          <CheckboxPrint checked={false} /> Haushaltshilfe §38 SGB XI
+          <CheckboxPrint checked={!!nachweis.cb_haushaltshilfe} /> Haushaltshilfe §38 SGB XI
         </label>
         <label style={checkboxLabel}>
-          <CheckboxPrint checked={false} /> Deckeln §45b _____ EUR Rest privat
+          <CheckboxPrint checked={!!nachweis.cb_deckeln_45b} /> {deckelnLabel}
         </label>
         <label style={checkboxLabel}>
           <CheckboxPrint checked={nachweis.ist_privat} /> Privat

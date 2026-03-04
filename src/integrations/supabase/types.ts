@@ -802,6 +802,12 @@ export type Database = {
       leistungsnachweise: {
         Row: {
           abweichende_rechnungsadresse: boolean
+          cb_deckeln_45b: boolean
+          cb_deckeln_45b_betrag: number | null
+          cb_entlastungsleistung: boolean
+          cb_haushaltshilfe: boolean
+          cb_kombinationsleistung: boolean
+          cb_verhinderungspflege: boolean
           created_at: string
           geleistete_stunden: number
           geplante_stunden: number
@@ -826,6 +832,12 @@ export type Database = {
         }
         Insert: {
           abweichende_rechnungsadresse?: boolean
+          cb_deckeln_45b?: boolean
+          cb_deckeln_45b_betrag?: number | null
+          cb_entlastungsleistung?: boolean
+          cb_haushaltshilfe?: boolean
+          cb_kombinationsleistung?: boolean
+          cb_verhinderungspflege?: boolean
           created_at?: string
           geleistete_stunden?: number
           geplante_stunden?: number
@@ -850,6 +862,12 @@ export type Database = {
         }
         Update: {
           abweichende_rechnungsadresse?: boolean
+          cb_deckeln_45b?: boolean
+          cb_deckeln_45b_betrag?: number | null
+          cb_entlastungsleistung?: boolean
+          cb_haushaltshilfe?: boolean
+          cb_kombinationsleistung?: boolean
+          cb_verhinderungspflege?: boolean
           created_at?: string
           geleistete_stunden?: number
           geplante_stunden?: number
