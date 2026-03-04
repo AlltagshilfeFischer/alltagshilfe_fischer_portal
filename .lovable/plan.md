@@ -1,35 +1,32 @@
 
 
-## Plan: Offline-faehige Unterschrift im Leistungsnachweis
+## Plan: Kundenadresse im Dienstplan mit Google Maps Link
 
-### Ziel
-Die Unterschrift-Funktion soll auch bei schlechtem/fehlendem Internet funktionieren. Die Signatur wird lokal zwischengespeichert und bei Reconnect automatisch synchronisiert.
+### Aenderungen
 
-### Aenderungen in `src/pages/controlboard/Leistungsnachweise.tsx`
+**1. `src/hooks/useAppointments.ts` - Adressfelder im Query ergaenzen**
+- Die Felder `strasse`, `plz`, `stadt`, `stadtteil` werden bereits teilweise geladen (`stadtteil`, `adresse`), aber `strasse`, `plz`, `stadt` fehlen im Select
+- Diese drei Felder zum Customer-Select hinzufuegen
 
-**1. Online-Status-Tracking hinzufuegen**
-- State `isOnline` mit `navigator.onLine` initialisieren
-- `useEffect` mit `online`/`offline` Event-Listenern auf `window`
-- Bei Reconnect: pruefen ob eine unsynchronisierte Unterschrift im `localStorage` liegt und automatisch hochladen
+**2. `src/types/domain.ts` - CalendarAppointment.customer erweitern**
+- `stadtteil`, `strasse`, `plz`, `stadt` als optionale Felder zum `customer`-Typ in `CalendarAppointment` hinzufuegen
 
-**2. Sign-Mutation offline-faehig machen**
-- Beim Unterschreiben: Canvas-DataURL immer zuerst in `localStorage` speichern (Key: `pending_signature_${selectedLN.id}`)
-- Wenn online: sofort in die Datenbank schreiben wie bisher, bei Erfolg localStorage-Eintrag loeschen
-- Wenn offline: Toast zeigen "Unterschrift wird synchronisiert, sobald Internet verfuegbar", lokalen State updaten damit die UI die Unterschrift sofort anzeigt
+**3. `src/components/schedule/ProAppointmentCard.tsx` - Stadtteil-Badge**
+- Unter dem Kundennamen (Zeile 89-91) ein kleines Badge mit `appointment.customer?.stadtteil` anzeigen, wenn vorhanden
+- Kompakt: `text-[10px]` mit MapPin-Icon
 
-**3. Auto-Sync bei Reconnect**
-- `useEffect` der auf `isOnline` reagiert: wenn online und pending signatures im localStorage existieren, diese nacheinander hochladen
-- Nach erfolgreichem Sync: localStorage-Eintrag loeschen, Toast "Unterschrift erfolgreich synchronisiert", Query invalidieren
+**4. `src/components/schedule/DraggableAppointment.tsx` - Stadtteil-Badge**
+- Analog zum ProAppointmentCard: kleines Stadtteil-Label unter dem Kundennamen anzeigen
 
-**4. UI-Feedback**
-- Kleines Badge/Banner im Unterschrift-Bereich wenn offline: "Offline-Modus - Unterschrift wird lokal gespeichert"
-- Nach lokalem Speichern: Erfolgs-Toast mit Hinweis auf spaeteren Sync
-- Pending-Indicator wenn unsynced Signatures vorhanden
+**5. `src/components/schedule/dialogs/AppointmentDetailDialog.tsx` - Adresse mit Maps-Link**
+- Im Kundeninfo-Block (nach Zeile 652, nach Telefon) einen neuen Adress-Abschnitt einfuegen
+- Vollstaendige Adresse (Strasse, PLZ Stadt) anzeigen
+- Klickbarer Google Maps Link: `https://maps.google.com/?q=${encodeURIComponent(strasse + ' ' + plz + ' ' + stadt)}`
+- MapPin-Icon, Link oeffnet in neuem Tab
+
+**6. `src/pages/controlboard/ScheduleBuilderModern.tsx` - Adressfelder im lokalen Query**
+- Pruefen ob der dortige Termin-Query ebenfalls `strasse, plz, stadt, stadtteil` laedt (er nutzt einen eigenen Query, nicht den Hook)
 
 ### Keine DB-Aenderungen noetig
-Die bestehenden Felder `unterschrift_kunde_bild`, `unterschrift_kunde_zeitstempel`, `unterschrift_kunde_durch` reichen aus.
-
-### Umfang
-- 1 Datei: `src/pages/controlboard/Leistungsnachweise.tsx`
-- Aenderungen: ~60 Zeilen (Online-State, localStorage-Logik, Auto-Sync, UI-Feedback)
+Alle Felder existieren bereits in der `kunden`-Tabelle.
 
