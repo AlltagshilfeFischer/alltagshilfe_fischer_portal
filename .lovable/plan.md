@@ -1,32 +1,32 @@
 
 
-## Plan: Kundenadresse im Dienstplan mit Google Maps Link
+## Plan: Kundendetails fuer Mitarbeiter erweitern
+
+### Ansatz
+Wenn der Mitarbeiter im Dashboard auf einen Termin klickt, wird statt nur dem EmployeeChangeRequestDialog ein **Kundeninfo-Dialog** geoeffnet, der alle relevanten Kundendaten anzeigt. Von dort kann der Mitarbeiter optional einen Aenderungsantrag stellen.
 
 ### Aenderungen
 
-**1. `src/hooks/useAppointments.ts` - Adressfelder im Query ergaenzen**
-- Die Felder `strasse`, `plz`, `stadt`, `stadtteil` werden bereits teilweise geladen (`stadtteil`, `adresse`), aber `strasse`, `plz`, `stadt` fehlen im Select
-- Diese drei Felder zum Customer-Select hinzufuegen
+**1. Termin-Query in `MitarbeiterDashboard.tsx` erweitern**
+- Mehr Kundenfelder laden: `vorname, nachname, strasse, plz, stadt, stadtteil, telefonnr, pflegegrad, pflegekasse, versichertennummer, sonstiges`
+- Zusaetzlich: Notfallkontakte und Zeitfenster separat laden (pro Kunde, bei Klick oder vorab)
 
-**2. `src/types/domain.ts` - CalendarAppointment.customer erweitern**
-- `stadtteil`, `strasse`, `plz`, `stadt` als optionale Felder zum `customer`-Typ in `CalendarAppointment` hinzufuegen
+**2. Neue Komponente `src/components/mitarbeiter/KundenInfoDialog.tsx` erstellen**
+- Dialog der beim Klick auf einen Termin aufgeht
+- Zeigt:
+  - **Termin-Info**: Titel, Datum, Uhrzeit
+  - **Kundenstammdaten**: Vorname, Nachname, Adresse (mit Google Maps Link), Telefon
+  - **Pflege-Info**: Pflegegrad, Pflegekasse, Versichertennummer
+  - **Notfallkontakte**: Name + Telefon (aus `notfallkontakte`-Tabelle, geladen per kunden_id)
+  - **Zeitfenster**: Wochentag + Von/Bis (aus `kunden_zeitfenster`-Tabelle)
+  - **Besondere Hinweise**: Feld `sonstiges`
+- Button "Aenderungsantrag stellen" oeffnet den bestehenden EmployeeChangeRequestDialog
+- Notfallkontakte und Zeitfenster werden per separatem Query geladen wenn der Dialog oeffnet
 
-**3. `src/components/schedule/ProAppointmentCard.tsx` - Stadtteil-Badge**
-- Unter dem Kundennamen (Zeile 89-91) ein kleines Badge mit `appointment.customer?.stadtteil` anzeigen, wenn vorhanden
-- Kompakt: `text-[10px]` mit MapPin-Icon
-
-**4. `src/components/schedule/DraggableAppointment.tsx` - Stadtteil-Badge**
-- Analog zum ProAppointmentCard: kleines Stadtteil-Label unter dem Kundennamen anzeigen
-
-**5. `src/components/schedule/dialogs/AppointmentDetailDialog.tsx` - Adresse mit Maps-Link**
-- Im Kundeninfo-Block (nach Zeile 652, nach Telefon) einen neuen Adress-Abschnitt einfuegen
-- Vollstaendige Adresse (Strasse, PLZ Stadt) anzeigen
-- Klickbarer Google Maps Link: `https://maps.google.com/?q=${encodeURIComponent(strasse + ' ' + plz + ' ' + stadt)}`
-- MapPin-Icon, Link oeffnet in neuem Tab
-
-**6. `src/pages/controlboard/ScheduleBuilderModern.tsx` - Adressfelder im lokalen Query**
-- Pruefen ob der dortige Termin-Query ebenfalls `strasse, plz, stadt, stadtteil` laedt (er nutzt einen eigenen Query, nicht den Hook)
+**3. `MitarbeiterDashboard.tsx` anpassen**
+- `handleEditAppointment` oeffnet den neuen KundenInfoDialog statt direkt den ChangeRequestDialog
+- KundenInfoDialog hat einen Button zum Wechsel zum ChangeRequestDialog
 
 ### Keine DB-Aenderungen noetig
-Alle Felder existieren bereits in der `kunden`-Tabelle.
+Alle Felder und Tabellen existieren bereits. RLS-Policies erlauben Mitarbeitern Lesezugriff auf zugewiesene Kunden, Notfallkontakte und Zeitfenster (via Termine-Join).
 
