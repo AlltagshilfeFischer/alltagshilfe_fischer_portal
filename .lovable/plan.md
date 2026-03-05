@@ -1,37 +1,28 @@
 
 
-## Plan: Regeltermin-Serie komplett verschieben
+## Plan: Kundenbearbeitung mit Tabs (Stammdaten, Abrechnung, Dokumente)
 
-### Kontext
-Der Dialog existiert bereits in `ScheduleBuilderModern.tsx` (Zeilen 1071-1129), zeigt aber bei "Alle zukuenftigen Termine" nur einen Platzhalter-Toast. Die Logik muss implementiert werden.
+### Problem
+Der aktuelle `CustomerEditDialog` ist ein flaches Formular ohne Tabs. Der Erstellungs-Wizard (`CreateCustomerWizard`) hat dagegen drei Tabs: Stammdaten, Abrechnung, Dokumente. Beim Bearbeiten fehlen die Abrechnung- und Dokumente-Tabs komplett.
+
+### Loesung
+Den `CustomerEditDialog` auf eine Tab-basierte Struktur umbauen, die die gleichen Wizard-Step-Komponenten wiederverwendet.
 
 ### Aenderungen
 
-**1. `ScheduleBuilderModern.tsx` -- Neue Funktion `moveEntireSeries`**
+**1. `src/components/customers/CustomerEditDialog.tsx`**
+- Tabs einfuehren: `Stammdaten`, `Abrechnung`, `Dokumente`
+- **Tab Stammdaten**: Bestehende Formularfelder (persoenliche Daten, Kontakt, Pflege, Status, Ein-/Austritt, Zeitfenster) bleiben wie bisher
+- **Tab Abrechnung**: `StepAbrechnung`-Komponente einbinden (Kasse/Privat, Verhinderungspflege, Pflegesachleistung, Budget-Priorisierung). State fuer `budgetOrder` und `draggedBudget` hinzufuegen, initialisiert aus `editingCustomer.budget_prioritaet`
+- **Tab Dokumente**: `StepDokumente`-Komponente einbinden fuer neue Uploads. Zusaetzlich vorhandene Dokumente aus DB laden und anzeigen
+- Budget-Felder (`verhinderungspflege_aktiv/beantragt/genehmigt/budget`, `pflegesachleistung_*`, `budget_prioritaet`) werden beim Speichern mit uebernommen
 
-Ersetze den Platzhalter-Toast (Zeilen 1114-1126) durch eine echte Implementierung:
+**2. `src/hooks/useCustomerMutations.ts`**
+- `updateCustomerMutation` erweitern: `budget_prioritaet`, alle `verhinderungspflege_*` und `pflegesachleistung_*` Felder mit speichern (aktuell werden diese vermutlich schon durchgereicht, muss verifiziert werden)
 
-- Aus `seriesMoveDialog` den `vorlage_id`, neuen `employeeId`, und `targetDate` entnehmen
-- Neuen Wochentag aus `targetDate` berechnen (JS `getDay()` → DB-Wochentag-Mapping: So=0→6, Mo=1→0, Di=2→1 usw., da DB 0=Mo nutzt)
-- Neue Startzeit aus der Originaldauer + Zielzeit berechnen
-- **Schritt 1**: `termin_vorlagen` updaten:
-  - `wochentag` auf neuen Wochentag
-  - `start_zeit` auf neue Uhrzeit
-  - `mitarbeiter_id` auf neuen Mitarbeiter (falls geaendert)
-- **Schritt 2**: Alle zukuenftigen `termine` der Serie updaten (WHERE `vorlage_id = X` AND `start_at >= now()` AND `ist_ausnahme = false`):
-  - Fuer jeden Termin: Berechne neues `start_at` und `end_at` basierend auf dem Wochentag-Offset und der neuen Uhrzeit
-  - `mitarbeiter_id` aktualisieren
-- Vergangene Termine und Ausnahmen (`ist_ausnahme = true`) bleiben unveraendert
-- `loadData()` aufrufen nach Erfolg
-
-**Implementierungsdetail**: Da Supabase-Client kein Batch-Update mit unterschiedlichen Werten pro Zeile erlaubt, werden die zukuenftigen Termine erst geladen, dann einzeln mit berechneten Zeiten aktualisiert (oder per `Promise.all` parallel).
-
-Alternativer Ansatz: Eine DB-Funktion waere eleganter, aber fuer den ersten Schritt reicht Client-seitiges Update.
-
-**2. Keine neuen Dateien oder Komponenten noetig**
-
-Der bestehende `AlertDialog` hat bereits die richtige Struktur. Nur der `onClick`-Handler des "Alle zukuenftigen Termine"-Buttons wird ersetzt.
+**3. `src/pages/controlboard/MasterData.tsx`**
+- `handleEditCustomer`: Beim Laden des Kunden auch `budget_prioritaet` in `budgetOrder` State initialisieren, damit die Abrechnung-Tab korrekt vorausgefuellt ist
 
 ### Keine DB-Aenderungen noetig
-`termin_vorlagen` und `termine` haben bereits alle benoetigten Felder. RLS erlaubt Admins/GF Updates auf beide Tabellen.
+Alle Felder existieren bereits in der `kunden`-Tabelle.
 
