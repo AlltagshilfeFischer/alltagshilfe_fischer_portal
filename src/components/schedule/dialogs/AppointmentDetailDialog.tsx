@@ -61,6 +61,7 @@ export function AppointmentDetailDialog({
   const [rescheduleTime, setRescheduleTime] = useState('');
   const [customerFaultNote, setCustomerFaultNote] = useState('');
   const [showKundenDetail, setShowKundenDetail] = useState(false);
+  const [noteSaving, setNoteSaving] = useState(false);
   const { toast } = useToast();
   const { isGeschaeftsfuehrer, isAdmin } = useUserRole();
 
@@ -787,6 +788,49 @@ export function AppointmentDetailDialog({
               </CardContent>
             </Card>
           )}
+
+          {/* Notizen */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-sm">Notizen</h3>
+                {!isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={noteSaving}
+                    onClick={async () => {
+                      if (!editedAppointment) return;
+                      setNoteSaving(true);
+                      try {
+                        const { error } = await supabase
+                          .from('termine')
+                          .update({ notizen: editedAppointment.notizen || null })
+                          .eq('id', editedAppointment.id);
+                        if (error) throw error;
+                        toast({ title: 'Notiz gespeichert' });
+                      } catch (e: any) {
+                        toast({ title: 'Fehler', description: e.message, variant: 'destructive' });
+                      } finally {
+                        setNoteSaving(false);
+                      }
+                    }}
+                  >
+                    <Save className="h-3 w-3 mr-1" />
+                    {noteSaving ? 'Speichert...' : 'Notiz speichern'}
+                  </Button>
+                )}
+              </div>
+              <Textarea
+                value={editedAppointment.notizen || ''}
+                onChange={(e) =>
+                  setEditedAppointment({ ...editedAppointment, notizen: e.target.value })
+                }
+                placeholder="Keine Notizen"
+                className="min-h-[80px] resize-y"
+              />
+            </CardContent>
+          </Card>
         </div>
 
         <DialogFooter className="gap-2">
