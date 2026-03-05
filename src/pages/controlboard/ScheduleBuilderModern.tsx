@@ -1112,12 +1112,103 @@ const ScheduleBuilderModern = () => {
                 Nur diesen Termin
               </AlertDialogAction>
               <AlertDialogAction
-                onClick={() => {
-                  if (seriesMoveDialog) {
+                onClick={async () => {
+                  if (!seriesMoveDialog) return;
+                  const { appointment, employeeId, targetDate } = seriesMoveDialog;
+                  const vorlageId = appointment.vorlage_id;
+                  if (!vorlageId) return;
+
+                  try {
+                    // 1. Compute new weekday (DB: 0=Mo … 6=So)
+                    const jsDay = targetDate.getDay(); // 0=Sun
+                    const newWochentag = jsDay === 0 ? 6 : jsDay - 1;
+
+                    // 2. Derive new start time from the drop target date
+                    //    The targetDate already encodes the target time slot via the hour
+                    const newStartZeit = format(targetDate, 'HH:mm:ss');
+
+                    // 3. Get original template for duration
+                    const { data: vorlage, error: vErr } = await supabase
+                      .from('termin_vorlagen')
+                      .select('dauer_minuten')
+                      .eq('id', vorlageId)
+                      .single();
+                    if (vErr || !vorlage) throw vErr || new Error('Vorlage nicht gefunden');
+
+                    const dauerMinuten = vorlage.dauer_minuten;
+
+                    // 4. Update template
+                    const { error: tplErr } = await supabase
+                      .from('termin_vorlagen')
+                      .update({
+                        wochentag: newWochentag,
+                        start_zeit: newStartZeit,
+                        mitarbeiter_id: employeeId || null,
+                      })
+                      .eq('id', vorlageId);
+                    if (tplErr) throw tplErr;
+
+                    // 5. Fetch all future non-exception appointments of this series
+                    const now = new Date().toISOString();
+                    const { data: futureTermine, error: ftErr } = await supabase
+                      .from('termine')
+                      .select('id, start_at, end_at')
+                      .eq('vorlage_id', vorlageId)
+                      .eq('ist_ausnahme', false)
+                      .gte('start_at', now);
+                    if (ftErr) throw ftErr;
+
+                    // 6. Update each future appointment with recalculated dates
+                    if (futureTermine && futureTermine.length > 0) {
+                      const updates = futureTermine.map((termin) => {
+                        const origDate = new Date(termin.start_at);
+                        const origJsDay = origDate.getDay();
+                        const origMondayIdx = origJsDay === 0 ? 6 : origJsDay - 1;
+                        let dayOffset = newWochentag - origMondayIdx;
+                        // Keep within same week (adjust ±6 days max)
+                        if (dayOffset > 3) dayOffset -= 7;
+                        if (dayOffset < -3) dayOffset += 7;
+
+                        const newStart = new Date(origDate);
+                        newStart.setDate(newStart.getDate() + dayOffset);
+                        // Set new time
+                        const [hh, mm] = newStartZeit.split(':').map(Number);
+                        newStart.setHours(hh, mm, 0, 0);
+
+                        const newEnd = new Date(newStart.getTime() + dauerMinuten * 60000);
+
+                        return supabase
+                          .from('termine')
+                          .update({
+                            start_at: newStart.toISOString(),
+                            end_at: newEnd.toISOString(),
+                            mitarbeiter_id: employeeId || null,
+                            status: employeeId ? 'scheduled' as const : 'unassigned' as const,
+                          })
+                          .eq('id', termin.id);
+                      });
+
+                      const results = await Promise.all(updates);
+                      const failed = results.filter(r => r.error);
+                      if (failed.length > 0) {
+                        console.error('Einige Termine konnten nicht aktualisiert werden:', failed);
+                      }
+                    }
+
                     toast({
-                      title: 'Hinweis',
-                      description: 'Das Verschieben ganzer Serien wird in einer zukünftigen Version implementiert.'
+                      title: 'Serie verschoben',
+                      description: `Vorlage und ${futureTermine?.length || 0} zukünftige Termine wurden aktualisiert.`,
                     });
+
+                    await loadData();
+                  } catch (err: any) {
+                    console.error('Fehler beim Verschieben der Serie:', err);
+                    toast({
+                      title: 'Fehler',
+                      description: err?.message || 'Serie konnte nicht verschoben werden.',
+                      variant: 'destructive',
+                    });
+                  } finally {
                     setSeriesMoveDialog(null);
                   }
                 }}
