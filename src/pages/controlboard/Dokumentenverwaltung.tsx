@@ -76,6 +76,7 @@ export default function Dokumentenverwaltung() {
   const [activeTab, setActiveTab] = useState<DokumentKategorie>('kunde');
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [entitySearchQuery, setEntitySearchQuery] = useState('');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
   const { toast } = useToast();
@@ -310,7 +311,11 @@ export default function Dokumentenverwaltung() {
 
         updatePendingFile(i, { status: 'done', progress: 100 });
       } catch (error: any) {
-        updatePendingFile(i, { status: 'error', error: error.message || 'Upload fehlgeschlagen' });
+        const msg = error.message || 'Upload fehlgeschlagen';
+        const detail = error.statusCode === 403 || msg.includes('security') || msg.includes('policy')
+          ? `${msg} — Bitte prüfen Sie die Berechtigungen (Storage-Bucket oder Datenbankrichtlinien).`
+          : msg;
+        updatePendingFile(i, { status: 'error', error: detail });
       }
     }
 
@@ -831,6 +836,7 @@ export default function Dokumentenverwaltung() {
         setActiveTab(v as DokumentKategorie);
         setSelectedEntityId(null);
         setSearchQuery('');
+        setEntitySearchQuery('');
       }} className="flex-1 flex flex-col min-h-0">
         <TabsList className="grid w-full grid-cols-3 mb-4">
           <TabsTrigger value="kunde" className="flex items-center gap-2">
@@ -855,18 +861,22 @@ export default function Dokumentenverwaltung() {
                 <CardHeader className="py-3 px-4 border-b">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
+                     <Input
                       className="pl-9 h-9"
                       placeholder={`${activeTab === 'kunde' ? 'Kunde' : 'Mitarbeiter'} suchen...`}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={entitySearchQuery}
+                      onChange={(e) => setEntitySearchQuery(e.target.value)}
                     />
                   </div>
                 </CardHeader>
                 <ScrollArea className="flex-1">
                   <div className="p-2">
                     {activeTab === 'kunde' ? (
-                      kunden.map((kunde) => {
+                      kunden.filter((k) => {
+                        if (!entitySearchQuery) return true;
+                        const q = entitySearchQuery.toLowerCase();
+                        return (k.vorname || '').toLowerCase().includes(q) || (k.nachname || '').toLowerCase().includes(q);
+                      }).map((kunde) => {
                         const docCount = getEntityDocCount(kunde.id, 'kunde');
                         const isSelected = selectedEntityId === kunde.id;
                         return (
@@ -895,7 +905,11 @@ export default function Dokumentenverwaltung() {
                         );
                       })
                     ) : (
-                      mitarbeiter.map((ma) => {
+                      mitarbeiter.filter((m) => {
+                        if (!entitySearchQuery) return true;
+                        const q = entitySearchQuery.toLowerCase();
+                        return (m.vorname || '').toLowerCase().includes(q) || (m.nachname || '').toLowerCase().includes(q);
+                      }).map((ma) => {
                         const docCount = getEntityDocCount(ma.id, 'mitarbeiter');
                         const isSelected = selectedEntityId === ma.id;
                         return (
@@ -944,17 +958,15 @@ export default function Dokumentenverwaltung() {
                       </CardDescription>
                     </div>
                   </div>
-                  {activeTab === 'intern' && (
-                    <div className="relative w-64">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        className="pl-9 h-9"
-                        placeholder="Dokument suchen..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
-                  )}
+                  <div className="relative w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="pl-9 h-9"
+                      placeholder="Dokument suchen..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
                 </div>
               </CardHeader>
               
