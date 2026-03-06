@@ -868,7 +868,11 @@ export default function Dokumentenverwaltung() {
                 <ScrollArea className="flex-1">
                   <div className="p-2">
                     {activeTab === 'kunde' ? (
-                      kunden.map((kunde) => {
+                      kunden.filter((k) => {
+                        if (!entitySearchQuery) return true;
+                        const q = entitySearchQuery.toLowerCase();
+                        return (k.vorname || '').toLowerCase().includes(q) || (k.nachname || '').toLowerCase().includes(q);
+                      }).map((kunde) => {
                         const docCount = getEntityDocCount(kunde.id, 'kunde');
                         const isSelected = selectedEntityId === kunde.id;
                         return (
