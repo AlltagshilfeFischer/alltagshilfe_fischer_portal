@@ -901,7 +901,11 @@ export default function Dokumentenverwaltung() {
                         );
                       })
                     ) : (
-                      mitarbeiter.map((ma) => {
+                      mitarbeiter.filter((m) => {
+                        if (!entitySearchQuery) return true;
+                        const q = entitySearchQuery.toLowerCase();
+                        return (m.vorname || '').toLowerCase().includes(q) || (m.nachname || '').toLowerCase().includes(q);
+                      }).map((ma) => {
                         const docCount = getEntityDocCount(ma.id, 'mitarbeiter');
                         const isSelected = selectedEntityId === ma.id;
                         return (
