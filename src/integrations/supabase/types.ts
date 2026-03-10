@@ -185,6 +185,36 @@ export type Database = {
         }
         Relationships: []
       }
+      development_todos: {
+        Row: {
+          bereich: string
+          created_at: string
+          erledigt: boolean
+          erstellt_von: string
+          id: string
+          titel: string
+          updated_at: string
+        }
+        Insert: {
+          bereich: string
+          created_at?: string
+          erledigt?: boolean
+          erstellt_von: string
+          id?: string
+          titel: string
+          updated_at?: string
+        }
+        Update: {
+          bereich?: string
+          created_at?: string
+          erledigt?: boolean
+          erstellt_von?: string
+          id?: string
+          titel?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dokumente: {
         Row: {
           beschreibung: string | null
