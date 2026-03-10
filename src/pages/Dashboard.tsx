@@ -13,6 +13,7 @@ import Billing from './controlboard/Billing';
 import Leistungsnachweise from './controlboard/Leistungsnachweise';
 import Dokumentenverwaltung from './controlboard/Dokumentenverwaltung';
 import AktivitaetsLog from './controlboard/AktivitaetsLog';
+import EntwicklungsStatus from './controlboard/EntwicklungsStatus';
 import MitarbeiterStart from './MitarbeiterStart';
 
 import Settings from './Settings';
@@ -84,6 +85,7 @@ export default function Dashboard() {
           <Route path="/controlboard/leistungsnachweise" element={<Leistungsnachweise />} />
           <Route path="/controlboard/billing" element={<Billing />} />
           <Route path="/controlboard/aktivitaetslog" element={<AktivitaetsLog />} />
+          <Route path="/controlboard/entwicklung" element={<EntwicklungsStatus />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </DashboardLayout>
@@ -104,6 +106,7 @@ export default function Dashboard() {
         <Route path="/controlboard/leistungsnachweise" element={<Leistungsnachweise />} />
         <Route path="/controlboard/billing" element={<Billing />} />
         <Route path="/controlboard/aktivitaetslog" element={<AktivitaetsLog />} />
+        <Route path="/controlboard/entwicklung" element={<EntwicklungsStatus />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
