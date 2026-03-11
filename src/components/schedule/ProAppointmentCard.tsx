@@ -98,12 +98,6 @@ export function ProAppointmentCard({
               </div>
             )}
             
-            {/* Optional: Titel/Type */}
-            {appointment.titel && appointment.customer?.name && appointment.titel !== appointment.customer.name && (
-              <div className="text-[10px] text-muted-foreground truncate mt-0.5">
-                {appointment.titel}
-              </div>
-            )}
           </div>
           
           {/* Color indicator bar at bottom */}
