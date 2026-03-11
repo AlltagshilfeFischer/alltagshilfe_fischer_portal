@@ -144,7 +144,7 @@ export function CreateAppointmentFromSlotDialog({
         : customers.find(c => c.id === finalKundenId)?.name || 'Unbekannt';
 
       await onSubmitSingle({
-        titel: `Termin: ${customerName}`,
+        titel: customerName,
         kunden_id: finalKundenId,
         mitarbeiter_id: mitarbeiterId,
         start_at: startDateTime.toISOString(),
@@ -168,7 +168,7 @@ export function CreateAppointmentFromSlotDialog({
       const customerName = customers.find(c => c.id === recurringKundenId)?.name || 'Unbekannt';
       
       await onSubmitRecurring({
-        titel: `Termin: ${customerName}`,
+        titel: customerName,
         kunden_id: recurringKundenId,
         mitarbeiter_id: recurringMitarbeiterId,
         wochentag,
