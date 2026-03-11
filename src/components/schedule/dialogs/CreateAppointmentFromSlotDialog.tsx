@@ -144,7 +144,7 @@ export function CreateAppointmentFromSlotDialog({
         : customers.find(c => c.id === finalKundenId)?.name || 'Unbekannt';
 
       await onSubmitSingle({
-        titel: `Termin: ${customerName}`,
+        titel: customerName,
         kunden_id: finalKundenId,
         mitarbeiter_id: mitarbeiterId,
         start_at: startDateTime.toISOString(),
