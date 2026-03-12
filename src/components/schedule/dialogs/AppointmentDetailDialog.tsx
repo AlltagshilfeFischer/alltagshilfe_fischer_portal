@@ -65,6 +65,7 @@ export function AppointmentDetailDialog({
   const [noteSaving, setNoteSaving] = useState(false);
   const { toast } = useToast();
   const { isGeschaeftsfuehrer, isAdmin } = useUserRole();
+  const queryClient = useQueryClient();
 
   React.useEffect(() => {
     if (appointment) {
