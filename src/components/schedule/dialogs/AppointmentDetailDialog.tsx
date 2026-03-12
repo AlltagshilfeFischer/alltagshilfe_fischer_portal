@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -64,6 +65,7 @@ export function AppointmentDetailDialog({
   const [noteSaving, setNoteSaving] = useState(false);
   const { toast } = useToast();
   const { isGeschaeftsfuehrer, isAdmin } = useUserRole();
+  const queryClient = useQueryClient();
 
   React.useEffect(() => {
     if (appointment) {
@@ -808,6 +810,7 @@ export function AppointmentDetailDialog({
                           .update({ notizen: editedAppointment.notizen || null })
                           .eq('id', editedAppointment.id);
                         if (error) throw error;
+                        queryClient.invalidateQueries({ queryKey: ['termine'] });
                         toast({ title: 'Notiz gespeichert' });
                       } catch (e: any) {
                         toast({ title: 'Fehler', description: e.message, variant: 'destructive' });
