@@ -1021,7 +1021,9 @@ const ScheduleBuilderModern = () => {
                 mitarbeiter_id: appointment.mitarbeiter_id,
                 kunden_id: appointment.kunden_id,
                 start_at: appointment.start_at,
-                end_at: appointment.end_at
+                end_at: appointment.end_at,
+                notizen: appointment.notizen ?? null,
+                iststunden: appointment.iststunden ?? null,
               };
               
               // Include series exception fields if present
