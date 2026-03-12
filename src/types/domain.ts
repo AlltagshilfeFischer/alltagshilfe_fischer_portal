@@ -79,7 +79,6 @@ export interface Customer {
   angehoerige_ansprechpartner: string | null;
   farbe_kalender?: string;
   kunden_nummer?: number;
-  haushalt_id?: string | null;
   sollstunden?: number | null;
   termindauer_stunden?: number | null;
   terminfrequenz?: string | null;
@@ -112,6 +111,7 @@ export interface CalendarAppointment {
   start_at: string;
   end_at: string;
   status?: TerminStatus;
+  notizen?: string | null;
   customer?: { id: string; name: string | null; farbe_kalender?: string; email?: string | null; telefonnr?: string | null; strasse?: string | null; plz?: string | null; stadt?: string | null; stadtteil?: string | null; pflegegrad?: number | null; pflegekasse?: string | null; versichertennummer?: string | null; sonstiges?: string | null; vorname?: string | null; nachname?: string | null };
   employee?: { id: string; name: string; farbe_kalender: string };
   vorlage_id?: string | null;
@@ -126,7 +126,6 @@ export interface Appointment extends CalendarAppointment {
   employee?: EmployeeSummary & Partial<Employee>;
   notizen?: string | null;
   iststunden?: number | null;
-  einsatzort_id?: string | null;
 }
 
 // ─── Time Windows ───────────────────────────────────────────
@@ -195,18 +194,82 @@ export interface MitarbeiterRow {
   zustaendigkeitsbereich: string | null;
 }
 
-// ─── Haushalt ───────────────────────────────────────────────
-export interface Haushalt {
+// ─── Pflegebudget ───────────────────────────────────────────
+
+export type ServiceType = 'ENTLASTUNG' | 'KOMBI' | 'VERHINDERUNG' | 'PRIVAT';
+export type TransactionSource = 'APLANO_IMPORT' | 'MANUAL';
+export type AllocationStatus = 'OK' | 'OPTIMIZE' | 'BUDGET_EXCEEDED';
+
+export interface BudgetTransaction {
   id: string;
-  name: string;
-  notfall_name?: string | null;
-  notfall_telefon?: string | null;
-  angehoerige_ansprechpartner?: string | null;
-  rechnungsempfaenger_name?: string | null;
-  rechnungsempfaenger_strasse?: string | null;
-  rechnungsempfaenger_plz?: string | null;
-  rechnungsempfaenger_stadt?: string | null;
-  sonstiges?: string | null;
+  budget_id?: string | null;
+  client_id: string;
+  service_date: string;
+  hours: number;
+  visits: number;
+  service_type: ServiceType;
+  hourly_rate: number;
+  travel_flat_total: number;
+  total_amount: number;
+  source: TransactionSource;
+  external_ref?: string | null;
+  billed: boolean;
+  allocation_type: 'AUTO' | 'MANUAL';
+  created_at: string;
+}
+
+export interface Tariff {
+  id: string;
+  service_type: 'ENTLASTUNG' | 'KOMBI' | 'VERHINDERUNG';
+  hourly_rate: number;
+  travel_flat_per_visit: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CareLevel {
+  pflegegrad: number;
+  sachleistung_monat: number;
+  kombi_max_40_prozent_monat: number;
+}
+
+export interface BudgetAvailability {
+  entlastungYearlyTotal: number;
+  entlastungConsumed: number;
+  entlastungAvailable: number;
+  kombiMonthlyMax: number;
+  kombiConsumed: number;
+  kombiAvailable: number;
+  vpYearlyTotal: number;
+  vpConsumed: number;
+  vpRemainingYear: number;
+  expiringCarryOver: number;
+}
+
+export interface BillingSuggestion {
+  entlastung: number;
+  kombi: number;
+  verhinderung: number;
+  privat: number;
+  total: number;
+  transactions: (BudgetTransaction & { suggestedType: ServiceType })[];
+}
+
+export interface AbrechnungsRow {
+  kunde: Customer & {
+    entlastung_genehmigt?: boolean | null;
+    privatrechnung_erlaubt?: boolean | null;
+    initial_budget_entlastung?: number | null;
+    initial_budget_verhinderung?: number | null;
+    verhinderungspflege_genehmigt_am?: string | null;
+    kombileistung_genehmigt_am?: string | null;
+    archiviert?: boolean | null;
+  };
+  suggestion: BillingSuggestion;
+  availability: BudgetAvailability;
+  status: AllocationStatus;
+  isPrivate: boolean;
 }
 
 // ─── Recurring Template ─────────────────────────────────────

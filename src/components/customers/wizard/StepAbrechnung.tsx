@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Lock, Euro, GripVertical } from 'lucide-react';
+import { Lock, Euro, GripVertical, Info } from 'lucide-react';
 
 interface StepAbrechnungProps {
   customerData: any;
@@ -51,6 +51,70 @@ export function StepAbrechnung({
                 ? (customerData.pflegegrad === 'nicht_vorhanden' ? 'Nicht vorhanden' : `Pflegegrad ${customerData.pflegegrad}`)
                 : <span className="text-muted-foreground">Nicht gesetzt (Stammdaten-Tab)</span>}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pflegebudget-Konfiguration (für Budgettracker) */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Pflegebudget-Konfiguration</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <Label className="text-sm font-medium">Entlastungsbetrag genehmigt</Label>
+              <p className="text-xs text-muted-foreground">§ 45b SGB XI (131 €/Monat)</p>
+            </div>
+            <Switch
+              checked={customerData.entlastung_genehmigt !== false}
+              onCheckedChange={(checked) =>
+                setCustomerData((p: any) => ({ ...p, entlastung_genehmigt: checked }))
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <Label className="text-sm font-medium">Privatrechnung erlaubt</Label>
+              <p className="text-xs text-muted-foreground">Über Kassenbudget hinaus privat abrechnen</p>
+            </div>
+            <Switch
+              checked={!!customerData.privatrechnung_erlaubt}
+              onCheckedChange={(checked) =>
+                setCustomerData((p: any) => ({ ...p, privatrechnung_erlaubt: checked }))
+              }
+            />
+          </div>
+          <div>
+            <Label>Vorjahresrest Entlastungsbetrag (€)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="z.B. 524.00"
+              value={customerData.initial_budget_entlastung ?? ''}
+              onChange={(e) =>
+                setCustomerData((p: any) => ({
+                  ...p,
+                  initial_budget_entlastung: e.target.value ? parseFloat(e.target.value) : null,
+                }))
+              }
+            />
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <Info className="h-3 w-3" />
+              Verfällt am 01.07. – bitte zum Jahreswechsel aktualisieren
+            </p>
+          </div>
+          <div>
+            <Label>VP genehmigt am</Label>
+            <Input
+              type="date"
+              value={customerData.verhinderungspflege_genehmigt_am ?? ''}
+              onChange={(e) =>
+                setCustomerData((p: any) => ({
+                  ...p,
+                  verhinderungspflege_genehmigt_am: e.target.value || null,
+                }))
+              }
+            />
           </div>
         </div>
       </div>

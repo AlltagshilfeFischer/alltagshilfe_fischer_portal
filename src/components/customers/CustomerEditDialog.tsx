@@ -31,7 +31,7 @@ interface CustomerEditDialogProps {
   editingCustomer: any;
   setEditingCustomer: (c: any) => void;
   employees: any[] | undefined;
-  onSave: (e: React.FormEvent) => void;
+  onSave: (e: React.FormEvent, overrides?: Partial<any>) => void;
 }
 
 const getWeekdayName = (day: number): string => {
@@ -100,30 +100,9 @@ export function CustomerEditDialog({
     setEditingCustomer(fn(editingCustomer));
   };
 
-  const handleSaveWithBudget = (e: React.FormEvent) => {
-    // Inject budget_prioritaet before saving
-    setEditingCustomer({ ...editingCustomer, budget_prioritaet: budgetOrder });
-    // Need to use a timeout so state updates before onSave reads it
-    setTimeout(() => onSave(e), 0);
-  };
-
-  // Actually, better to directly modify and call
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const updatedCustomer = { ...editingCustomer, budget_prioritaet: budgetOrder };
-    setEditingCustomer(updatedCustomer);
-    // Call onSave with the form event - but the parent reads editingCustomer
-    // So we set it and let the parent handle it
-    // We need to ensure parent gets the updated data
-    onSave(e);
-  };
-
-  // Pre-set budget_prioritaet on editingCustomer before form submit
   const preSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Directly mutate to ensure parent sees it
-    editingCustomer.budget_prioritaet = budgetOrder;
-    onSave(e);
+    onSave(e, { budget_prioritaet: budgetOrder });
   };
 
   return (
@@ -179,7 +158,21 @@ export function CustomerEditDialog({
                   </div>
                   <div>
                     <Label htmlFor="geburtsdatum">Geburtsdatum</Label>
-                    <Input id="geburtsdatum" type="date" value={editingCustomer.geburtsdatum || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, geburtsdatum: e.target.value })} />
+                    <Input
+                      id="geburtsdatum"
+                      type="date"
+                      value={editingCustomer.geburtsdatum || ''}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, geburtsdatum: e.target.value })}
+                      onPaste={(e) => {
+                        const text = e.clipboardData.getData('text').trim();
+                        const match = text.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+                        if (match) {
+                          e.preventDefault();
+                          const [, day, month, year] = match;
+                          setEditingCustomer({ ...editingCustomer, geburtsdatum: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` });
+                        }
+                      }}
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">

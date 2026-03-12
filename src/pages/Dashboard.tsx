@@ -15,6 +15,9 @@ import Dokumentenverwaltung from './controlboard/Dokumentenverwaltung';
 import AktivitaetsLog from './controlboard/AktivitaetsLog';
 import EntwicklungsStatus from './controlboard/EntwicklungsStatus';
 import MitarbeiterStart from './MitarbeiterStart';
+import PflegebudgetAbrechnung from './controlboard/pflegebudget/PflegebudgetAbrechnung';
+import PflegebudgetAbrechnungDetail from './controlboard/pflegebudget/PflegebudgetAbrechnungDetail';
+import PflegebudgetTracker from './controlboard/pflegebudget/PflegebudgetTracker';
 
 import Settings from './Settings';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -48,6 +51,7 @@ export default function Dashboard() {
     );
   }
 
+  // Mitarbeiter: nur eigener Bereich, kein Pflegebudget
   if (role === 'mitarbeiter') {
     return (
       <DashboardLayout>
@@ -61,20 +65,24 @@ export default function Dashboard() {
     );
   }
 
+  // Buchhaltung: nur Einsicht — kein Import, kein Dienstplan, keine Stammdaten
   if (role === 'buchhaltung') {
     return (
       <DashboardLayout>
         <Routes>
           <Route path="/" element={<DashboardHome />} />
           <Route path="/controlboard/billing" element={<Billing />} />
+          <Route path="/controlboard/pflegebudget" element={<PflegebudgetAbrechnung />} />
+          <Route path="/controlboard/pflegebudget/:kundenId/:year/:month" element={<PflegebudgetAbrechnungDetail />} />
+          <Route path="/controlboard/pflegebudget/tracker" element={<PflegebudgetTracker />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </DashboardLayout>
     );
   }
 
+  // Admin (Disponent): Einsatzplanung + Pflegebudget, keine Userverwaltung
   if (role === 'admin') {
-    // Disponent: Einsatzplanung, keine Userverwaltung
     return (
       <DashboardLayout>
         <Routes>
@@ -84,6 +92,9 @@ export default function Dashboard() {
           <Route path="/controlboard/dokumentenverwaltung" element={<Dokumentenverwaltung />} />
           <Route path="/controlboard/leistungsnachweise" element={<Leistungsnachweise />} />
           <Route path="/controlboard/billing" element={<Billing />} />
+          <Route path="/controlboard/pflegebudget" element={<PflegebudgetAbrechnung />} />
+          <Route path="/controlboard/pflegebudget/:kundenId/:year/:month" element={<PflegebudgetAbrechnungDetail />} />
+          <Route path="/controlboard/pflegebudget/tracker" element={<PflegebudgetTracker />} />
           <Route path="/controlboard/aktivitaetslog" element={<AktivitaetsLog />} />
           <Route path="/controlboard/entwicklung" element={<EntwicklungsStatus />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -105,6 +116,9 @@ export default function Dashboard() {
         <Route path="/controlboard/dokumentenverwaltung" element={<Dokumentenverwaltung />} />
         <Route path="/controlboard/leistungsnachweise" element={<Leistungsnachweise />} />
         <Route path="/controlboard/billing" element={<Billing />} />
+        <Route path="/controlboard/pflegebudget" element={<PflegebudgetAbrechnung />} />
+        <Route path="/controlboard/pflegebudget/:kundenId/:year/:month" element={<PflegebudgetAbrechnungDetail />} />
+        <Route path="/controlboard/pflegebudget/tracker" element={<PflegebudgetTracker />} />
         <Route path="/controlboard/aktivitaetslog" element={<AktivitaetsLog />} />
         <Route path="/controlboard/entwicklung" element={<EntwicklungsStatus />} />
         <Route path="/settings" element={<Settings />} />
