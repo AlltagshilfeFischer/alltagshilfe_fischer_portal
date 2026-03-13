@@ -334,7 +334,7 @@ export default function BudgetTrackerDetail() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Zurück
         </Button>
-        <p className="text-muted-foreground">Klient nicht gefunden.</p>
+        <p className="text-muted-foreground">Kunde nicht gefunden.</p>
       </div>
     );
   }

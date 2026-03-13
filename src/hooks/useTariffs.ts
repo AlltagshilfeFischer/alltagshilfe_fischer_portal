@@ -11,7 +11,10 @@ export function useTariffs() {
         .select('*')
         .eq('active', true)
         .order('service_type');
-      if (error) throw error;
+      if (error) {
+        console.warn('tariffs nicht verfügbar:', error.message);
+        return [] as Tariff[];
+      }
       return (data ?? []) as Tariff[];
     },
     staleTime: 1000 * 60 * 10, // 10 Minuten cachen

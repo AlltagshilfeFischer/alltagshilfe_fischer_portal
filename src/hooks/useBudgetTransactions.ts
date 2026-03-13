@@ -87,7 +87,11 @@ export function useBudgetTransactionsByYear(year: number) {
         .gte('service_date', `${year}-01-01`)
         .lte('service_date', `${year}-12-31`)
         .order('service_date', { ascending: true });
-      if (error) throw error;
+      // Tabelle existiert noch nicht (Migration ausstehend) → leere Liste
+      if (error) {
+        console.warn('budget_transactions nicht verfügbar:', error.message);
+        return [] as BudgetTransaction[];
+      }
       return (data ?? []) as BudgetTransaction[];
     },
   });

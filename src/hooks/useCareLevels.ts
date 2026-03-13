@@ -10,7 +10,10 @@ export function useCareLevels() {
         .from('care_levels' as never)
         .select('*')
         .order('pflegegrad');
-      if (error) throw error;
+      if (error) {
+        console.warn('care_levels nicht verfügbar:', error.message);
+        return [] as CareLevel[];
+      }
       return (data ?? []) as CareLevel[];
     },
     staleTime: 1000 * 60 * 60, // 1 Stunde cachen (ändert sich selten)
