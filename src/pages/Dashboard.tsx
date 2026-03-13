@@ -90,7 +90,6 @@ export default function Dashboard() {
           <Route path="/controlboard/budgettracker" element={<BudgetTracker />} />
           <Route path="/controlboard/budgettracker/:kundenId" element={<BudgetTrackerDetail />} />
           <Route path="/controlboard/aktivitaetslog" element={<AktivitaetsLog />} />
-          <Route path="/controlboard/entwicklung" element={<EntwicklungsStatus />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </DashboardLayout>
@@ -112,7 +111,6 @@ export default function Dashboard() {
         <Route path="/controlboard/budgettracker" element={<BudgetTracker />} />
         <Route path="/controlboard/budgettracker/:kundenId" element={<BudgetTrackerDetail />} />
         <Route path="/controlboard/aktivitaetslog" element={<AktivitaetsLog />} />
-        <Route path="/controlboard/entwicklung" element={<EntwicklungsStatus />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
