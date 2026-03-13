@@ -12,7 +12,7 @@ import BenutzerverwaltungNeu from './controlboard/BenutzerverwaltungNeu';
 import Leistungsnachweise from './controlboard/Leistungsnachweise';
 import Dokumentenverwaltung from './controlboard/Dokumentenverwaltung';
 import AktivitaetsLog from './controlboard/AktivitaetsLog';
-import EntwicklungsStatus from './controlboard/EntwicklungsStatus';
+
 import MitarbeiterStart from './MitarbeiterStart';
 import BudgetTracker from './controlboard/budgettracker/BudgetTracker';
 import BudgetTrackerDetail from './controlboard/budgettracker/BudgetTrackerDetail';
