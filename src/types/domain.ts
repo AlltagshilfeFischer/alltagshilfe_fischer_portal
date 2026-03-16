@@ -89,6 +89,28 @@ export interface Customer {
   startdatum?: string | null;
   kategorie?: string | null;
   sonstiges?: string | null;
+  // Versicherung & Abrechnung
+  kasse_privat?: string | null;
+  kopie_lw?: string | null;
+  rechnungskopie?: string[] | null;
+  rechnungskopie_adresse_name?: string | null;
+  rechnungskopie_adresse_strasse?: string | null;
+  rechnungskopie_adresse_plz?: string | null;
+  rechnungskopie_adresse_stadt?: string | null;
+  budget_prioritaet?: string[] | null;
+  // Notfall-Kontakt
+  notfall_name?: string | null;
+  notfall_telefon?: string | null;
+  // Verhinderungspflege
+  verhinderungspflege_aktiv?: boolean | null;
+  verhinderungspflege_beantragt?: boolean | null;
+  verhinderungspflege_genehmigt?: boolean | null;
+  verhinderungspflege_budget?: number | null;
+  verhinderungspflege_status?: string | null;
+  // Pflegesachleistung
+  pflegesachleistung_aktiv?: boolean | null;
+  pflegesachleistung_beantragt?: boolean | null;
+  pflegesachleistung_genehmigt?: boolean | null;
 }
 
 /** Minimal customer for comboboxes */

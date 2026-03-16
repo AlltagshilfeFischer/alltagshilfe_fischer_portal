@@ -129,9 +129,32 @@ EXTREM WICHTIG: Extrahiere ALLE Kunden aus dem Text, auch wenn es 50+ sind. Übe
       throw new Error("KI konnte keine Kunden extrahieren");
     }
 
-    const parsed = JSON.parse(toolCall.function.arguments);
+    let parsed: { kunden?: unknown[] };
+    try {
+      parsed = JSON.parse(toolCall.function.arguments);
+    } catch {
+      console.error("Malformed AI JSON:", toolCall.function.arguments?.slice(0, 500));
+      throw new Error("KI-Antwort konnte nicht verarbeitet werden (ungültiges JSON)");
+    }
 
-    return new Response(JSON.stringify({ kunden: parsed.kunden || [] }), {
+    // Validate response structure
+    if (!parsed.kunden || !Array.isArray(parsed.kunden)) {
+      throw new Error("KI-Antwort enthält keine Kunden-Daten");
+    }
+
+    // Filter out entries without required fields
+    const validKunden = parsed.kunden.filter((k: unknown) => {
+      if (typeof k !== 'object' || k === null) return false;
+      const obj = k as Record<string, unknown>;
+      return typeof obj.vorname === 'string' && obj.vorname.trim() !== '' &&
+             typeof obj.nachname === 'string' && obj.nachname.trim() !== '';
+    });
+
+    if (validKunden.length < parsed.kunden.length) {
+      console.warn(`Filtered ${parsed.kunden.length - validKunden.length} invalid entries (missing vorname/nachname)`);
+    }
+
+    return new Response(JSON.stringify({ kunden: validKunden }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

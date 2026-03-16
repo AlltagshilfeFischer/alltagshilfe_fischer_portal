@@ -1,6 +1,6 @@
 import { SmartDataImport, ColumnConfig, DataRow } from './SmartDataImport';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface KundenRow extends DataRow {
@@ -23,7 +23,14 @@ interface KundenRow extends DataRow {
 const COLUMNS: ColumnConfig[] = [
   { key: 'vorname', label: 'Vorname', required: true, width: 120 },
   { key: 'nachname', label: 'Nachname', required: true, width: 120 },
-  { key: 'telefonnr', label: 'Telefon', required: false, width: 130 },
+  { key: 'telefonnr', label: 'Telefon', required: false, width: 130,
+    validate: (value) => {
+      if (value && !/^[\d\s+\-/().]{5,25}$/.test(value)) {
+        return 'Ungültige Telefonnummer';
+      }
+      return null;
+    }
+  },
   { key: 'email', label: 'E-Mail', required: false, width: 180,
     validate: (value) => {
       if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
@@ -64,7 +71,14 @@ const COLUMNS: ColumnConfig[] = [
       return null;
     }
   },
-  { key: 'kategorie', label: 'Kategorie', required: false, width: 110, hint: 'Kunde/Interessent' },
+  { key: 'kategorie', label: 'Kategorie', required: false, width: 110, hint: 'Kunde/Interessent',
+    validate: (value) => {
+      if (value && !['Kunde', 'Interessent'].includes(value)) {
+        return 'Nur "Kunde" oder "Interessent"';
+      }
+      return null;
+    }
+  },
   { key: 'pflegekasse', label: 'Pflegekasse', required: false, width: 120 },
   { key: 'versichertennummer', label: 'Versichertennr.', required: false, width: 130 },
   { key: 'sonstiges', label: 'Sonstiges', required: false, width: 200 },
@@ -107,7 +121,6 @@ interface KundenSmartImportProps {
 }
 
 export function KundenSmartImport({ open, onOpenChange }: KundenSmartImportProps) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const handleImport = async (rows: KundenRow[]) => {
@@ -116,9 +129,12 @@ export function KundenSmartImport({ open, onOpenChange }: KundenSmartImportProps
       .from('kunden')
       .select('vorname, nachname, strasse');
 
+    const normalizeDupKey = (vorname: string, nachname: string, strasse: string) =>
+      `${(vorname || '').trim().toLowerCase().replace(/\s+/g, ' ')}|${(nachname || '').trim().toLowerCase().replace(/\s+/g, ' ')}|${(strasse || '').trim().toLowerCase().replace(/\s+/g, ' ')}`;
+
     const existingKeys = new Set(
       (existingCustomers ?? []).map(c =>
-        `${(c.vorname || '').trim().toLowerCase()}|${(c.nachname || '').trim().toLowerCase()}|${(c.strasse || '').trim().toLowerCase()}`
+        normalizeDupKey(c.vorname || '', c.nachname || '', c.strasse || '')
       )
     );
 
@@ -128,7 +144,7 @@ export function KundenSmartImport({ open, onOpenChange }: KundenSmartImportProps
     const uniqueRows: typeof rows = [];
 
     for (const row of rows) {
-      const key = `${row.vorname.trim().toLowerCase()}|${row.nachname.trim().toLowerCase()}|${(row.strasse || '').trim().toLowerCase()}`;
+      const key = normalizeDupKey(row.vorname, row.nachname, row.strasse || '');
       if (existingKeys.has(key) || seenInBatch.has(key)) {
         duplicates.push(`${row.vorname} ${row.nachname}`);
       } else {
@@ -138,10 +154,8 @@ export function KundenSmartImport({ open, onOpenChange }: KundenSmartImportProps
     }
 
     if (duplicates.length > 0) {
-      toast({
-        title: `${duplicates.length} Duplikat(e) übersprungen`,
+      toast.warning(`${duplicates.length} Duplikat(e) übersprungen`, {
         description: duplicates.slice(0, 5).join(', ') + (duplicates.length > 5 ? ` und ${duplicates.length - 5} weitere` : ''),
-        variant: 'destructive',
       });
     }
 
@@ -168,11 +182,39 @@ export function KundenSmartImport({ open, onOpenChange }: KundenSmartImportProps
       eintritt: new Date().toISOString().slice(0, 10),
     }));
 
+    // Batch insert — bei Fehler Einzelinserts als Fallback
     const { error } = await supabase
       .from('kunden')
       .insert(customersToInsert);
-    
-    if (error) throw error;
+
+    if (error) {
+      // Fallback: einzeln einfügen um fehlerhafte Zeilen zu identifizieren
+      let successCount = 0;
+      const failedNames: string[] = [];
+
+      for (const customer of customersToInsert) {
+        const { error: singleError } = await supabase
+          .from('kunden')
+          .insert(customer);
+        if (singleError) {
+          failedNames.push(`${customer.vorname} ${customer.nachname}`);
+          console.error(`[KundenImport] Fehler bei ${customer.vorname} ${customer.nachname}:`, singleError.message);
+        } else {
+          successCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        queryClient.invalidateQueries({ queryKey: ['customers'] });
+      }
+
+      if (failedNames.length > 0) {
+        throw new Error(
+          `${failedNames.length} Kunde(n) fehlgeschlagen: ${failedNames.slice(0, 3).join(', ')}${failedNames.length > 3 ? ` und ${failedNames.length - 3} weitere` : ''}. ${successCount} erfolgreich importiert.`
+        );
+      }
+      return;
+    }
 
     queryClient.invalidateQueries({ queryKey: ['customers'] });
   };
@@ -188,7 +230,7 @@ export function KundenSmartImport({ open, onOpenChange }: KundenSmartImportProps
       columns={COLUMNS}
       onImport={handleImport}
       createEmptyRow={createEmptyRow}
-      initialRowCount={50}
+      initialRowCount={10}
       batchSize={200}
       aiParseFunction="parse-kunden-text"
       aiParseResultKey="kunden"

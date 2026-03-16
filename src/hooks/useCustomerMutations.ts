@@ -1,13 +1,22 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
+import type { CustomerTimeWindow } from '@/types/domain';
+
+type KundenUpdate = Database['public']['Tables']['kunden']['Update'];
+
+interface UpdateCustomerPayload extends KundenUpdate {
+  id: string;
+  zeitfenster?: CustomerTimeWindow[];
+  hauptbetreuer?: string;
+}
 
 export function useCustomerMutations() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const updateCustomerMutation = useMutation({
-    mutationFn: async (customerData: any) => {
+    mutationFn: async (customerData: UpdateCustomerPayload) => {
       const { zeitfenster, hauptbetreuer, ...kundenData } = customerData;
 
       const { error: kundenError } = await supabase
@@ -19,7 +28,7 @@ export function useCustomerMutations() {
       if (zeitfenster && Array.isArray(zeitfenster)) {
         await supabase.from('kunden_zeitfenster').delete().eq('kunden_id', kundenData.id);
         if (zeitfenster.length > 0) {
-          const windowsToInsert = zeitfenster.map((w: any) => ({
+          const windowsToInsert = zeitfenster.map((w) => ({
             kunden_id: kundenData.id,
             wochentag: w.wochentag,
             von: w.von,
@@ -34,11 +43,11 @@ export function useCustomerMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      toast({ title: 'Erfolg', description: 'Kundendaten wurden aktualisiert' });
+      toast.success('Kundendaten wurden aktualisiert');
     },
     onError: (error: Error) => {
       console.error('[useCustomerMutations] Update-Fehler:', error);
-      toast({ title: 'Fehler', description: error.message || 'Kundendaten konnten nicht aktualisiert werden', variant: 'destructive' });
+      toast.error('Fehler', { description: error.message || 'Kundendaten konnten nicht aktualisiert werden' });
     },
   });
 
@@ -49,10 +58,10 @@ export function useCustomerMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      toast({ title: 'Erfolg', description: 'Interessent wurde zu Kunde umgewandelt' });
+      toast.success('Interessent wurde zu Kunde umgewandelt');
     },
     onError: () => {
-      toast({ title: 'Fehler', description: 'Umwandlung fehlgeschlagen', variant: 'destructive' });
+      toast.error('Umwandlung fehlgeschlagen');
     },
   });
 
@@ -63,13 +72,10 @@ export function useCustomerMutations() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      toast({
-        title: 'Erfolg',
-        description: variables.currentStatus ? 'Kunde wurde deaktiviert' : 'Kunde wurde aktiviert',
-      });
+      toast.success(variables.currentStatus ? 'Kunde wurde deaktiviert' : 'Kunde wurde aktiviert');
     },
     onError: () => {
-      toast({ title: 'Fehler', description: 'Status konnte nicht geändert werden', variant: 'destructive' });
+      toast.error('Status konnte nicht geändert werden');
     },
   });
 
@@ -86,10 +92,10 @@ export function useCustomerMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      toast({ title: 'Erfolg', description: 'Kunde wurde erfolgreich gelöscht' });
+      toast.success('Kunde wurde erfolgreich gelöscht');
     },
     onError: () => {
-      toast({ title: 'Fehler', description: 'Kunde konnte nicht gelöscht werden', variant: 'destructive' });
+      toast.error('Kunde konnte nicht gelöscht werden');
     },
   });
 
