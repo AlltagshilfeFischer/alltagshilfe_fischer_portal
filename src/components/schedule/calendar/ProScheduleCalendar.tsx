@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-import { Settings2, GripVertical, Eye, EyeOff } from 'lucide-react';
+import { Settings2, GripVertical, Eye, EyeOff, UserX } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -18,6 +18,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -125,6 +126,29 @@ function SortablePopoverItem({ emp, isHidden, onToggle }: { emp: Employee; isHid
   );
 }
 
+// Drop cell for the "Nicht zugeordnet" row — shows "Zuordnung entfernen" on hover
+function UnassignedDropCell({ id, children }: { id: string; children: React.ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'relative h-full min-h-[60px] p-2 transition-all duration-200',
+        isOver && 'bg-amber-100/60 dark:bg-amber-900/30 ring-2 ring-inset ring-amber-400'
+      )}
+    >
+      {isOver && (
+        <div className="absolute inset-0 border-2 border-amber-400 border-dashed rounded-lg animate-pulse z-10 flex items-center justify-center pointer-events-none">
+          <span className="text-amber-700 dark:text-amber-300 font-semibold text-xs px-2 py-1 bg-background/90 rounded">
+            Zuordnung entfernen
+          </span>
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
 export function ProScheduleCalendar({
   employees,
   allEmployees,
@@ -167,6 +191,13 @@ export function ProScheduleCalendar({
       .filter((app) => app.mitarbeiter_id === employeeId && isSameDay(new Date(app.start_at), date))
       .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
   };
+
+  const getUnassignedForDate = (date: Date) =>
+    appointments
+      .filter((app) => !app.mitarbeiter_id && isSameDay(new Date(app.start_at), date))
+      .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
+
+  const hasUnassignedThisWeek = weekDates.some((d) => getUnassignedForDate(d).length > 0);
 
   // Calculate weekly hours for each employee
   const getWeeklyHours = (employeeId: string) => {
@@ -274,6 +305,55 @@ export function ProScheduleCalendar({
           );
         })}
       </div>
+
+      {/* Unzugeordnete Termine — Zeile direkt unter dem Header */}
+      {hasUnassignedThisWeek && (
+        <div
+          className="grid border-b border-dashed border-amber-300/70 dark:border-amber-700/50 bg-amber-50/40 dark:bg-amber-950/10"
+          style={{ gridTemplateColumns: '220px repeat(7, 1fr)' }}
+        >
+          <div className="px-4 py-2 border-r border-border flex items-center gap-2 min-h-[64px]">
+            <UserX className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <div>
+              <div className="text-xs font-medium text-amber-700 dark:text-amber-300 leading-tight">
+                Nicht zugeordnet
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">Kein Mitarbeiter</div>
+            </div>
+          </div>
+          {weekDates.map((date) => {
+            const unassigned = getUnassignedForDate(date);
+            const dropId = `unassigned-${format(date, 'yyyy-MM-dd')}`;
+            const isToday = isSameDay(date, today);
+            return (
+              <div
+                key={date.toISOString()}
+                className={cn(
+                  'border-r border-border last:border-r-0',
+                  isToday && 'bg-primary/5'
+                )}
+              >
+                <UnassignedDropCell id={dropId}>
+                  <div className="space-y-1.5">
+                    {unassigned.map((appointment) => (
+                      <ProAppointmentCard
+                        key={appointment.id}
+                        appointment={appointment}
+                        isDragging={activeAppointmentId === appointment.id}
+                        isConflicting={false}
+                        isHighlighted={highlightedAppointmentId === appointment.id}
+                        onClick={() => onEditAppointment(appointment)}
+                        onCut={() => onCut(appointment)}
+                        onCopy={() => onCopy?.(appointment)}
+                      />
+                    ))}
+                  </div>
+                </UnassignedDropCell>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Employee Rows */}
       <div className="divide-y divide-border">

@@ -26,7 +26,6 @@ import { ProScheduleHeader } from '@/components/schedule/ProScheduleHeader';
 import { ProCalendarLegend } from '@/components/schedule/calendar/ProCalendarLegend';
 import { EmployeeManagementDialog } from '@/components/schedule/dialogs/EmployeeManagementDialog';
 
-import { UnassignedAppointmentsBar } from '@/components/schedule/UnassignedAppointmentsBar';
 import { AppointmentApprovalBar } from '@/components/schedule/AppointmentApprovalBar';
 import { AppointmentDetailDialog } from '@/components/schedule/dialogs/AppointmentDetailDialog';
 // CreateAppointmentDialog entfernt — CreateAppointmentFromSlotDialog wird für beides genutzt
@@ -1155,23 +1154,6 @@ const ScheduleBuilderModern = () => {
 
         {/* Main Calendar Content */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-          {/* Unassigned Bar */}
-          <UnassignedAppointmentsBar
-            appointments={appointments}
-            weekDates={weekDates}
-            activeId={activeId}
-            onEditAppointment={setEditingAppointment}
-            onCut={handleCutAppointment}
-            onCopy={handleCopyAppointment}
-            onSlotClick={(date) => {
-              if (cutAppointment) {
-                handlePasteAppointment(null, date);
-              }
-            }}
-            viewMode={viewMode}
-            currentDay={currentDay}
-          />
-          
           {/* Calendar Grid */}
           <div className="flex-1 overflow-auto">
             <div style={{ zoom: calendarScale }}>
