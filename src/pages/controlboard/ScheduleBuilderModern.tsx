@@ -467,8 +467,6 @@ const ScheduleBuilderModern = () => {
         title: 'Erfolg',
         description: `${appointmentLabel} → ${employee?.name}${targetDate ? ` am ${format(targetDate, 'dd.MM.yyyy')}` : ''}`
       });
-
-      await loadData();
     } catch (error: any) {
       console.error('Error assigning appointment:', error);
       const errorMsg = error?.message?.includes('network')
@@ -479,7 +477,7 @@ const ScheduleBuilderModern = () => {
         description: errorMsg,
         variant: 'destructive'
       });
-      await loadData();
+      await loadData(); // Nur bei Fehler: Zustand synchronisieren
     }
   };
 
@@ -530,18 +528,24 @@ const ScheduleBuilderModern = () => {
 
         if (error) throw error;
 
+        // Optimistisch lokalen State updaten
+        setAppointments(prev => prev.map(app =>
+          app.id === appointmentId
+            ? { ...app, ...updateData }
+            : app
+        ));
+
         toast({
           title: 'Erfolg',
           description: `Termin nicht zugewiesen am ${format(targetDate, 'dd.MM.yyyy')}`
         });
-
-        await loadData();
       } catch (error) {
         toast({
           title: 'Fehler',
           description: 'Fehler beim Verschieben des Termins.',
           variant: 'destructive'
         });
+        await loadData();
       }
       return;
     }
@@ -699,7 +703,7 @@ const ScheduleBuilderModern = () => {
         }
       }
 
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('termine')
         .insert([{
           titel: payload.titel,
@@ -710,16 +714,43 @@ const ScheduleBuilderModern = () => {
           status: payload.mitarbeiter_id ? 'scheduled' : 'unassigned',
           notizen: payload.notizen ?? null,
           kategorie: payload.kategorie ?? null,
-        }]);
+        }])
+        .select(`*, customer:kunden(*), employee:mitarbeiter(*)`)
+        .single();
 
       if (error) throw error;
+
+      // Optimistisch in lokalen State einfügen
+      if (inserted) {
+        const empData = inserted.employee as any;
+        const newApp: LocalAppointment = {
+          id: inserted.id,
+          titel: inserted.titel,
+          kunden_id: inserted.kunden_id,
+          mitarbeiter_id: inserted.mitarbeiter_id,
+          start_at: inserted.start_at,
+          end_at: inserted.end_at,
+          vorlage_id: inserted.vorlage_id,
+          ist_ausnahme: inserted.ist_ausnahme,
+          ausnahme_grund: inserted.ausnahme_grund,
+          status: inserted.status,
+          notizen: inserted.notizen,
+          kategorie: inserted.kategorie,
+          customer: inserted.customer ? { ...(inserted.customer as any), farbe_kalender: (inserted.customer as any).farbe_kalender || '#10B981' } : undefined,
+          employee: empData ? {
+            id: empData.id,
+            name: empData.vorname && empData.nachname ? `${empData.vorname} ${empData.nachname}` : `Mitarbeiter ${empData.id.slice(0, 8)}`,
+            farbe_kalender: empData.farbe_kalender || '#10B981',
+          } as Employee : undefined,
+        };
+        setAppointments(prev => [...prev, newApp]);
+      }
 
       toast({
         title: 'Erfolg',
         description: 'Termin wurde erstellt.'
       });
 
-      await loadData();
       setShowCreateAppointment(false);
     } catch (error: any) {
       toast({
@@ -861,12 +892,13 @@ const ScheduleBuilderModern = () => {
 
       if (error) throw error;
 
+      // Optimistisch aus lokalem State entfernen
+      setAppointments(prev => prev.filter(app => app.id !== appointmentId));
+
       toast({
         title: 'Erfolg',
         description: 'Termin wurde gelöscht.'
       });
-
-      await loadData();
     } catch (error) {
       console.error('Error deleting appointment:', error);
       toast({
@@ -874,7 +906,8 @@ const ScheduleBuilderModern = () => {
         description: 'Fehler beim Löschen des Termins.',
         variant: 'destructive'
       });
-      throw error; // Re-throw to let dialog know deletion failed
+      await loadData(); // Bei Fehler: Zustand synchronisieren
+      throw error;
     }
   };
 
@@ -923,8 +956,13 @@ const ScheduleBuilderModern = () => {
           : `${cutAppointment.customer?.name} → Unzugeordnet am ${format(targetDate, 'dd.MM.yyyy')}`
       });
 
+      // Optimistisch lokalen State updaten
+      setAppointments(prev => prev.map(app =>
+        app.id === cutAppointment.id
+          ? { ...app, mitarbeiter_id: employeeId, start_at: newStart.toISOString(), end_at: newEnd.toISOString(), status: employeeId ? 'scheduled' as const : 'unassigned' as const }
+          : app
+      ));
       setCutAppointment(null);
-      await loadData();
     } catch (error) {
       toast({
         title: 'Fehler',
@@ -1205,14 +1243,20 @@ const ScheduleBuilderModern = () => {
 
               if (error) throw error;
 
+              // Optimistisch lokalen State updaten
+              setAppointments(prev => prev.map(app =>
+                app.id === appointment.id
+                  ? { ...app, ...updateData, mitarbeiter_id: effectiveMitarbeiterId }
+                  : app
+              ));
+
               toast({
                 title: 'Erfolg',
-                description: appointment.ist_ausnahme 
-                  ? 'Einzeltermin wurde als Ausnahme gespeichert.' 
+                description: appointment.ist_ausnahme
+                  ? 'Einzeltermin wurde als Ausnahme gespeichert.'
                   : 'Termin wurde aktualisiert.'
               });
 
-              await loadData();
               setEditingAppointment(null);
             } catch (error) {
               toast({
@@ -1220,6 +1264,7 @@ const ScheduleBuilderModern = () => {
                 description: 'Fehler beim Aktualisieren.',
                 variant: 'destructive'
               });
+              await loadData(); // Bei Fehler: synchronisieren
             }
           }}
           onDelete={handleDeleteAppointment}
