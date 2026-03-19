@@ -952,11 +952,13 @@ const ScheduleBuilderModern = () => {
           onViewChange={setViewMode}
         />
 
-        {/* AI Appointment Creator + Conflicts - Compact Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-shrink-0">
-          <div className="lg:col-span-2">
-            <AIAppointmentCreator onAppointmentCreated={loadData} />
-          </div>
+        {/* AI Appointment Creator — volle Breite */}
+        <div className="flex-shrink-0">
+          <AIAppointmentCreator onAppointmentCreated={loadData} />
+        </div>
+
+        {/* Konflikte-Popover — erscheint inline vor dem Kalender */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <ConflictsNavigationCard
             appointments={appointments}
             onNavigateToConflict={(appointmentId) => {
