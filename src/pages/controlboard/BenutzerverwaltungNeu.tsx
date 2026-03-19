@@ -810,7 +810,6 @@ export default function BenutzerverwaltungNeu() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent className="z-[300] bg-popover">
                   {isGeschaeftsfuehrer && <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>}
-                  <SelectItem value="admin">Disponent</SelectItem>
                   <SelectItem value="buchhaltung">Buchhaltung</SelectItem>
                   <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
                 </SelectContent>
@@ -850,7 +849,6 @@ function EmployeeRow({
     switch (role) {
       case 'globaladmin': return 'destructive';
       case 'geschaeftsfuehrer': return 'default';
-      case 'admin': return 'default';
       case 'buchhaltung': return 'outline';
       default: return 'secondary';
     }
@@ -914,7 +912,6 @@ function EmployeeRow({
             </SelectTrigger>
             <SelectContent>
               {canAssignGF && <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>}
-              <SelectItem value="admin">Disponent</SelectItem>
               <SelectItem value="buchhaltung">Buchhaltung</SelectItem>
               <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
             </SelectContent>

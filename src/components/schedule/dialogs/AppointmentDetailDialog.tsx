@@ -38,6 +38,9 @@ interface AppointmentDetailDialogProps {
 const KATEGORIE_OPTIONS = [
   'Erstgespräch',
   'Schulung',
+  'Meeting',
+  'Bewerbungsgespräch',
+  'Blocker',
   'Intern',
   'Regelbesuch',
   'Sonstiges',
@@ -340,17 +343,33 @@ export function AppointmentDetailDialog({
 
     setLoading(true);
     try {
+      // 2-Tage-Regel: Absage >= 2 Tage vor Termin → rechtzeitig (nicht abrechenbar)
+      //               Absage < 2 Tage vor Termin → kurzfristig (abrechenbar)
+      let cancelStatus: string = 'cancelled';
+      if (cancelAbsageDatum && editedAppointment.start_at) {
+        const absageDate = new Date(cancelAbsageDatum);
+        const terminDate = new Date(editedAppointment.start_at);
+        const diffMs = terminDate.getTime() - absageDate.getTime();
+        const diffDays = diffMs / (1000 * 60 * 60 * 24);
+        if (diffDays >= 2) {
+          cancelStatus = 'abgesagt_rechtzeitig';
+        }
+      }
+
       await onUpdate({
         ...editedAppointment,
-        status: 'cancelled',
+        status: cancelStatus,
         absage_datum: cancelAbsageDatum || null,
         absage_kanal: cancelAbsageKanal || null,
         ausnahme_grund: cancelGrund || editedAppointment.ausnahme_grund || null,
       } as any);
 
+      const isTimely = cancelStatus === 'abgesagt_rechtzeitig';
       toast({
         title: 'Erfolg',
-        description: 'Der Termin wurde abgesagt und dokumentiert.',
+        description: isTimely
+          ? 'Der Termin wurde als "Rechtzeitig abgesagt" markiert (nicht abrechenbar).'
+          : 'Der Termin wurde als "Kurzfristig abgesagt" markiert (abrechenbar).',
       });
 
       setShowCancelDialog(false);

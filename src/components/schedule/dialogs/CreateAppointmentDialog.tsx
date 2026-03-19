@@ -19,6 +19,9 @@ import type { CustomerSummary, EmployeeSummary, TerminKategorie } from '@/types/
 const KATEGORIE_OPTIONS: { value: TerminKategorie; label: string }[] = [
   { value: 'Erstgespräch', label: 'Erstgespräch' },
   { value: 'Schulung', label: 'Schulung' },
+  { value: 'Meeting', label: 'Meeting' },
+  { value: 'Bewerbungsgespräch', label: 'Bewerbungsgespräch' },
+  { value: 'Blocker', label: 'Blocker (nicht Arbeitszeit)' },
   { value: 'Intern', label: 'Intern' },
   { value: 'Regelbesuch', label: 'Regelbesuch' },
   { value: 'Sonstiges', label: 'Sonstiges' },

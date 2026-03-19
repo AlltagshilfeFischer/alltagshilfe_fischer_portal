@@ -1,112 +1,111 @@
 ---
 name: abrechnung
 description: Budget- und Abrechnungslogik der Alltagshilfe Fischer. Laden wenn Abrechnung, Budget, Leistungsnachweis, Rechnung, Entlastungsbetrag, Verhinderungspflege, Pflegesachleistung, Steuersatz oder Budgettracker relevant sind.
-user-invocable: true
-argument-hint: "[Budget-Typ oder Abrechnungsfrage]"
+user-invocable: false
 ---
 
 # Abrechnungs- & Budgetlogik – Alltagshilfe Fischer
 
-## Budget-Typen (§ SGB)
+## Budget-Typen
 
-| Typ | Gesetz | Betrag | Logik |
-|-----|--------|--------|-------|
-| Entlastungsbetrag | §45b SGB XI | 131€/Monat | Monatlich, Übertrag bis 30.06. Folgejahr |
-| Verhinderungspflege | §39 SGB XI | 3.539€/Jahr | Jährliches Budget |
-| Umwandlung (Kombi) | §45a SGB XI | max 40% Sachleistung | Abhängig von Pflegegrad |
-| Haushaltshilfe | §38 SGB V | individuell | Ärztl. Verordnung – **NOCH NICHT IMPLEMENTIERT** |
-| Privatleistung | — | unbegrenzt | Direkte Rechnung an Kunden |
+| Typ | Gesetz | Betrag | Übertrag |
+|-----|--------|--------|----------|
+| Entlastungsbetrag | §45b SGB XI | 131€/Monat | Ja, bis 30.06. Folgejahr (FIFO) |
+| Verhinderungspflege | §39 SGB XI | 3.539€/Jahr | Nein |
+| Umwandlungsanspruch | §45a SGB XI | max 40% Sachleistung | Monatlich |
+| Haushaltshilfe | §38 SGB V | Ärztl. Verordnung | NICHT IMPLEMENTIERT |
+| Privatleistung | — | Unbegrenzt | — |
 
-## DB-Tabellen
-
-```
-budget_transactions  → Verbrauch-Tracking (APLANO_IMPORT | MANUAL)
-care_levels          → Pflegegrad-Budgets (sachleistung_monat, kombi_max_40_prozent_monat)
-tariffs              → Stundensätze (ENTLASTUNG, KOMBI, VERHINDERUNG)
-abrechnungsregeln    → Kundenspezifische Regeln (kostentraeger_typ + leistungsart)
-rechnungen           → Generierte Rechnungen (Status-Workflow: entwurf → freigegeben → versendet → bezahlt)
-abrechnungs_historie → Statusänderungs-Log
-leistungen           → Anträge pro Kunde (beantragt → genehmigt → aktiv)
-```
-
-## Priorisierung der Budgettöpfe
-
-Pro Kunde konfigurierbar über `kunden.budget_prioritaet` (String-Array):
-```typescript
-// Beispiel: Erst Entlastung, dann VP, dann Kombi, dann Privat
-budget_prioritaet: ['entlastung', 'verhinderung', 'kombi', 'privat']
-```
-
-## Abrechnungs-Prüfungskette (Spec §12)
+## Budget-Priorisierung (budgetCalculations.ts)
 
 ```
-1. Status-Check    → Termin hat Status 'completed' oder 'abgesagt_rechtzeitig'
-2. Budget-Check    → Gewählter Topf hat Restguthaben
-3. Dokumenten-Check → Anträge vorhanden (leistungen.status = 'genehmigt')
-4. Regelprüfung    → Kundenspezifische Regeln anwenden
-5. Split           → Bei Restbudget < Einsatzkosten: aufteilen
+1. KOMBI (monatlich, verfällt Ende Monat)
+2. Vorjahresrest Entlastung (FIFO, verfällt 01.07.)
+3. VERHINDERUNG (höherer Stundensatz bevorzugt)
+4. Reguläre Entlastung (131€/Monat)
+5. PRIVAT (Fallback, unbegrenzt)
 ```
 
-### Restbetrags-Split Beispiel
-```
-Einsatz: 39€, Budget §45b: nur 20€ Rest
-→ 20€ über §45b + 19€ Privat (oder nächster Topf laut Priorisierung)
-```
+Konfigurierbar pro Kunde über `abrechnungsregeln` Tabelle.
 
 ## Steuerlogik
 
 ```
-0%  → Pflegeleistung (§4 Nr. 16 UStG) – Kunden MIT Pflegegrad
-19% → Privatleistung bei Kunden OHNE Pflegegrad
+0%  → Pflegeleistung (§4 Nr. 16 UStG)
+      Implementiert in batch-billing/index.ts Zeile 348
+19% → Privatleistung ohne Pflegegrad
+      ⚠️ FEHLT! Muss noch gebaut werden
 ```
 
-## Domain Types
+Regel: `pflegegrad > 0` → 0% | `pflegegrad = 0 && leistungsart = 'privat'` → 19%
+
+## Prüfungskette (Spec §12)
+
+```
+1. Status-Check:     termine.status = 'completed'?
+2. Budget-Check:     Gewählter Topf hat Guthaben?
+   → Falls Nein:     Split auf Privat oder Ausweichtopf
+3. Dokumenten-Check: leistungen (Anträge) vorhanden + genehmigt?
+4. Regelprüfung:     abrechnungsregeln für Kunde anwenden
+5. Betrag berechnen: stunden × stundensatz (aus tariffs)
+6. Split:            20€ Kasse + 19€ Privat bei Restbudget
+```
+
+## Batch-Billing Workflow (Edge Function)
 
 ```typescript
-import { BudgetAvailability, BillingSuggestion, AbrechnungsRow } from '@/types/domain';
-
-// Budget-Verfügbarkeit berechnen
-interface BudgetAvailability {
-  entlastungYearlyTotal: number;   // Gesamtbudget Entlastung (Jahr)
-  entlastungConsumed: number;      // Verbraucht
-  entlastungAvailable: number;     // Verfügbar
-  kombiMonthlyMax: number;         // Kombi-Limit (40% Sachleistung)
-  vpYearlyTotal: number;           // Verhinderungspflege Jahresbudget
-  vpRemainingYear: number;         // VP Rest
-  expiringCarryOver: number;       // Verfallender Übertrag (30.06.)
-}
+// supabase/functions/batch-billing/index.ts
+// Input: { startDate, endDate, dry_run? }
+// 1. Lade completed Termine im Zeitraum
+// 2. Gruppiere nach Kunde + Kostenträger
+// 3. Prüfe leistungen (Anträge) pro Kunde
+// 4. Validiere Kontingente, Pflegegrad, Gültigkeit
+// 5. Erstelle rechnungen + rechnungspositionen
+// 6. Update termine.status → 'abgerechnet'
+// 7. Schreibe abrechnungs_historie
 ```
-
-## Hooks & Seiten
-
-- `src/hooks/useBudgetTransactions.ts` – Budget-Queries + Mutations
-- `src/hooks/useTariffs.ts` – Stundensätze
-- `src/hooks/useCareLevels.ts` – Pflegegrad-Budgets
-- `src/pages/controlboard/budgettracker/BudgetTracker.tsx` – Übersicht aller Kunden
-- `src/pages/controlboard/budgettracker/BudgetTrackerDetail.tsx` – Detail pro Kunde
-- `src/pages/controlboard/Leistungsnachweise.tsx` – Leistungsnachweis-Generierung
-
-## Edge Functions
-
-- `batch-billing` – Monatliche Sammelabrechnung
-- `auto-complete-appointments` – Auto-Status-Update für vergangene Termine
 
 ## Leistungsnachweis-Flow
 
 ```
-1. Termine des Vormonats für Kunde laden (status: completed, abgesagt_rechtzeitig)
-2. Budget-Priorisierung anwenden → Beträge zuordnen
-3. Leistungsnachweis generieren (Preview + PDF)
-4. Kunde unterschreibt mobil (LeistungsnachweisSignature)
-5. GF-Unterschrift nachtragen
-6. Export an AS Abrechnung
+1. Auto-Generierung: termine eines Monats → leistungsnachweise Upsert
+2. Status-Workflow: entwurf → veröffentlicht → unterschrieben → abgeschlossen
+3. Unterschrift: Canvas-basiert, offline-fähig (localStorage)
+4. PDF-Print: 2-Spalten-Tagesliste, Stunden, Billing-Checkboxen
+5. Checkboxen: Kombi, Entlastung, VP, Haushaltshilfe, Deckeln §45b, Privatperson
 ```
 
-## GAPS (noch zu implementieren)
+## Kerndateien
 
-- [ ] §38 SGB V Haushaltshilfe als Budget-Typ
-- [ ] Steuersatz-Feld in Rechnungen (0% vs 19%)
-- [ ] Restbetrags-Split vollständig testen
-- [ ] Dokumenten-Check blockiert Export wenn Nachweis fehlt
-- [ ] Reminder für fehlende Unterschriften
-- [ ] GF-Dashboard-Widget für offene Leistungsnachweise
+```
+src/lib/pflegebudget/budgetCalculations.ts    # Budget-Berechnung (KRITISCH)
+src/hooks/useBudgetTransactions.ts            # Budget Queries+Mutations
+src/pages/controlboard/budgettracker/         # Budget UI
+src/pages/controlboard/Leistungsnachweise.tsx # LN-Verwaltung
+src/components/leistungsnachweis/             # LN-Preview + Print
+src/pages/controlboard/Reporting.tsx          # Auswertungen
+supabase/functions/batch-billing/index.ts     # Sammelabrechnung
+```
+
+## DB-Tabellen
+
+```
+budget_transactions    → Verbrauch (client_id, service_type, hours, total_amount, billed)
+care_levels            → PG0-5 Limits (sachleistung_monat, kombi_max_40_prozent_monat)
+tariffs                → Stundensätze (service_type, hourly_rate, travel_flat_per_visit)
+abrechnungsregeln      → Pro-Kunde Regeln (kostentraeger_typ, stundensatz, hoechstbetrag)
+rechnungen             → Generierte Rechnungen (status: entwurf→freigegeben→versendet→bezahlt)
+rechnungspositionen    → Zeilen pro Rechnung
+leistungen             → Anträge (art, status: beantragt→genehmigt→aktiv)
+leistungsnachweise     → Monats-LN (status, unterschrift_kunde, unterschrift_firma)
+abrechnungs_historie   → Audit-Trail
+```
+
+## Gaps (Priorität)
+
+1. **Tax 19%** — Privatleistung ohne Pflegegrad muss 19% bekommen
+2. **Invoice-UI** — Rechnungen anzeigen/verwalten (Frontend fehlt komplett)
+3. **Abrechnungsregeln-UI** — Regeln pro Kunde erstellen/bearbeiten
+4. **GF-Stempel** — Stempel/Unterschrift für Leistungsnachweis
+5. **Reminder** — Fehlende Unterschriften, offene Anträge
+6. **§38 SGB V** — Haushaltshilfe Budget-Typ (Phase 2?)

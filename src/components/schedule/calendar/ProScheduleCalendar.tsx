@@ -66,6 +66,7 @@ interface ProScheduleCalendarProps {
   onSlotClick: (employeeId: string, date: Date) => void;
   conflictingAppointments: Set<string>;
   onCut: (appointment: CalendarAppointment) => void;
+  onCopy?: (appointment: CalendarAppointment) => void;
   highlightedAppointmentId?: string | null;
   hiddenEmployeeIds?: Set<string>;
   onToggleEmployee?: (id: string) => void;
@@ -135,6 +136,7 @@ export function ProScheduleCalendar({
   onSlotClick,
   conflictingAppointments,
   onCut,
+  onCopy,
   highlightedAppointmentId,
   hiddenEmployeeIds = new Set(),
   onToggleEmployee,
@@ -374,6 +376,7 @@ export function ProScheduleCalendar({
                               isHighlighted={highlightedAppointmentId === appointment.id}
                               onClick={() => onEditAppointment(appointment)}
                               onCut={() => onCut(appointment)}
+                              onCopy={() => onCopy?.(appointment)}
                             />
                           ))}
                         </div>

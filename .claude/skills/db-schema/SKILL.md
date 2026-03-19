@@ -95,6 +95,13 @@ termin_status:         'unassigned' | 'scheduled' | 'in_progress' | 'completed' 
 | gueltig_bis | DATE | nullable |
 | ist_aktiv | BOOLEAN | DEFAULT true |
 
+#### `termine` – Neue Felder (Migration 20260318)
+| Spalte | Typ | Beschreibung |
+|--------|-----|--------------|
+| kategorie | TEXT | Erstgespräch, Schulung, Intern, Regelbesuch, Sonstiges |
+| absage_datum | DATE | Wann wurde abgesagt? |
+| absage_kanal | TEXT | Telefonisch, E-Mail, Persönlich, WhatsApp, Sonstiges |
+
 ### Weitere Tabellen
 - `kunden_zeitfenster` – Verfügbarkeitsfenster pro Kunde (wochentag, von, bis, prioritaet)
 - `mitarbeiter_verfuegbarkeit` – Verfügbarkeit pro Mitarbeiter (wochentag, von, bis)
@@ -103,12 +110,23 @@ termin_status:         'unassigned' | 'scheduled' | 'in_progress' | 'completed' 
 - `dokumente` – Datei-Uploads (kunden_id ODER mitarbeiter_id)
 - `pending_registrations` – Offene Registrierungsanfragen
 - `audit_log` – BIGSERIAL, table_name, operation, row_id, old_data JSONB, new_data JSONB
+- `budget_transactions` – Budget-Verbrauch (client_id, service_type, hours, total_amount, billed)
+- `care_levels` – Pflegegrad-Budgets (sachleistung_monat, kombi_max_40_prozent_monat)
+- `tariffs` – Stundensätze (service_type, hourly_rate, travel_flat_per_visit)
+- `abrechnungsregeln` – Pro-Kunde Regeln (kostentraeger_typ, stundensatz, hoechstbetrag)
+- `rechnungen` – Rechnungen (status: entwurf→freigegeben→versendet→bezahlt)
+- `rechnungspositionen` – Zeilen pro Rechnung
+- `leistungen` – Anträge (art, status: beantragt→genehmigt→aktiv)
+- `leistungsnachweise` – Monats-LN (status, unterschrift_kunde, unterschrift_firma)
 
 ## Helper Functions (PostgreSQL)
 
 ```sql
-public.is_admin(user_id uuid) → boolean
+public.is_admin(user_id uuid) → boolean           -- ⚠️ Wird obsolet nach admin-Refactor
+public.is_admin_secure(user_id uuid) → boolean     -- Prüft admin/gf/globaladmin
+public.is_admin_or_higher(user_id uuid) → boolean  -- Gleich wie is_admin_secure
 public.get_user_rolle(p_user_id uuid) → text
+public.has_role(user_id uuid, role app_role) → boolean
 ```
 
 ## Wichtige Indizes

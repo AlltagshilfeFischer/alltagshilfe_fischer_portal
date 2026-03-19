@@ -35,18 +35,18 @@ interface SidebarItem {
 }
 
 const dashboardItems: SidebarItem[] = [
-  { title: 'Dashboard', url: '/dashboard', icon: Home, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin', 'buchhaltung', 'mitarbeiter'] },
+  { title: 'Dashboard', url: '/dashboard', icon: Home, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'buchhaltung', 'mitarbeiter'] },
   { title: 'Mein Bereich', url: '/dashboard/mein-bereich', icon: UserCircle, requiredRoles: ['geschaeftsfuehrer', 'mitarbeiter'] },
 ];
 
 const controlboardItems: SidebarItem[] = [
-  { title: 'Dienstplan', url: '/dashboard/controlboard/schedule-builder', icon: Calendar, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin'] },
-  { title: 'Kunden/Neukunden', url: '/dashboard/controlboard/master-data', icon: Users, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin'] },
+  { title: 'Dienstplan', url: '/dashboard/controlboard/schedule-builder', icon: Calendar, requiredRoles: ['globaladmin', 'geschaeftsfuehrer'] },
+  { title: 'Kunden/Neukunden', url: '/dashboard/controlboard/master-data', icon: Users, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'buchhaltung'] },
   { title: 'Mitarbeiter', url: '/dashboard/controlboard/admin', icon: UserCog, requiredRoles: ['globaladmin', 'geschaeftsfuehrer'] },
-  { title: 'Dokumentenverwaltung', url: '/dashboard/controlboard/dokumentenverwaltung', icon: FolderOpen, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin'] },
-  { title: 'Leistungsnachweise', url: '/dashboard/controlboard/leistungsnachweise', icon: ClipboardCheck, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin'] },
-  { title: 'Budgettracker', url: '/dashboard/controlboard/budgettracker', icon: TrendingUp, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin', 'buchhaltung'] },
-  { title: 'Berichte', url: '/dashboard/controlboard/reporting', icon: BarChart3, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'admin'] },
+  { title: 'Dokumentenverwaltung', url: '/dashboard/controlboard/dokumentenverwaltung', icon: FolderOpen, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'buchhaltung'] },
+  { title: 'Leistungsnachweise', url: '/dashboard/controlboard/leistungsnachweise', icon: ClipboardCheck, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'buchhaltung'] },
+  { title: 'Budgettracker', url: '/dashboard/controlboard/budgettracker', icon: TrendingUp, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'buchhaltung'] },
+  { title: 'Berichte', url: '/dashboard/controlboard/reporting', icon: BarChart3, requiredRoles: ['globaladmin', 'geschaeftsfuehrer', 'buchhaltung'] },
   { title: 'Aktivitätslog', url: '/dashboard/controlboard/aktivitaetslog', icon: ScrollText, requiredRoles: ['globaladmin'] },
 ];
 

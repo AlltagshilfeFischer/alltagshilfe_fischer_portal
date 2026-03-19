@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       throw new Error('Passwort muss mindestens 6 Zeichen lang sein');
     }
 
-    const validRoles = ['geschaeftsfuehrer', 'admin', 'mitarbeiter'];
+    const validRoles = ['geschaeftsfuehrer', 'buchhaltung', 'mitarbeiter'];
     const finalRole = validRoles.includes(rolle) ? rolle : 'mitarbeiter';
 
     // Check role assignment permission: only GF can assign GF role

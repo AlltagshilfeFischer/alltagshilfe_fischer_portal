@@ -9,7 +9,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Scissors, MapPin } from "lucide-react";
+import { Scissors, Copy, MapPin } from "lucide-react";
 import type { CalendarAppointment } from '@/types/domain';
 
 interface DraggableAppointmentProps {
@@ -18,6 +18,7 @@ interface DraggableAppointmentProps {
   isConflicting?: boolean;
   onClick?: () => void;
   onCut?: () => void;
+  onCopy?: () => void;
 }
 
 export function DraggableAppointment({
@@ -25,7 +26,8 @@ export function DraggableAppointment({
   isDragging,
   isConflicting,
   onClick,
-  onCut
+  onCut,
+  onCopy
 }: DraggableAppointmentProps) {
   const {
     attributes,
@@ -99,6 +101,13 @@ export function DraggableAppointment({
         }}>
           <Scissors className="mr-2 h-4 w-4" />
           Ausschneiden
+        </ContextMenuItem>
+        <ContextMenuItem onClick={(e) => {
+          e.stopPropagation();
+          onCopy?.();
+        }}>
+          <Copy className="mr-2 h-4 w-4" />
+          Kopieren
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

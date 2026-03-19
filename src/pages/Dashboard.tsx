@@ -64,33 +64,17 @@ export default function Dashboard() {
     );
   }
 
-  // Buchhaltung: nur Einsicht — kein Import, kein Dienstplan, keine Stammdaten
+  // Buchhaltung: Lesen + Budget/Abrechnung, kein Dienstplan-Editing, kein User-Management
   if (role === 'buchhaltung') {
     return (
       <DashboardLayout>
         <Routes>
           <Route path="/" element={<DashboardHome />} />
-          <Route path="/controlboard/budgettracker" element={<BudgetTracker />} />
-          <Route path="/controlboard/budgettracker/:kundenId" element={<BudgetTrackerDetail />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </DashboardLayout>
-    );
-  }
-
-  // Admin (Disponent): Einsatzplanung + Pflegebudget, keine Userverwaltung
-  if (role === 'admin') {
-    return (
-      <DashboardLayout>
-        <Routes>
-          <Route path="/" element={<DashboardHome />} />
-          <Route path="/controlboard/schedule-builder" element={<ScheduleBuilderModern />} />
           <Route path="/controlboard/master-data" element={<MasterData />} />
           <Route path="/controlboard/dokumentenverwaltung" element={<Dokumentenverwaltung />} />
           <Route path="/controlboard/leistungsnachweise" element={<Leistungsnachweise />} />
           <Route path="/controlboard/budgettracker" element={<BudgetTracker />} />
           <Route path="/controlboard/budgettracker/:kundenId" element={<BudgetTrackerDetail />} />
-          <Route path="/controlboard/aktivitaetslog" element={<AktivitaetsLog />} />
           <Route path="/controlboard/reporting" element={<Reporting />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

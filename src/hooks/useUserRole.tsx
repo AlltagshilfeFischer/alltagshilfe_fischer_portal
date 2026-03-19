@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
-// Hierarchie: globaladmin > geschaeftsfuehrer > admin (Disponent) > mitarbeiter, buchhaltung
-export type UserRole = 'globaladmin' | 'geschaeftsfuehrer' | 'admin' | 'buchhaltung' | 'mitarbeiter' | null;
+// Hierarchie: globaladmin > geschaeftsfuehrer > buchhaltung, mitarbeiter
+export type UserRole = 'globaladmin' | 'geschaeftsfuehrer' | 'buchhaltung' | 'mitarbeiter' | null;
 
 export function useUserRole() {
   const { user } = useAuth();
@@ -43,8 +43,6 @@ export function useUserRole() {
           setRole('globaladmin');
         } else if (roleList.includes('geschaeftsfuehrer')) {
           setRole('geschaeftsfuehrer');
-        } else if (roleList.includes('admin')) {
-          setRole('admin');
         } else if (roleList.includes('buchhaltung')) {
           setRole('buchhaltung');
         } else if (roleList.includes('mitarbeiter')) {
@@ -97,17 +95,11 @@ export function useUserRole() {
   // Geschäftsführer ODER höher
   const isGeschaeftsfuehrer = role === 'globaladmin' || role === 'geschaeftsfuehrer';
   
-  // Disponent (admin) oder höher: Einsatzplanung, Kunden/Mitarbeiter
-  const isAdmin = role === 'globaladmin' || role === 'geschaeftsfuehrer' || role === 'admin';
-  
-  // Disponent-spezifisch (nur admin-Rolle, ohne GF/GlobalAdmin)
-  const isDisponent = role === 'admin';
-  
+  // Geschäftsführer oder höher: Einsatzplanung, Kunden/Mitarbeiter
+  const isAdmin = role === 'globaladmin' || role === 'geschaeftsfuehrer';
+
   // Buchhaltung
   const isBuchhaltung = roles.includes('buchhaltung');
-  
-  // Rückwärtskompatibilität
-  const isManager = isAdmin;
   
   // Kann deaktivieren/soft-delete: GlobalAdmin und GF
   const canDelete = role === 'globaladmin' || role === 'geschaeftsfuehrer';
@@ -128,7 +120,6 @@ export function useUserRole() {
     switch (r) {
       case 'globaladmin': return 'Admin';
       case 'geschaeftsfuehrer': return 'Geschäftsführer';
-      case 'admin': return 'Disponent';
       case 'buchhaltung': return 'Buchhaltung';
       case 'mitarbeiter': return 'Mitarbeiter';
       default: return 'Unbekannt';
@@ -140,7 +131,6 @@ export function useUserRole() {
     switch (r) {
       case 'globaladmin': return 'destructive';
       case 'geschaeftsfuehrer': return 'default';
-      case 'admin': return 'secondary';
       case 'buchhaltung': return 'outline';
       case 'mitarbeiter': return 'secondary';
       default: return 'outline';
@@ -156,9 +146,7 @@ export function useUserRole() {
     isGlobalAdmin,
     isGeschaeftsfuehrer,
     isAdmin,
-    isDisponent,
     isBuchhaltung,
-    isManager,
     canDelete,
     canManageUsers,
     isEmployee,
