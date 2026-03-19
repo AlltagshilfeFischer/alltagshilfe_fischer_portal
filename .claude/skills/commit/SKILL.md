@@ -2,7 +2,6 @@
 name: commit
 description: Git-Commit für das Alltagshilfe Fischer Projekt erstellen mit deutschen Commit-Messages und Projektkonventionen.
 disable-model-invocation: true
-allowed-tools: Bash(git *)
 ---
 
 # Commit erstellen
@@ -34,7 +33,7 @@ git add src/components/... src/hooks/... supabase/...
 
 [Optionaler längerer Beschreibungstext]
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 ```
 
 **Typen:**
@@ -63,7 +62,7 @@ refactor: Termin-Hook in useAppointments ausgelagert
 git commit -m "$(cat <<'EOF'
 <typ>: <Beschreibung>
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```

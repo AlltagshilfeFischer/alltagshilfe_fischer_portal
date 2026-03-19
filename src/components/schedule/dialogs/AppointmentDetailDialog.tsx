@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CreateRecurringAppointmentDialog } from './CreateRecurringAppointmentDialog';
+import { AppointmentAttachments } from '@/components/schedule/AppointmentAttachments';
 import { KundenDetailDialog } from '@/components/customers/KundenDetailDialog';
 import { useUserRole } from '@/hooks/useUserRole';
 import type { Employee, Customer, Appointment, CustomerTimeWindow } from '@/types/domain';
@@ -33,6 +34,14 @@ interface AppointmentDetailDialogProps {
   isConflicting?: boolean;
   customerTimeWindows?: CustomerTimeWindow[];
 }
+
+const KATEGORIE_OPTIONS = [
+  'Erstgespräch',
+  'Schulung',
+  'Intern',
+  'Regelbesuch',
+  'Sonstiges',
+] as const;
 
 export function AppointmentDetailDialog({ 
   isOpen, 
@@ -56,6 +65,9 @@ export function AppointmentDetailDialog({
   const [showEditTemplateDialog, setShowEditTemplateDialog] = useState(false);
   const [templateData, setTemplateData] = useState<any>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelAbsageDatum, setCancelAbsageDatum] = useState('');
+  const [cancelAbsageKanal, setCancelAbsageKanal] = useState('');
+  const [cancelGrund, setCancelGrund] = useState('');
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [showCustomerFaultDialog, setShowCustomerFaultDialog] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState('');
@@ -72,6 +84,11 @@ export function AppointmentDetailDialog({
       setEditedAppointment({ ...appointment });
     }
   }, [appointment]);
+
+  const parseLocalDate = (dateString: string) => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
 
   if (!appointment || !editedAppointment) return null;
 
@@ -320,20 +337,26 @@ export function AppointmentDetailDialog({
 
   const handleCancelAppointment = async () => {
     if (!editedAppointment) return;
-    
+
     setLoading(true);
     try {
       await onUpdate({
         ...editedAppointment,
-        status: 'cancelled'
-      });
-      
+        status: 'cancelled',
+        absage_datum: cancelAbsageDatum || null,
+        absage_kanal: cancelAbsageKanal || null,
+        ausnahme_grund: cancelGrund || editedAppointment.ausnahme_grund || null,
+      } as any);
+
       toast({
         title: 'Erfolg',
-        description: 'Der Termin wurde abgesagt.',
+        description: 'Der Termin wurde abgesagt und dokumentiert.',
       });
-      
+
       setShowCancelDialog(false);
+      setCancelAbsageDatum('');
+      setCancelAbsageKanal('');
+      setCancelGrund('');
       onClose();
     } catch (error: any) {
       toast({
@@ -363,7 +386,7 @@ export function AppointmentDetailDialog({
       const duration = currentEnd.getTime() - currentStart.getTime();
       
       const [hours, minutes] = rescheduleTime.split(':');
-      const newStart = new Date(rescheduleDate);
+      const newStart = parseLocalDate(rescheduleDate);
       newStart.setHours(parseInt(hours), parseInt(minutes), 0, 0);
       
       const newEnd = new Date(newStart.getTime() + duration);
@@ -550,10 +573,14 @@ export function AppointmentDetailDialog({
                   {isEditing ? (
                     <Select
                       value={editedAppointment.status}
-                      onValueChange={(value: any) => setEditedAppointment({
-                        ...editedAppointment,
-                        status: value
-                      })}
+                      onValueChange={(value: any) => {
+                        const updates: any = { status: value };
+                        if (value === 'unassigned') {
+                          updates.mitarbeiter_id = null;
+                          toast({ title: 'Info', description: 'Mitarbeiter-Zuweisung wird entfernt.' });
+                        }
+                        setEditedAppointment({ ...editedAppointment, ...updates });
+                      }}
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue />
@@ -562,7 +589,6 @@ export function AppointmentDetailDialog({
                         <SelectItem value="unassigned">Unzugewiesen</SelectItem>
                         <SelectItem value="scheduled">Geplant</SelectItem>
                         <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-                        <SelectItem value="completed">Abgeschlossen</SelectItem>
                         <SelectItem value="cancelled">Abgesagt</SelectItem>
                         <SelectItem value="nicht_angetroffen">Nicht angetroffen</SelectItem>
                         <SelectItem value="abgesagt_rechtzeitig">Rechtzeitig abgesagt</SelectItem>
@@ -570,6 +596,30 @@ export function AppointmentDetailDialog({
                     </Select>
                   ) : (
                     <p className="text-sm font-medium mt-1">{getStatusBadge(editedAppointment.status)}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Label</Label>
+                  {isEditing ? (
+                    <Select
+                      value={editedAppointment.kategorie ?? '__none__'}
+                      onValueChange={(value) => setEditedAppointment({
+                        ...editedAppointment,
+                        kategorie: value === '__none__' ? null : value as any,
+                      })}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Kein Label" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Kein Label</SelectItem>
+                        {KATEGORIE_OPTIONS.map((kategorie) => (
+                          <SelectItem key={kategorie} value={kategorie}>{kategorie}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm font-medium mt-1">{editedAppointment.kategorie || 'Kein Label'}</p>
                   )}
                 </div>
               </div>
@@ -606,115 +656,95 @@ export function AppointmentDetailDialog({
             </CardContent>
           </Card>
 
-          {/* Notizen */}
+          {/* Customer Information */}
           <Card>
             <CardContent className="p-4">
               <h3 className="font-medium mb-3 flex items-center gap-2">
-                <Edit className="h-4 w-4" />
-                Notiz
+                <User className="h-4 w-4" />
+                Kunde (optional)
               </h3>
-              {isEditing ? (
-                <Textarea
-                  value={editedAppointment.notizen || ''}
-                  onChange={(e) => setEditedAppointment({ ...editedAppointment, notizen: e.target.value })}
-                  placeholder="Notiz zum Termin..."
-                  rows={3}
-                  className="text-sm"
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {editedAppointment.notizen || 'Keine Notiz'}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Name</Label>
+                  {isEditing ? (
+                    <Select
+                      value={editedAppointment.kunden_id ?? '__none__'}
+                      onValueChange={(value) => setEditedAppointment({
+                        ...editedAppointment,
+                        kunden_id: value === '__none__' ? null : value
+                      })}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Kein Kunde</SelectItem>
+                        {customers.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>
+                            {customer.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm font-medium mt-1">
+                      {editedAppointment.customer?.name || 'Kein Kunde zugewiesen'}
+                    </p>
+                  )}
+                </div>
 
-          {/* Customer Information */}
-          {editedAppointment.customer && (
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="font-medium mb-3 flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Kunde
-                </h3>
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Name</Label>
-                    {isEditing ? (
-                      <Select
-                        value={editedAppointment.kunden_id}
-                        onValueChange={(value) => setEditedAppointment({
-                          ...editedAppointment,
-                          kunden_id: value
-                        })}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customers.map((customer) => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              {customer.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <p className="text-sm font-medium mt-1">
-                        {editedAppointment.customer.name}
-                      </p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">E-Mail</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Mail className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-sm">{editedAppointment.customer.email}</p>
+                {editedAppointment.customer && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">E-Mail</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Mail className="h-3 w-3 text-muted-foreground" />
+                          <p className="text-sm">{editedAppointment.customer.email}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Telefon</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-sm">{editedAppointment.customer.telefonnr}</p>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Address with Google Maps link */}
-                  {(editedAppointment.customer?.strasse || editedAppointment.customer?.stadt) && (
-                    <div className="mt-3">
-                      <Label className="text-sm font-medium text-muted-foreground">Adresse</Label>
-                      <div className="flex items-start gap-2 mt-1">
-                        <MapPin className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm">
-                            {[editedAppointment.customer.strasse, [editedAppointment.customer.plz, editedAppointment.customer.stadt].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
-                            {editedAppointment.customer.stadtteil && (
-                              <span className="text-muted-foreground"> ({editedAppointment.customer.stadtteil})</span>
-                            )}
-                          </p>
-                          <a
-                            href={`https://maps.google.com/?q=${encodeURIComponent([editedAppointment.customer.strasse, editedAppointment.customer.plz, editedAppointment.customer.stadt].filter(Boolean).join(' '))}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline mt-0.5 inline-block"
-                          >
-                            In Google Maps öffnen →
-                          </a>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Telefon</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Phone className="h-3 w-3 text-muted-foreground" />
+                          <p className="text-sm">{editedAppointment.customer.telefonnr}</p>
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
-                {(isGeschaeftsfuehrer || isAdmin) && (
-                  <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => setShowKundenDetail(true)}>
-                    Kundendetails anzeigen
-                  </Button>
+                    {(editedAppointment.customer?.strasse || editedAppointment.customer?.stadt) && (
+                      <div className="mt-3">
+                        <Label className="text-sm font-medium text-muted-foreground">Adresse</Label>
+                        <div className="flex items-start gap-2 mt-1">
+                          <MapPin className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm">
+                              {[editedAppointment.customer.strasse, [editedAppointment.customer.plz, editedAppointment.customer.stadt].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
+                              {editedAppointment.customer.stadtteil && (
+                                <span className="text-muted-foreground"> ({editedAppointment.customer.stadtteil})</span>
+                              )}
+                            </p>
+                            <a
+                              href={`https://maps.google.com/?q=${encodeURIComponent([editedAppointment.customer.strasse, editedAppointment.customer.plz, editedAppointment.customer.stadt].filter(Boolean).join(' '))}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline mt-0.5 inline-block"
+                            >
+                              In Google Maps öffnen →
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
-              </CardContent>
-            </Card>
-          )}
+              </div>
+              {(isGeschaeftsfuehrer || isAdmin) && editedAppointment.kunden_id && (
+                <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => setShowKundenDetail(true)}>
+                  Kundendetails anzeigen
+                </Button>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Employee Information */}
           <Card>
@@ -723,57 +753,51 @@ export function AppointmentDetailDialog({
                 <User className="h-4 w-4" />
                 Zugewiesener Mitarbeiter
               </h3>
-              {editedAppointment.mitarbeiter_id ? (
-                <div>
-                  {isEditing ? (
-                    <Select
-                      value={editedAppointment.mitarbeiter_id || "unassigned"}
-                      onValueChange={(value) => setEditedAppointment({
-                        ...editedAppointment,
-                        mitarbeiter_id: value === "unassigned" ? null : value
-                      })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
-                        {employees.map((employee) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
-                                style={{ backgroundColor: employee.farbe_kalender }}
-                              />
-                              {employee.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    editedAppointment.employee && (
-                      <div className="space-y-2">
+              {isEditing ? (
+                <Select
+                  value={editedAppointment.mitarbeiter_id || "unassigned"}
+                  onValueChange={(value) => setEditedAppointment({
+                    ...editedAppointment,
+                    mitarbeiter_id: value === "unassigned" ? null : value
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
+                    {employees.map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id}>
                         <div className="flex items-center gap-2">
                           <div 
                             className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: editedAppointment.employee.farbe_kalender }}
+                            style={{ backgroundColor: employee.farbe_kalender }}
                           />
-                          <p className="text-sm font-medium">{editedAppointment.employee.name}</p>
+                          {employee.name}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3" />
-                            {editedAppointment.employee.benutzer?.email || 'Keine E-Mail'}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-3 w-3" />
-                            {editedAppointment.employee.telefon}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : editedAppointment.mitarbeiter_id && editedAppointment.employee ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: editedAppointment.employee.farbe_kalender }}
+                    />
+                    <p className="text-sm font-medium">{editedAppointment.employee.name}</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-3 w-3" />
+                      {editedAppointment.employee.benutzer?.email || 'Keine E-Mail'}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3 w-3" />
+                      {editedAppointment.employee.telefon}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
@@ -854,6 +878,9 @@ export function AppointmentDetailDialog({
               />
             </CardContent>
           </Card>
+
+          {/* Anhänge */}
+          <AppointmentAttachments terminId={editedAppointment.id} />
         </div>
 
         <DialogFooter className="gap-2">
@@ -1032,19 +1059,55 @@ export function AppointmentDetailDialog({
         />
       )}
 
-      {/* Cancel Appointment Dialog */}
+      {/* Cancel Appointment Dialog — mit Storno-Dokumentation */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Termin absagen?</AlertDialogTitle>
+            <AlertDialogTitle>Termin absagen</AlertDialogTitle>
             <AlertDialogDescription>
-              Möchten Sie den Termin wirklich absagen? Der Status wird auf "Abgesagt" gesetzt.
+              Bitte dokumentieren Sie die Absage.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="absage-datum">Wann wurde abgesagt?</Label>
+              <Input
+                id="absage-datum"
+                type="date"
+                value={cancelAbsageDatum}
+                onChange={(e) => setCancelAbsageDatum(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="absage-kanal">Wie wurde abgesagt?</Label>
+              <Select value={cancelAbsageKanal} onValueChange={setCancelAbsageKanal}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Absagekanal wählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Telefonisch">Telefonisch</SelectItem>
+                  <SelectItem value="E-Mail">E-Mail</SelectItem>
+                  <SelectItem value="Persönlich">Persönlich</SelectItem>
+                  <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                  <SelectItem value="Sonstiges">Sonstiges</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="absage-grund">Grund / Anmerkung (optional)</Label>
+              <Textarea
+                id="absage-grund"
+                value={cancelGrund}
+                onChange={(e) => setCancelGrund(e.target.value)}
+                placeholder="Grund der Absage..."
+                rows={2}
+              />
+            </div>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleCancelAppointment} 
+            <AlertDialogAction
+              onClick={handleCancelAppointment}
               disabled={loading}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

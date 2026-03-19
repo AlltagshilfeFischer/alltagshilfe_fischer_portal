@@ -30,8 +30,24 @@ export function ProScheduleHeader({
   const weekNumber = getWeek(currentWeek, { locale: de, weekStartsOn: 1 });
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
-  
-  const dateRange = `${format(weekStart, 'd. MMM', { locale: de })} - ${format(weekEnd, 'd. MMM yyyy', { locale: de })}`;
+
+  const titleText = view === 'day'
+    ? 'Tagesplanung'
+    : view === 'month'
+    ? 'Monatsplanung'
+    : 'Wochenplanung';
+
+  const titleHighlight = view === 'day'
+    ? format(currentWeek, 'EEEE, d. MMMM yyyy', { locale: de })
+    : view === 'month'
+    ? format(currentWeek, 'MMMM yyyy', { locale: de })
+    : `KW ${weekNumber}`;
+
+  const dateRange = view === 'day'
+    ? format(currentWeek, 'd. MMM yyyy', { locale: de })
+    : view === 'month'
+    ? format(currentWeek, 'MMMM yyyy', { locale: de })
+    : `${format(weekStart, 'd. MMM', { locale: de })} - ${format(weekEnd, 'd. MMM yyyy', { locale: de })}`;
 
   return (
     <div className="flex items-center justify-between gap-4">
@@ -39,12 +55,12 @@ export function ProScheduleHeader({
       <div className="flex items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            Wochenplanung <span className="text-primary">KW {weekNumber}</span>
+            {titleText} <span className="text-primary">{titleHighlight}</span>
           </h1>
         </div>
       </div>
-      
-      {/* Center: Week Navigation */}
+
+      {/* Center: Navigation */}
       <div className="flex items-center gap-1 bg-muted rounded-full px-1 py-1">
         <Button
           variant="ghost"
@@ -54,8 +70,8 @@ export function ProScheduleHeader({
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        
-        <button 
+
+        <button
           onClick={onToday}
           className="px-4 py-1.5 text-sm font-medium hover:bg-background/80 rounded-full transition-colors min-w-[180px]"
         >

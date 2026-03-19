@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { generateUUID } from '@/lib/uuid';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -80,7 +81,7 @@ const COLUMNS = [
 ];
 
 const createEmptyRow = (): CustomerRow => ({
-  id: crypto.randomUUID(),
+  id: generateUUID(),
   vorname: '',
   nachname: '',
   telefonnr: '',

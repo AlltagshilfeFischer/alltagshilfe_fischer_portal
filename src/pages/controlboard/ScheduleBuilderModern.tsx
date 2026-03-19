@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks } from 'date-fns';
+import { useSearchParams } from 'react-router-dom';
+import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks, subDays, addMonths, subMonths, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,9 +16,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { ProScheduleCalendar } from '@/components/schedule/calendar/ProScheduleCalendar';
+import { DayView } from '@/components/schedule/calendar/DayView';
+import { MonthView } from '@/components/schedule/calendar/MonthView';
 import { ProScheduleHeader } from '@/components/schedule/ProScheduleHeader';
 import { ProCalendarLegend } from '@/components/schedule/calendar/ProCalendarLegend';
 import { EmployeeManagementDialog } from '@/components/schedule/dialogs/EmployeeManagementDialog';
@@ -42,7 +46,13 @@ type LocalAppointment = CalendarAppointment & {
 };
 
 const ScheduleBuilderModern = () => {
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [searchParams] = useSearchParams();
+  const [currentWeek, setCurrentWeek] = useState(() => {
+    const weekParam = searchParams.get('week');
+    return weekParam ? parseISO(weekParam) : new Date();
+  });
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week');
+  const [currentDay, setCurrentDay] = useState(new Date());
   const [calendarScale, setCalendarScale] = useState<number>(() => {
     const saved = localStorage.getItem('calendarScale');
     return saved ? parseFloat(saved) : 0.9;
@@ -90,6 +100,11 @@ const ScheduleBuilderModern = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor)
   );
+
+  const parseDateKeyAsLocalDate = (dateKey: string) => {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
 
   useEffect(() => {
     loadData();
@@ -182,6 +197,7 @@ const ScheduleBuilderModern = () => {
           ausnahme_grund: app.ausnahme_grund,
           status: app.status,
           notizen: app.notizen,
+          kategorie: app.kategorie,
           customer: app.customer ? {
             ...app.customer,
             farbe_kalender: app.customer.farbe_kalender || '#10B981'
@@ -211,7 +227,35 @@ const ScheduleBuilderModern = () => {
       }
       
       setCustomers(transformedCustomers);
-      setAppointments(transformedAppointments);
+
+      // Auto-complete: Vergangene scheduled-Termine sofort als completed behandeln
+      const now = new Date();
+      const autoCompletedIds: string[] = [];
+      const finalAppointments = transformedAppointments.map(app => {
+        if (app.status === 'scheduled' && new Date(app.end_at) < now) {
+          autoCompletedIds.push(app.id);
+          return { ...app, status: 'completed' as const };
+        }
+        return app;
+      });
+      setAppointments(finalAppointments);
+
+      // Fire-and-forget: DB-Update für auto-completed Termine
+      if (autoCompletedIds.length > 0) {
+        const autoNow = new Date().toISOString();
+        supabase
+          .from('termine')
+          .update({
+            status: 'completed' as Database['public']['Enums']['termin_status'],
+            auto_completed_at: autoNow,
+            updated_at: autoNow,
+          })
+          .in('id', autoCompletedIds)
+          .eq('status', 'scheduled')
+          .then(({ error }) => {
+            if (error) console.error('Auto-complete update error:', error);
+          });
+      }
 
       // Load approved absences for the schedule
       const { data: abwesenheitenData } = await supabase
@@ -268,20 +312,15 @@ const ScheduleBuilderModern = () => {
   };
 
   const unassignedAppointments = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const visibleDays = new Set(weekDates.map((d) => format(d, 'yyyy-MM-dd')));
     
     return appointments.filter(app => {
-      if (app.mitarbeiter_id) return false;
-      
-      const appointmentDate = new Date(app.start_at);
-      const isInFuture = appointmentDate > now;
-      const isInCurrentMonth = appointmentDate.getMonth() === currentMonth && appointmentDate.getFullYear() === currentYear;
-      
-      return isInFuture && isInCurrentMonth;
+      const isUnassigned = !app.mitarbeiter_id || app.status === 'unassigned';
+      if (!isUnassigned) return false;
+      const appointmentDateKey = format(new Date(app.start_at), 'yyyy-MM-dd');
+      return visibleDays.has(appointmentDateKey);
     });
-  }, [appointments]);
+  }, [appointments, weekDates]);
 
   const conflictingAppointments = useMemo(() => {
     const conflicts = new Set<string>();
@@ -347,12 +386,21 @@ const ScheduleBuilderModern = () => {
     setActiveId(event.active.id as string);
   };
 
-  const checkForConflicts = (appointmentId: string, employeeId: string) => {
+  const checkForConflicts = (appointmentId: string, employeeId: string, targetDate?: Date) => {
     const appointment = appointments.find(app => app.id === appointmentId);
     if (!appointment) return [];
 
-    const appointmentStart = new Date(appointment.start_at);
-    const appointmentEnd = new Date(appointment.end_at);
+    let appointmentStart = new Date(appointment.start_at);
+    let appointmentEnd = new Date(appointment.end_at);
+
+    // Wenn ein Ziel-Datum angegeben ist, berechne die neuen Zeiten
+    if (targetDate) {
+      const originalStart = new Date(appointment.start_at);
+      const durationMs = new Date(appointment.end_at).getTime() - originalStart.getTime();
+      appointmentStart = new Date(targetDate);
+      appointmentStart.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+      appointmentEnd = new Date(appointmentStart.getTime() + durationMs);
+    }
 
     return appointments.filter(existingApp =>
       existingApp.mitarbeiter_id === employeeId &&
@@ -381,14 +429,13 @@ const ScheduleBuilderModern = () => {
       // If target date is provided, adjust start_at and end_at to the new date while keeping the time
       if (targetDate) {
         const originalStart = new Date(appointment.start_at);
-        const originalEnd = new Date(appointment.end_at);
+        const durationMs = new Date(appointment.end_at).getTime() - originalStart.getTime();
         
         // Create new dates with target date but original times
         const newStart = new Date(targetDate);
         newStart.setHours(originalStart.getHours(), originalStart.getMinutes(), originalStart.getSeconds(), originalStart.getMilliseconds());
         
-        const newEnd = new Date(targetDate);
-        newEnd.setHours(originalEnd.getHours(), originalEnd.getMinutes(), originalEnd.getSeconds(), originalEnd.getMilliseconds());
+        const newEnd = new Date(newStart.getTime() + durationMs);
         
         updateData.start_at = newStart.toISOString();
         updateData.end_at = newEnd.toISOString();
@@ -413,18 +460,22 @@ const ScheduleBuilderModern = () => {
       if (error) throw error;
 
       const employee = employees.find(emp => emp.id === employeeId);
+      const appointmentLabel = appointment?.customer?.name || appointment?.titel || 'Termin';
 
       toast({
         title: 'Erfolg',
-        description: `${appointment?.customer?.name} → ${employee?.name}${targetDate ? ` am ${format(targetDate, 'dd.MM.yyyy')}` : ''}`
+        description: `${appointmentLabel} → ${employee?.name}${targetDate ? ` am ${format(targetDate, 'dd.MM.yyyy')}` : ''}`
       });
 
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error assigning appointment:', error);
+      const errorMsg = error?.message?.includes('network')
+        ? 'Netzwerkfehler — bitte Verbindung prüfen.'
+        : `Fehler beim Zuweisen: ${error?.message || 'Unbekannter Fehler'}`;
       toast({
         title: 'Fehler',
-        description: 'Fehler beim Zuweisen des Termins.',
+        description: errorMsg,
         variant: 'destructive'
       });
       await loadData();
@@ -540,7 +591,7 @@ const ScheduleBuilderModern = () => {
       return;
     }
 
-    const conflicts = checkForConflicts(appointmentId, employeeId);
+    const conflicts = checkForConflicts(appointmentId, employeeId, targetDate);
 
     if (conflicts.length > 0) {
       setConflictWarning({
@@ -587,7 +638,7 @@ const ScheduleBuilderModern = () => {
 
       const appointmentSchema = z.object({
         titel: z.string().trim().min(1, 'Titel ist erforderlich'),
-        kunden_id: z.string().uuid('Ungültige Kunden-ID'),
+        kunden_id: z.string().uuid('Ungültige Kunden-ID').nullable().optional(),
         mitarbeiter_id: z.string().uuid().nullable().optional(),
         start_at: z
           .string()
@@ -597,6 +648,8 @@ const ScheduleBuilderModern = () => {
           .string()
           .min(1, 'Endzeit fehlt')
           .refine((v) => !isNaN(Date.parse(v)), { message: 'Ungültige Endzeit' }),
+        notizen: z.string().nullable().optional(),
+        kategorie: z.string().nullable().optional(),
       }).refine(
         (vals) => new Date(vals.end_at).getTime() > new Date(vals.start_at).getTime(),
         { path: ['end_at'], message: 'Endzeit muss nach Startzeit liegen' }
@@ -617,13 +670,15 @@ const ScheduleBuilderModern = () => {
 
       const { error } = await supabase
         .from('termine')
-        .insert([{ 
+        .insert([{
           titel: payload.titel,
-          kunden_id: payload.kunden_id,
+          kunden_id: payload.kunden_id ?? null,
           mitarbeiter_id: payload.mitarbeiter_id ?? null,
           start_at: payload.start_at,
           end_at: payload.end_at,
-          status: payload.mitarbeiter_id ? 'scheduled' : 'unassigned'
+          status: payload.mitarbeiter_id ? 'scheduled' : 'unassigned',
+          notizen: payload.notizen ?? null,
+          kategorie: payload.kategorie ?? null,
         }]);
 
       if (error) throw error;
@@ -877,11 +932,24 @@ const ScheduleBuilderModern = () => {
       <div className="h-[calc(100vh-4rem)] flex flex-col gap-3 p-4 bg-background overflow-hidden">
         {/* Pro Header */}
         <ProScheduleHeader
-          currentWeek={currentWeek}
-          onPreviousWeek={() => setCurrentWeek(prev => subWeeks(prev, 1))}
-          onNextWeek={() => setCurrentWeek(prev => addWeeks(prev, 1))}
-          onToday={() => setCurrentWeek(new Date())}
+          currentWeek={viewMode === 'day' ? currentDay : currentWeek}
+          onPreviousWeek={() => {
+            if (viewMode === 'day') setCurrentDay(prev => subDays(prev, 1));
+            else if (viewMode === 'week') setCurrentWeek(prev => subWeeks(prev, 1));
+            else setCurrentWeek(prev => subMonths(prev, 1));
+          }}
+          onNextWeek={() => {
+            if (viewMode === 'day') setCurrentDay(prev => addDays(prev, 1));
+            else if (viewMode === 'week') setCurrentWeek(prev => addWeeks(prev, 1));
+            else setCurrentWeek(prev => addMonths(prev, 1));
+          }}
+          onToday={() => {
+            setCurrentWeek(new Date());
+            setCurrentDay(new Date());
+          }}
           onEmployeeManagement={() => setShowEmployeeDialog(true)}
+          view={viewMode}
+          onViewChange={setViewMode}
         />
 
         {/* AI Appointment Creator + Conflicts - Compact Row */}
@@ -970,35 +1038,57 @@ const ScheduleBuilderModern = () => {
           {/* Calendar Grid */}
           <div className="flex-1 overflow-auto">
             <div style={{ zoom: calendarScale }}>
-            <ProScheduleCalendar
-              employees={filteredEmployees}
-              allEmployees={[...employees.filter(e => e.ist_aktiv)].sort((a, b) => {
-                const ai = employeeOrder.indexOf(a.id);
-                const bi = employeeOrder.indexOf(b.id);
-                return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-              })}
-              appointments={appointments}
-              abwesenheiten={abwesenheiten}
-              weekDates={weekDates}
-              activeAppointmentId={activeId}
-              onEditAppointment={setEditingAppointment}
-              onSlotClick={handleSlotClick}
-              conflictingAppointments={conflictingAppointments}
-              onCut={handleCutAppointment}
-              highlightedAppointmentId={highlightedAppointmentId}
-              hiddenEmployeeIds={hiddenEmployeeIds}
-              onToggleEmployee={(id) => {
-                setHiddenEmployeeIds(prev => {
-                  const next = new Set(prev);
-                  if (next.has(id)) next.delete(id);
-                  else next.add(id);
-                  return next;
-                });
-              }}
-              onReorderEmployees={(orderedIds) => {
-                setEmployeeOrder(orderedIds);
-              }}
-            />
+            {viewMode === 'week' && (
+              <ProScheduleCalendar
+                employees={filteredEmployees}
+                allEmployees={[...employees.filter(e => e.ist_aktiv)].sort((a, b) => {
+                  const ai = employeeOrder.indexOf(a.id);
+                  const bi = employeeOrder.indexOf(b.id);
+                  return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                })}
+                appointments={appointments}
+                abwesenheiten={abwesenheiten}
+                weekDates={weekDates}
+                activeAppointmentId={activeId}
+                onEditAppointment={setEditingAppointment}
+                onSlotClick={handleSlotClick}
+                conflictingAppointments={conflictingAppointments}
+                onCut={handleCutAppointment}
+                highlightedAppointmentId={highlightedAppointmentId}
+                hiddenEmployeeIds={hiddenEmployeeIds}
+                onToggleEmployee={(id) => {
+                  setHiddenEmployeeIds(prev => {
+                    const next = new Set(prev);
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                  });
+                }}
+                onReorderEmployees={(orderedIds) => {
+                  setEmployeeOrder(orderedIds);
+                }}
+              />
+            )}
+            {viewMode === 'day' && (
+              <DayView
+                employees={filteredEmployees}
+                appointments={appointments}
+                currentDate={currentDay}
+                onEditAppointment={setEditingAppointment}
+                onSlotClick={handleSlotClick}
+                abwesenheiten={abwesenheiten}
+                hiddenEmployeeIds={hiddenEmployeeIds}
+              />
+            )}
+            {viewMode === 'month' && (
+              <MonthView
+                employees={filteredEmployees}
+                appointments={appointments}
+                currentMonth={currentWeek}
+                onEditAppointment={setEditingAppointment}
+                onSlotClick={handleSlotClick}
+              />
+            )}
             </div>
           </div>
           
@@ -1048,17 +1138,25 @@ const ScheduleBuilderModern = () => {
           customerTimeWindows={editingAppointment ? customerTimeWindows.filter(tw => tw.kunden_id === editingAppointment.kunden_id) : []}
           onUpdate={async (appointment) => {
             try {
+              // Bug 11: Wenn Status → unassigned, Mitarbeiter entfernen
+              const effectiveMitarbeiterId = appointment.status === 'unassigned'
+                ? null
+                : appointment.mitarbeiter_id;
+
               const updateData: any = {
                 titel: appointment.titel,
                 status: appointment.status,
-                mitarbeiter_id: appointment.mitarbeiter_id,
-                kunden_id: appointment.kunden_id,
+                mitarbeiter_id: effectiveMitarbeiterId,
+                kunden_id: appointment.kunden_id ?? null,
                 start_at: appointment.start_at,
                 end_at: appointment.end_at,
                 notizen: appointment.notizen ?? null,
                 iststunden: appointment.iststunden ?? null,
+                kategorie: appointment.kategorie ?? null,
+                absage_datum: appointment.absage_datum ?? null,
+                absage_kanal: appointment.absage_kanal ?? null,
               };
-              
+
               // Include series exception fields if present
               if (appointment.ist_ausnahme !== undefined) {
                 updateData.ist_ausnahme = appointment.ist_ausnahme;
@@ -1130,7 +1228,8 @@ const ScheduleBuilderModern = () => {
                     // Move only this appointment as an exception
                     const conflicts = checkForConflicts(
                       seriesMoveDialog.appointment.id,
-                      seriesMoveDialog.employeeId
+                      seriesMoveDialog.employeeId,
+                      seriesMoveDialog.targetDate
                     );
                     
                     if (conflicts.length > 0) {

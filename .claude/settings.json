@@ -14,7 +14,17 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(find /home/deploy/KITech/projects/easy-assist-hub/src -name *AddEmployee* -o -name *add-employee*)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(find /home/deploy/KITech/projects/easy-assist-hub/.cursor -o -path */.github/copilot*)",
+      "Bash(ls -la /home/deploy/KITech/projects/easy-assist-hub/.cursor*)",
+      "Bash(xargs cat:*)",
+      "Bash(node /home/deploy/KITech/projects/easy-assist-hub/.tmp/test_uuid.mjs)"
+    ],
+    "additionalDirectories": [
+      "/home/deploy/KITech/projects/easy-assist-hub/.claude/rules",
+      "/home/deploy/KITech/projects/easy-assist-hub/test-results"
     ]
   }
 }

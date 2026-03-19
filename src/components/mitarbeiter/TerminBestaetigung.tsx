@@ -7,7 +7,7 @@ import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { CheckCircle2, XCircle, AlertTriangle, Clock, Loader2 } from 'lucide-react';
+import { XCircle, AlertTriangle, Clock, Loader2 } from 'lucide-react';
 
 interface Appointment {
   id: string;
@@ -48,7 +48,6 @@ export function TerminBestaetigung({ appointments, onUpdate }: TerminBestaetigun
       if (error) throw error;
 
       const labels: Record<string, string> = {
-        completed: 'Erfolgt',
         abgesagt_rechtzeitig: 'Rechtzeitig abgesagt',
         nicht_angetroffen: 'Nicht rechtzeitig abgesagt',
       };
@@ -73,7 +72,7 @@ export function TerminBestaetigung({ appointments, onUpdate }: TerminBestaetigun
           <Badge variant="destructive" className="ml-2">{unconfirmedPast.length}</Badge>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Bitte bestätigen Sie den Status vergangener Termine
+          Vergangene Termine werden automatisch als abgeschlossen markiert. Bitte nur Ausnahmen melden.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -96,16 +95,6 @@ export function TerminBestaetigung({ appointments, onUpdate }: TerminBestaetigun
                 </p>
               </div>
               <div className="flex gap-2 flex-shrink-0">
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  disabled={isLoading}
-                  onClick={() => handleStatusUpdate(appointment.id, 'completed')}
-                >
-                  {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
-                  Erfolgt
-                </Button>
                 <Button
                   size="sm"
                   variant="outline"

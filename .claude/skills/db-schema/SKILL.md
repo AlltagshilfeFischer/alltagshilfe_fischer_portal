@@ -11,15 +11,19 @@ Supabase (PostgreSQL). Alle Typen: `src/integrations/supabase/types.ts`.
 ## ENUMs
 
 ```sql
+app_role:              'globaladmin' | 'geschaeftsfuehrer' | 'admin' | 'mitarbeiter' | 'buchhaltung'
 approval_status:       'pending' | 'approved' | 'rejected'
-benutzer_status:       'pending' | 'approved' | 'rejected'
-recurrence_interval:   'weekly' | 'biweekly' | 'monthly'
-standort:              'Hannover' | 'Hildesheim' | 'Peine'
-termin_status:         'unassigned' | 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
-user_rolle:            'admin' | 'mitarbeiter'
+benutzer_status:       'pending' | 'eingeladen' | 'approved' | 'rejected'
+kostentraeger_typ:     'pflegekasse' | 'krankenkasse' | 'kommune' | 'privat' | 'beihilfe'
+leistungs_status:      'beantragt' | 'genehmigt' | 'aktiv' | 'pausiert' | 'beendet'
+leistungsart:          'entlastungsleistung' | 'verhinderungspflege' | 'kurzzeitpflege' | 'pflegesachleistung' | 'privat' | 'sonstige'
+rechnung_status:       'entwurf' | 'freigegeben' | 'versendet' | 'bezahlt' | 'storniert'
+recurrence_interval:   'none' | 'weekly' | 'biweekly' | 'monthly'
+standort:              'Hannover' (⚠️ Hildesheim & Peine fehlen noch im ENUM!)
+termin_status:         'unassigned' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'abgerechnet' | 'bezahlt' | 'nicht_angetroffen' | 'abgesagt_rechtzeitig'
 ```
 
-> Rollen-Hierarchie im Code: `globaladmin > geschaeftsfuehrer > admin > mitarbeiter`
+> Rollen-Hierarchie im Code: `globaladmin > geschaeftsfuehrer > admin > mitarbeiter / buchhaltung`
 
 ## Kern-Tabellen
 

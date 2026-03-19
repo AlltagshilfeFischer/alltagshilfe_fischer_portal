@@ -185,9 +185,18 @@ export default function Leistungsnachweise() {
   });
 
   // Filter: only show planned + past termine, no cancelled/abgesagt
+  // Auto-complete: Vergangene scheduled-Termine als completed behandeln
   const filteredTermine = useMemo(() => {
     if (!termine) return [];
-    return termine.filter(t => !['cancelled', 'abgesagt_rechtzeitig'].includes(t.status));
+    const now = new Date();
+    return termine
+      .filter(t => !['cancelled', 'abgesagt_rechtzeitig'].includes(t.status))
+      .map(t => {
+        if (t.status === 'scheduled' && new Date(t.end_at) < now) {
+          return { ...t, status: 'completed' as typeof t.status };
+        }
+        return t;
+      });
   }, [termine]);
 
   // Auto-generate/update Leistungsnachweise when month data is loaded
@@ -198,13 +207,37 @@ export default function Leistungsnachweise() {
 
     const { data: allTermine, error: tErr } = await supabase
       .from('termine')
-      .select('kunden_id, iststunden, start_at, end_at, status')
+      .select('id, kunden_id, iststunden, start_at, end_at, status')
       .gte('start_at', von)
       .lte('start_at', bis);
     if (tErr) return;
 
-    const terminsByKunde = new Map<string, typeof allTermine>();
-    for (const t of allTermine || []) {
+    // Auto-complete: Vergangene scheduled-Termine als completed behandeln
+    const now = new Date();
+    const autoCompleteIds: string[] = [];
+    const effectiveTermine = (allTermine || []).map(t => {
+      if (t.status === 'scheduled' && new Date(t.end_at) < now) {
+        autoCompleteIds.push(t.id);
+        return { ...t, status: 'completed' as typeof t.status };
+      }
+      return t;
+    });
+
+    // Fire-and-forget: DB-Update für auto-completed Termine
+    if (autoCompleteIds.length > 0) {
+      const autoNow = new Date().toISOString();
+      supabase
+        .from('termine')
+        .update({ status: 'completed' as any, auto_completed_at: autoNow, updated_at: autoNow })
+        .in('id', autoCompleteIds)
+        .eq('status', 'scheduled')
+        .then(({ error }) => {
+          if (error) console.error('Auto-complete update error:', error);
+        });
+    }
+
+    const terminsByKunde = new Map<string, typeof effectiveTermine>();
+    for (const t of effectiveTermine) {
       const arr = terminsByKunde.get(t.kunden_id) || [];
       arr.push(t);
       terminsByKunde.set(t.kunden_id, arr);
@@ -532,11 +565,13 @@ export default function Leistungsnachweise() {
     }
   }, [showDetail, selectedLN?.id]);
 
-  // Dienstplan link with week param
+  // Dienstplan link with week param based on first termin date
   const getDienstplanLink = () => {
-    const firstOfMonth = new Date(selectedYear, selectedMonth - 1, 1);
-    const weekStart = startOfWeek(firstOfMonth, { weekStartsOn: 1 });
-    return `/dashboard/dienstplan?week=${format(weekStart, 'yyyy-MM-dd')}`;
+    const firstTerminDate = filteredTermine.length > 0
+      ? new Date(filteredTermine[0].start_at)
+      : new Date(selectedYear, selectedMonth - 1, 1);
+    const weekStart = startOfWeek(firstTerminDate, { weekStartsOn: 1 });
+    return `/dashboard/controlboard/schedule-builder?week=${format(weekStart, 'yyyy-MM-dd')}`;
   };
 
   const canSign = selectedLN?.status === 'veröffentlicht' && !selectedLN?.unterschrift_kunde_zeitstempel;

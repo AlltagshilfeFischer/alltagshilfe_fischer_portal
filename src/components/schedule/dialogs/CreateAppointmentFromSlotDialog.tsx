@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CustomerSearchCombobox } from '../CustomerSearchCombobox';
 import { TIME_SLOTS, DURATION_OPTIONS, addMinutesToTime } from '../timeSlots';
-import type { CustomerSummary, EmployeeSummary } from '@/types/domain';
+import type { CustomerSummary, EmployeeSummary, TerminKategorie } from '@/types/domain';
 
 interface CreateAppointmentFromSlotDialogProps {
   open: boolean;
@@ -46,6 +46,14 @@ const INTERVALS = [
   { value: 'monthly', label: 'Monatlich' },
 ];
 
+const KATEGORIE_OPTIONS: { value: TerminKategorie; label: string }[] = [
+  { value: 'Erstgespräch', label: 'Erstgespräch' },
+  { value: 'Schulung', label: 'Schulung' },
+  { value: 'Intern', label: 'Intern' },
+  { value: 'Regelbesuch', label: 'Regelbesuch' },
+  { value: 'Sonstiges', label: 'Sonstiges' },
+];
+
 export function CreateAppointmentFromSlotDialog({
   open,
   onOpenChange,
@@ -66,6 +74,8 @@ export function CreateAppointmentFromSlotDialog({
   const [date, setDate] = useState<Date>(prefilledData.date);
   const [startTime, setStartTime] = useState('09:00');
   const [dauerMinuten, setDauerMinuten] = useState(90);
+  const [singleKategorie, setSingleKategorie] = useState<string>('');
+  const [singleNotizen, setSingleNotizen] = useState('');
 
   // Recurring appointment state
   const [recurringKundenId, setRecurringKundenId] = useState('');
@@ -94,6 +104,8 @@ export function CreateAppointmentFromSlotDialog({
     setDate(prefilledData.date);
     setStartTime('09:00');
     setDauerMinuten(90);
+    setSingleKategorie('');
+    setSingleNotizen('');
     
     setRecurringKundenId('');
     setRecurringMitarbeiterId(prefilledData.employeeId);
@@ -108,11 +120,11 @@ export function CreateAppointmentFromSlotDialog({
   };
 
   const handleSubmitSingle = async () => {
-    if (!date || (!kundenId && !isNewInteressent) || (isNewInteressent && !newInteressentName.trim())) return;
+    if (!date || (isNewInteressent && !newInteressentName.trim())) return;
 
     setLoading(true);
     try {
-      let finalKundenId = kundenId;
+      let finalKundenId: string | null = kundenId || null;
 
       if (isNewInteressent && newInteressentName.trim()) {
         const { supabase } = await import('@/integrations/supabase/client');
@@ -141,14 +153,16 @@ export function CreateAppointmentFromSlotDialog({
 
       const customerName = isNewInteressent 
         ? newInteressentName.trim() 
-        : customers.find(c => c.id === finalKundenId)?.name || 'Unbekannt';
+        : customers.find(c => c.id === finalKundenId)?.name || singleKategorie || 'Einzeltermin';
 
       await onSubmitSingle({
         titel: customerName,
         kunden_id: finalKundenId,
-        mitarbeiter_id: mitarbeiterId,
+        mitarbeiter_id: mitarbeiterId === 'unassigned' ? null : mitarbeiterId,
         start_at: startDateTime.toISOString(),
         end_at: endDateTime.toISOString(),
+        notizen: singleNotizen.trim() || null,
+        kategorie: singleKategorie || null,
       });
 
       resetForm();
@@ -229,7 +243,21 @@ export function CreateAppointmentFromSlotDialog({
             </Alert>
 
             <div className="space-y-2">
-              <Label htmlFor="single-kunde">Kunde / Interessent *</Label>
+              <Label>Kategorie / Label (optional)</Label>
+              <Select value={singleKategorie} onValueChange={setSingleKategorie}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kategorie wählen" />
+                </SelectTrigger>
+                <SelectContent className="z-[202]">
+                  {KATEGORIE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="single-kunde">Kunde / Interessent (optional)</Label>
               <div className="flex gap-2 mb-2">
                 <Button type="button" variant={!isNewInteressent ? 'default' : 'outline'} size="sm" onClick={() => setIsNewInteressent(false)}>
                   Bestandskunde
@@ -252,6 +280,7 @@ export function CreateAppointmentFromSlotDialog({
                   <SelectValue placeholder="Mitarbeiter auswählen" />
                 </SelectTrigger>
                 <SelectContent className="z-[202]">
+                  <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
                   {employees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>{employee.name}</SelectItem>
                   ))}
@@ -304,9 +333,20 @@ export function CreateAppointmentFromSlotDialog({
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="single-notizen">Notizen (optional)</Label>
+              <Textarea
+                id="single-notizen"
+                value={singleNotizen}
+                onChange={(e) => setSingleNotizen(e.target.value)}
+                placeholder="Zusätzliche Informationen..."
+                rows={2}
+              />
+            </div>
+
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-              <Button onClick={handleSubmitSingle} disabled={loading || !date || !kundenId}>
+              <Button onClick={handleSubmitSingle} disabled={loading || !date || (isNewInteressent && !newInteressentName.trim())}>
                 {loading ? 'Erstelle...' : 'Einzeltermin erstellen'}
               </Button>
             </DialogFooter>

@@ -6,13 +6,23 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 import { CalendarIcon, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CustomerSearchCombobox } from '../CustomerSearchCombobox';
 import { TIME_SLOTS, DURATION_OPTIONS, addMinutesToTime } from '../timeSlots';
-import type { CustomerSummary, EmployeeSummary } from '@/types/domain';
+import type { CustomerSummary, EmployeeSummary, TerminKategorie } from '@/types/domain';
+
+const KATEGORIE_OPTIONS: { value: TerminKategorie; label: string }[] = [
+  { value: 'Erstgespräch', label: 'Erstgespräch' },
+  { value: 'Schulung', label: 'Schulung' },
+  { value: 'Intern', label: 'Intern' },
+  { value: 'Regelbesuch', label: 'Regelbesuch' },
+  { value: 'Sonstiges', label: 'Sonstiges' },
+];
 
 interface CreateAppointmentDialogProps {
   open: boolean;
@@ -21,10 +31,12 @@ interface CreateAppointmentDialogProps {
   employees: EmployeeSummary[];
   onSubmit: (appointment: {
     titel: string;
-    kunden_id: string;
+    kunden_id: string | null;
     mitarbeiter_id: string | null;
     start_at: string;
     end_at: string;
+    notizen?: string | null;
+    kategorie?: string | null;
   }) => Promise<void>;
 }
 
@@ -43,23 +55,27 @@ export function CreateAppointmentDialog({
   const [loading, setLoading] = useState(false);
   const [isNewInteressent, setIsNewInteressent] = useState(false);
   const [newInteressentName, setNewInteressentName] = useState('');
+  const [isInternTermin, setIsInternTermin] = useState(false);
+  const [kategorie, setKategorie] = useState<string>('');
+  const [notizen, setNotizen] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || (!kundenId && !isNewInteressent) || (isNewInteressent && !newInteressentName.trim())) return;
+    if (!date) return;
+    if (isNewInteressent && !newInteressentName.trim()) return;
 
     setLoading(true);
     try {
-      let finalKundenId = kundenId;
+      let finalKundenId: string | null = isInternTermin ? null : (kundenId || null);
 
       // If creating new Interessent, create them first
-      if (isNewInteressent && newInteressentName.trim()) {
+      if (!isInternTermin && isNewInteressent && newInteressentName.trim()) {
         const { supabase } = await import('@/integrations/supabase/client');
-        
+
         const nameParts = newInteressentName.trim().split(' ');
         const vorname = nameParts[0];
         const nachname = nameParts.slice(1).join(' ') || '';
-        
+
         const { data: newKunde, error: kundeError } = await supabase
           .from('kunden')
           .insert([{
@@ -84,16 +100,20 @@ export function CreateAppointmentDialog({
       const [endHours, endMinutes] = endTime.split(':').map(Number);
       endAt.setHours(endHours, endMinutes, 0, 0);
 
-      const customerName = isNewInteressent 
-        ? newInteressentName.trim() 
-        : customers.find(c => c.id === finalKundenId)?.name || 'Unbekannt';
+      const titel = isInternTermin
+        ? (kategorie || 'Interner Termin')
+        : isNewInteressent
+          ? newInteressentName.trim()
+          : customers.find(c => c.id === finalKundenId)?.name || kategorie || 'Einzeltermin';
 
       await onSubmit({
-        titel: customerName,
+        titel,
         kunden_id: finalKundenId,
         mitarbeiter_id: mitarbeiterId === 'unassigned' ? null : mitarbeiterId || null,
         start_at: startAt.toISOString(),
         end_at: endAt.toISOString(),
+        notizen: notizen.trim() || null,
+        kategorie: kategorie || null,
       });
 
       // Reset form
@@ -104,9 +124,14 @@ export function CreateAppointmentDialog({
       setDauerMinuten(90);
       setIsNewInteressent(false);
       setNewInteressentName('');
+      setIsInternTermin(false);
+      setKategorie('');
+      setNotizen('');
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error creating appointment:', error);
+      const message = error instanceof Error ? error.message : 'Unbekannter Fehler';
+      toast.error(`Fehler beim Erstellen: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -120,9 +145,48 @@ export function CreateAppointmentDialog({
           <p className="sr-only" id="create-appointment-desc">Einzeltermin mit Datum und Uhrzeit anlegen</p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
+          {/* Kategorie */}
+          <div className="space-y-2">
+            <Label>Kategorie</Label>
+            <Select value={kategorie} onValueChange={(val) => {
+              setKategorie(val);
+              setIsInternTermin(val === 'Schulung' || val === 'Intern');
+            }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Kategorie wählen (optional)" />
+              </SelectTrigger>
+              <SelectContent className="z-[202]">
+                {KATEGORIE_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Intern-Toggle */}
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant={!isInternTermin ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setIsInternTermin(false)}
+            >
+              Mit Kunde
+            </Button>
+            <Button
+              type="button"
+              variant={isInternTermin ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setIsInternTermin(true)}
+            >
+              Interner Termin (ohne Kunde)
+            </Button>
+          </div>
+
+          {/* Kunde — nur wenn kein interner Termin */}
+          {!isInternTermin && (
             <div className="space-y-2">
-              <Label htmlFor="kunde">Kunde / Interessent</Label>
+              <Label htmlFor="kunde">Kunde / Interessent (optional)</Label>
               <div className="flex gap-2 mb-2">
                 <Button
                   type="button"
@@ -157,7 +221,7 @@ export function CreateAppointmentDialog({
                 />
               )}
             </div>
-          </div>
+          )}
 
             <div className="space-y-2">
               <Label htmlFor="mitarbeiter">Mitarbeiter (optional)</Label>
@@ -238,15 +302,26 @@ export function CreateAppointmentDialog({
             </div>
           </div>
 
+          {/* Notizen */}
+          <div className="space-y-2">
+            <Label>Notizen (optional)</Label>
+            <Textarea
+              value={notizen}
+              onChange={(e) => setNotizen(e.target.value)}
+              placeholder="Notizen zum Termin..."
+              rows={2}
+            />
+          </div>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Abbrechen
             </Button>
-            <Button 
-              type="submit" 
-              disabled={loading || !date || (!kundenId && !isNewInteressent) || (isNewInteressent && !newInteressentName.trim())}
+            <Button
+              type="submit"
+              disabled={loading || !date || (isNewInteressent && !newInteressentName.trim())}
             >
-              {loading ? 'Erstelle...' : isNewInteressent ? 'Interessent & Termin erstellen' : 'Termin erstellen'}
+              {loading ? 'Erstelle...' : isInternTermin ? 'Internen Termin erstellen' : isNewInteressent ? 'Interessent & Termin erstellen' : 'Termin erstellen'}
             </Button>
           </DialogFooter>
         </form>

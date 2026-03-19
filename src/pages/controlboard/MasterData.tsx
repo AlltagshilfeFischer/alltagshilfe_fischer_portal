@@ -139,6 +139,10 @@ export default function MasterData() {
             dateToFilter={filters.dateToFilter} setDateToFilter={filters.setDateToFilter}
           />
 
+          <p className="text-sm text-muted-foreground mb-3">
+            {filters.sortedCustomers.length} von {customers?.length ?? 0} Kunden angezeigt
+          </p>
+
           {customersLoading ? (
             <div className="text-center py-4">Lade Kundendaten...</div>
           ) : filters.sortedCustomers.length > 0 ? (
@@ -162,7 +166,13 @@ export default function MasterData() {
               stadtFilter={filters.stadtFilter} setStadtFilter={filters.setStadtFilter}
             />
           ) : (
-            <div className="text-center py-8 text-muted-foreground">Keine Kunden gefunden</div>
+            <div className="text-center py-8 text-muted-foreground">
+              {filters.customerStatusFilter === 'inactive'
+                ? 'Keine inaktiven Kunden vorhanden'
+                : filters.customerStatusFilter === 'active'
+                  ? 'Keine aktiven Kunden vorhanden'
+                  : 'Keine Kunden gefunden'}
+            </div>
           )}
         </CardContent>
       </Card>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { generateUUID } from '@/lib/uuid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +18,7 @@ import { AvatarUpload } from '@/components/mitarbeiter/AvatarUpload';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUserRole, type UserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
-import { MitarbeiterSmartImport } from '@/components/import/MitarbeiterSmartImport';
+import { AddMitarbeiterDialog } from '@/components/mitarbeiter/AddMitarbeiterDialog';
 
 // Geschützte System-Accounts die nicht gelöscht werden dürfen
 const PROTECTED_EMAILS = ['admin@af-verwaltung.de'];
@@ -342,7 +343,7 @@ export default function BenutzerverwaltungNeu() {
         if (existingBenutzer) {
           benutzerId = existingBenutzer.id;
         } else {
-          const newId = crypto.randomUUID();
+          const newId = generateUUID();
           const { error: createError } = await supabase.from('benutzer').insert({
             id: newId,
             email: `pending-${mitarbeiterId}@placeholder.local`,
@@ -584,8 +585,8 @@ export default function BenutzerverwaltungNeu() {
         </Collapsible>
       )}
 
-      {/* Add/Import Mitarbeiter Dialog */}
-      <MitarbeiterSmartImport open={importDialogOpen} onOpenChange={setImportDialogOpen} onSuccess={loadData} />
+      {/* Add Mitarbeiter Dialog */}
+      <AddMitarbeiterDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} onSuccess={loadData} />
 
       {/* Deactivate Confirmation Dialog */}
       <AlertDialog open={deactivateDialogOpen} onOpenChange={setDeactivateDialogOpen}>

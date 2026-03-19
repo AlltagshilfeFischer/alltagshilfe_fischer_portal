@@ -228,6 +228,7 @@ export type Database = {
           kunden_id: string | null
           mime_type: string
           mitarbeiter_id: string | null
+          termin_id: string | null
           titel: string
           updated_at: string
         }
@@ -243,6 +244,7 @@ export type Database = {
           kunden_id?: string | null
           mime_type: string
           mitarbeiter_id?: string | null
+          termin_id?: string | null
           titel: string
           updated_at?: string
         }
@@ -258,6 +260,7 @@ export type Database = {
           kunden_id?: string | null
           mime_type?: string
           mitarbeiter_id?: string | null
+          termin_id?: string | null
           titel?: string
           updated_at?: string
         }
@@ -281,6 +284,13 @@ export type Database = {
             columns: ["mitarbeiter_id"]
             isOneToOne: false
             referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dokumente_termin_id_fkey"
+            columns: ["termin_id"]
+            isOneToOne: false
+            referencedRelation: "termine"
             referencedColumns: ["id"]
           },
         ]
@@ -1614,6 +1624,7 @@ export type Database = {
       termine: {
         Row: {
           ausnahme_grund: string | null
+          auto_completed_at: string | null
           created_at: string
           einsatzort_id: string | null
           end_at: string
@@ -1631,6 +1642,7 @@ export type Database = {
         }
         Insert: {
           ausnahme_grund?: string | null
+          auto_completed_at?: string | null
           created_at?: string
           einsatzort_id?: string | null
           end_at: string
@@ -1648,6 +1660,7 @@ export type Database = {
         }
         Update: {
           ausnahme_grund?: string | null
+          auto_completed_at?: string | null
           created_at?: string
           einsatzort_id?: string | null
           end_at?: string

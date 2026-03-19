@@ -2,7 +2,6 @@
 name: migration
 description: Supabase-Datenbankmigration erstellen und anwenden im Alltagshilfe Fischer Projekt. Verwenden bei neuen Tabellen, Spalten, Indizes, RLS-Policies oder Enum-Änderungen.
 disable-model-invocation: true
-allowed-tools: Bash(supabase *), Bash(npx supabase *), Bash(bun *)
 argument-hint: "[Beschreibung der Änderung]"
 ---
 

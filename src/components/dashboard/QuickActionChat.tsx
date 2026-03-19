@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Globe, Settings, Image, Mic, Bot, User, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -251,37 +252,65 @@ export default function QuickActionChat() {
           <div className="flex items-center justify-between px-4 pb-3 pt-1">
             {/* Left icons */}
             <div className="flex items-center gap-1">
-              <button
-                type="button"
-                className="p-2 rounded-lg text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
-                title="Datei anhängen"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                className="p-2 rounded-lg text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
-                title="Web durchsuchen"
-              >
-                <Globe className="h-4 w-4" />
-              </button>
-              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <button
+                      type="button"
+                      className="p-2 rounded-lg text-muted-foreground/60 opacity-50 cursor-not-allowed pointer-events-none transition-colors"
+                      disabled
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Demnächst verfügbar</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <button
+                      type="button"
+                      className="p-2 rounded-lg text-muted-foreground/60 opacity-50 cursor-not-allowed pointer-events-none transition-colors"
+                      disabled
+                    >
+                      <Globe className="h-4 w-4" />
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Demnächst verfügbar</TooltipContent>
+              </Tooltip>
+
               <div className="w-px h-4 bg-border/50 mx-1" />
-              
-              <button
-                type="button"
-                className="p-2 rounded-lg text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
-                title="Einstellungen"
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                className="p-2 rounded-lg text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
-                title="Bild generieren"
-              >
-                <Image className="h-4 w-4" />
-              </button>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <button
+                      type="button"
+                      className="p-2 rounded-lg text-muted-foreground/60 opacity-50 cursor-not-allowed pointer-events-none transition-colors"
+                      disabled
+                    >
+                      <Settings className="h-4 w-4" />
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Demnächst verfügbar</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <button
+                      type="button"
+                      className="p-2 rounded-lg text-muted-foreground/60 opacity-50 cursor-not-allowed pointer-events-none transition-colors"
+                      disabled
+                    >
+                      <Image className="h-4 w-4" />
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Demnächst verfügbar</TooltipContent>
+              </Tooltip>
             </div>
 
             {/* Right side - send/mic button */}
@@ -306,21 +335,28 @@ export default function QuickActionChat() {
                   )}
                 </Button>
               ) : (
-                <button
-                  type="button"
-                  className={cn(
-                    "flex items-center justify-center",
-                    "h-9 w-9 rounded-full",
-                    "bg-card dark:bg-[hsl(220,13%,20%)]",
-                    "border border-border/50",
-                    "text-muted-foreground hover:text-foreground",
-                    "transition-all duration-200",
-                    "hover:border-border"
-                  )}
-                  title="Spracheingabe"
-                >
-                  <Mic className="h-4 w-4" />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex items-center justify-center",
+                          "h-9 w-9 rounded-full",
+                          "bg-card dark:bg-[hsl(220,13%,20%)]",
+                          "border border-border/50",
+                          "text-muted-foreground",
+                          "opacity-50 cursor-not-allowed pointer-events-none",
+                          "transition-all duration-200"
+                        )}
+                        disabled
+                      >
+                        <Mic className="h-4 w-4" />
+                      </button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Demnächst verfügbar</TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>

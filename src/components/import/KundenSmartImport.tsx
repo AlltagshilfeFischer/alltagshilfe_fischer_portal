@@ -1,5 +1,6 @@
 import { SmartDataImport, ColumnConfig, DataRow } from './SmartDataImport';
 import { supabase } from '@/integrations/supabase/client';
+import { generateUUID } from '@/lib/uuid';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -85,7 +86,7 @@ const COLUMNS: ColumnConfig[] = [
 ];
 
 const createEmptyRow = (): KundenRow => ({
-  id: crypto.randomUUID(),
+  id: generateUUID(),
   vorname: '',
   nachname: '',
   telefonnr: '',
