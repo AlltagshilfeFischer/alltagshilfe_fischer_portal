@@ -1564,7 +1564,7 @@ export type Database = {
           id: string
           intervall: Database["public"]["Enums"]["recurrence_interval"]
           ist_aktiv: boolean
-          kunden_id: string
+          kunden_id: string | null
           mitarbeiter_id: string | null
           notizen: string | null
           start_zeit: string
@@ -1580,7 +1580,7 @@ export type Database = {
           id?: string
           intervall?: Database["public"]["Enums"]["recurrence_interval"]
           ist_aktiv?: boolean
-          kunden_id: string
+          kunden_id?: string | null
           mitarbeiter_id?: string | null
           notizen?: string | null
           start_zeit: string

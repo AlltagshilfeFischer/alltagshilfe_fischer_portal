@@ -125,7 +125,7 @@ export interface CustomerSummary {
 // ─── Appointment / Termin ───────────────────────────────────
 
 /** Minimal appointment fields used by calendar/grid components */
-export type TerminKategorie = 'Erstgespräch' | 'Schulung' | 'Intern' | 'Regelbesuch' | 'Sonstiges';
+export type TerminKategorie = 'Erstgespräch' | 'Schulung' | 'Meeting' | 'Bewerbungsgespräch' | 'Blocker' | 'Intern' | 'Regelbesuch' | 'Sonstiges';
 export type AbsageKanal = 'Telefonisch' | 'E-Mail' | 'Persönlich' | 'WhatsApp' | 'Sonstiges';
 
 export interface CalendarAppointment {
@@ -303,7 +303,7 @@ export interface AbrechnungsRow {
 // ─── Recurring Template ─────────────────────────────────────
 export interface TerminVorlage {
   id: string;
-  kunden_id: string;
+  kunden_id: string | null;
   mitarbeiter_id: string | null;
   wochentag: number;
   start_zeit: string;

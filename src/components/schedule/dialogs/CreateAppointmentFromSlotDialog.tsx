@@ -49,6 +49,9 @@ const INTERVALS = [
 const KATEGORIE_OPTIONS: { value: TerminKategorie; label: string }[] = [
   { value: 'Erstgespräch', label: 'Erstgespräch' },
   { value: 'Schulung', label: 'Schulung' },
+  { value: 'Meeting', label: 'Meeting' },
+  { value: 'Bewerbungsgespräch', label: 'Bewerbungsgespräch' },
+  { value: 'Blocker', label: 'Blocker (nicht Arbeitszeit)' },
   { value: 'Intern', label: 'Intern' },
   { value: 'Regelbesuch', label: 'Regelbesuch' },
   { value: 'Sonstiges', label: 'Sonstiges' },
@@ -82,6 +85,8 @@ export function CreateAppointmentFromSlotDialog({
   const [singleNotizen, setSingleNotizen] = useState('');
 
   // Recurring appointment state
+  const [recurringIsIntern, setRecurringIsIntern] = useState(false);
+  const [recurringKategorie, setRecurringKategorie] = useState<string>('');
   const [recurringKundenId, setRecurringKundenId] = useState('');
   const [recurringMitarbeiterId, setRecurringMitarbeiterId] = useState(defaultEmployeeId);
   const [wochentag, setWochentag] = useState(defaultDate.getDay());
@@ -114,6 +119,8 @@ export function CreateAppointmentFromSlotDialog({
     setSingleKategorie('');
     setSingleNotizen('');
 
+    setRecurringIsIntern(false);
+    setRecurringKategorie('');
     setRecurringKundenId('');
     setRecurringMitarbeiterId(defaultEmployeeId);
     setWochentag(defaultDate.getDay());
@@ -185,15 +192,20 @@ export function CreateAppointmentFromSlotDialog({
   };
 
   const handleSubmitRecurring = async () => {
-    if (!gueltigVon || !recurringKundenId) return;
+    if (!gueltigVon) return;
+    // Kunde nur Pflicht wenn kein interner Termin
+    if (!recurringIsIntern && !recurringKundenId) return;
 
     setLoading(true);
     try {
-      const customerName = customers.find(c => c.id === recurringKundenId)?.name || 'Unbekannt';
-      
+      const finalKundenId = recurringIsIntern ? null : (recurringKundenId || null);
+      const titel = recurringIsIntern
+        ? (recurringKategorie || 'Interner Regeltermin')
+        : customers.find(c => c.id === finalKundenId)?.name || 'Unbekannt';
+
       await onSubmitRecurring({
-        titel: customerName,
-        kunden_id: recurringKundenId,
+        titel,
+        kunden_id: finalKundenId,
         mitarbeiter_id: recurringMitarbeiterId,
         wochentag,
         intervall,
@@ -396,10 +408,41 @@ export function CreateAppointmentFromSlotDialog({
               </AlertDescription>
             </Alert>
 
+            {/* Kategorie */}
             <div className="space-y-2">
-              <Label htmlFor="recurring-kunde">Kunde *</Label>
-              <CustomerSearchCombobox customers={customers} value={recurringKundenId} onValueChange={setRecurringKundenId} placeholder="Kunde suchen..." />
+              <Label>Kategorie / Label (optional)</Label>
+              <Select value={recurringKategorie} onValueChange={(val) => {
+                setRecurringKategorie(val);
+                setRecurringIsIntern(val === 'Schulung' || val === 'Intern');
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kategorie wählen" />
+                </SelectTrigger>
+                <SelectContent className="z-[202]">
+                  {KATEGORIE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Intern-Toggle */}
+            <div className="flex items-center gap-3">
+              <Button type="button" variant={!recurringIsIntern ? 'default' : 'outline'} size="sm" onClick={() => setRecurringIsIntern(false)}>
+                Mit Kunde
+              </Button>
+              <Button type="button" variant={recurringIsIntern ? 'default' : 'outline'} size="sm" onClick={() => setRecurringIsIntern(true)}>
+                Intern (ohne Kunde)
+              </Button>
+            </div>
+
+            {/* Kunde — nur wenn kein interner Termin */}
+            {!recurringIsIntern && (
+              <div className="space-y-2">
+                <Label htmlFor="recurring-kunde">Kunde (optional)</Label>
+                <CustomerSearchCombobox customers={customers} value={recurringKundenId} onValueChange={setRecurringKundenId} placeholder="Kunde suchen..." />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="recurring-mitarbeiter">Mitarbeiter</Label>
@@ -506,8 +549,8 @@ export function CreateAppointmentFromSlotDialog({
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-              <Button onClick={handleSubmitRecurring} disabled={loading || !gueltigVon || !recurringKundenId}>
-                {loading ? 'Erstelle...' : 'Terminserie erstellen'}
+              <Button onClick={handleSubmitRecurring} disabled={loading || !gueltigVon || (!recurringIsIntern && !recurringKundenId)}>
+                {loading ? 'Erstelle...' : recurringIsIntern ? 'Interne Serie erstellen' : 'Terminserie erstellen'}
               </Button>
             </DialogFooter>
           </TabsContent>
