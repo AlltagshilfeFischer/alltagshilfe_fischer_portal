@@ -93,7 +93,8 @@ const ScheduleBuilderModern = () => {
     employeeId: string;
     targetDate: Date;
   } | null>(null);
-  
+  const [pendingCreateData, setPendingCreateData] = useState<Record<string, unknown> | null>(null);
+
   const { toast } = useToast();
 
   const sensors = useSensors(
@@ -607,12 +608,18 @@ const ScheduleBuilderModern = () => {
   };
 
   const handleConflictConfirm = async () => {
-    await assignAppointment(
-      conflictWarning.appointmentId, 
-      conflictWarning.employeeId, 
-      conflictWarning.targetDate,
-      false // Not making an exception here, as it's already determined
-    );
+    if (conflictWarning.appointmentId === '__new__' && pendingCreateData) {
+      // Neuen Termin trotzdem erstellen (Konflikt-Check überspringen)
+      await handleCreateAppointment({ ...pendingCreateData, _skipConflictCheck: true });
+      setPendingCreateData(null);
+    } else {
+      await assignAppointment(
+        conflictWarning.appointmentId,
+        conflictWarning.employeeId,
+        conflictWarning.targetDate,
+        false
+      );
+    }
     setConflictWarning({
       show: false,
       appointmentId: '',
@@ -667,6 +674,30 @@ const ScheduleBuilderModern = () => {
       }
 
       const payload = parsed.data;
+
+      // Konflikt-Prüfung VOR dem Erstellen (nur wenn MA zugewiesen)
+      if (payload.mitarbeiter_id && !data._skipConflictCheck) {
+        const newStart = new Date(payload.start_at);
+        const newEnd = new Date(payload.end_at);
+        const conflicts = appointments.filter(existing =>
+          existing.mitarbeiter_id === payload.mitarbeiter_id &&
+          new Date(existing.start_at) < newEnd &&
+          new Date(existing.end_at) > newStart
+        );
+
+        if (conflicts.length > 0) {
+          // Daten zwischenspeichern, ConflictWarning zeigen
+          setPendingCreateData(data);
+          setConflictWarning({
+            show: true,
+            appointmentId: '__new__',
+            employeeId: payload.mitarbeiter_id,
+            conflicts,
+            targetDate: newStart,
+          });
+          return;
+        }
+      }
 
       const { error } = await supabase
         .from('termine')
@@ -1205,12 +1236,20 @@ const ScheduleBuilderModern = () => {
           })}
           onConfirm={handleConflictConfirm}
           employeeName={employees.find(emp => emp.id === conflictWarning.employeeId)?.name || ''}
-          appointmentTitle={appointments.find(app => app.id === conflictWarning.appointmentId)?.titel || ''}
+          appointmentTitle={
+            conflictWarning.appointmentId === '__new__'
+              ? (pendingCreateData?.titel as string) || 'Neuer Termin'
+              : appointments.find(app => app.id === conflictWarning.appointmentId)?.titel || ''
+          }
           conflictingAppointments={conflictWarning.conflicts}
-          newAppointmentTime={{
-            start: appointments.find(app => app.id === conflictWarning.appointmentId)?.start_at || new Date().toISOString(),
-            end: appointments.find(app => app.id === conflictWarning.appointmentId)?.end_at || new Date().toISOString()
-          }}
+          newAppointmentTime={
+            conflictWarning.appointmentId === '__new__'
+              ? { start: (pendingCreateData?.start_at as string) || '', end: (pendingCreateData?.end_at as string) || '' }
+              : {
+                  start: appointments.find(app => app.id === conflictWarning.appointmentId)?.start_at || new Date().toISOString(),
+                  end: appointments.find(app => app.id === conflictWarning.appointmentId)?.end_at || new Date().toISOString()
+                }
+          }
         />
 
         {/* Series Move Dialog */}
