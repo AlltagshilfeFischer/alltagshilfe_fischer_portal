@@ -19,11 +19,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Sparkles, FileText, Receipt, User } from 'lucide-react';
+import { Plus, Trash2, Sparkles, FileText, Receipt, User, AlertCircle } from 'lucide-react';
 import AITimeWindowsCreator from '@/components/schedule/ai/AITimeWindowsCreator';
 import { StepAbrechnung } from '@/components/customers/wizard/StepAbrechnung';
 import { StepDokumente } from '@/components/customers/wizard/StepDokumente';
+import { PflegekasseCombobox } from '@/components/customers/PflegekasseCombobox';
 import { supabase } from '@/integrations/supabase/client';
+import { customerBaseSchema } from '@/lib/validations/customer-schema';
 
 interface CustomerEditDialogProps {
   open: boolean;
@@ -63,6 +65,7 @@ export function CustomerEditDialog({
   const [draggedBudget, setDraggedBudget] = useState<string | null>(null);
   const [documentFiles, setDocumentFiles] = useState<{ vertrag: File[]; historie: File[]; antragswesen: File[] }>({ vertrag: [], historie: [], antragswesen: [] });
   const [existingDokumente, setExistingDokumente] = useState<any[]>([]);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // Initialize budget order from customer data
   useEffect(() => {
@@ -102,6 +105,24 @@ export function CustomerEditDialog({
 
   const preSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const result = customerBaseSchema.safeParse({
+      ...editingCustomer,
+      pflegegrad: editingCustomer.pflegegrad != null ? String(editingCustomer.pflegegrad) : '',
+      termindauer_stunden: editingCustomer.termindauer_stunden != null ? String(editingCustomer.termindauer_stunden) : '1.5',
+      stunden_kontingent_monat: editingCustomer.stunden_kontingent_monat != null ? String(editingCustomer.stunden_kontingent_monat) : '',
+      verhinderungspflege_budget: editingCustomer.verhinderungspflege_budget != null ? String(editingCustomer.verhinderungspflege_budget) : '3539',
+      rechnungskopie: editingCustomer.rechnungskopie || [],
+    });
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as string;
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      setValidationErrors(fieldErrors);
+      return;
+    }
+    setValidationErrors({});
     onSave(e, { budget_prioritaet: budgetOrder });
   };
 
@@ -228,6 +249,7 @@ export function CustomerEditDialog({
                   <div><Label htmlFor="stunden_kontingent_monat">Stunden</Label><Input id="stunden_kontingent_monat" type="number" step="0.5" value={editingCustomer.stunden_kontingent_monat || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, stunden_kontingent_monat: e.target.value ? parseFloat(e.target.value) : null })} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Pflegekasse</Label><PflegekasseCombobox value={editingCustomer.pflegekasse || ''} onValueChange={(v) => setEditingCustomer({ ...editingCustomer, pflegekasse: v })} /></div>
                   <div><Label htmlFor="versichertennummer">Versichertennummer</Label><Input id="versichertennummer" value={editingCustomer.versichertennummer || ''} onChange={(e) => setEditingCustomer({ ...editingCustomer, versichertennummer: e.target.value })} /></div>
                 </div>
               </div>
@@ -401,6 +423,20 @@ export function CustomerEditDialog({
               )}
             </TabsContent>
           </Tabs>
+
+          {Object.keys(validationErrors).length > 0 && (
+            <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md border border-destructive/20 mt-4">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">Bitte korrigieren Sie folgende Felder:</p>
+                <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                  {Object.entries(validationErrors).map(([key, msg]) => (
+                    <li key={key}>{msg}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 border-t pt-4 mt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>

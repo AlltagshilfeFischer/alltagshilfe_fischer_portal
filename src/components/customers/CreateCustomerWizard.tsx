@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -8,13 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ArrowRight, Loader2, Euro, FileText } from 'lucide-react';
+import { ArrowRight, Loader2, Euro, FileText, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { StepStammdaten } from './wizard/StepStammdaten';
 import { StepAbrechnung } from './wizard/StepAbrechnung';
 import { StepDokumente } from './wizard/StepDokumente';
 import { StepEmployeeMatching } from './wizard/StepEmployeeMatching';
+import { customerBaseSchema } from '@/lib/validations/customer-schema';
 
 interface TimeWindow { wochentag: number; von: string; bis: string; }
 
@@ -59,25 +60,43 @@ export default function CreateCustomerWizard({ open, onOpenChange, employees, on
   const [isLoading, setIsLoading] = useState(false);
   const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null);
   const [customerData, setCustomerData] = useState({ ...INITIAL_DATA, eintritt: getCurrentMonth() });
-  const [weekMatrix, setWeekMatrix] = useState<Record<number, Record<string, boolean>>>({});
   const [budgetOrder, setBudgetOrder] = useState<string[]>([]);
   const [draggedBudget, setDraggedBudget] = useState<string | null>(null);
   const [documentFiles, setDocumentFiles] = useState<{ vertrag: File[]; historie: File[]; antragswesen: File[] }>({ vertrag: [], historie: [], antragswesen: [] });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const resetWizard = () => {
     setStep('customer'); setActiveTab('stammdaten'); setCreatedCustomerId(null);
-    setWeekMatrix({}); setBudgetOrder([]); setDraggedBudget(null);
+    setBudgetOrder([]); setDraggedBudget(null);
     setDocumentFiles({ vertrag: [], historie: [], antragswesen: [] });
     setCustomerData({ ...INITIAL_DATA, eintritt: getCurrentMonth() });
+    setValidationErrors({});
   };
+
+  // Bei Kategorie-Wechsel zu Interessent: Tab zuruecksetzen
+  useEffect(() => {
+    if (customerData.kategorie === 'Interessent' && activeTab !== 'stammdaten') {
+      setActiveTab('stammdaten');
+    }
+  }, [customerData.kategorie]);
 
   const handleClose = () => { resetWizard(); onOpenChange(false); };
 
   const handleSaveCustomerAndTimeWindows = async () => {
-    if (!customerData.vorname || !customerData.nachname) { toast.error('Bitte Vor- und Nachname ausfüllen'); return; }
-    if (!customerData.strasse.trim()) { toast.error('Bitte Straße und Hausnummer ausfüllen'); return; }
-    if (!customerData.plz.trim() || !/^\d{5}$/.test(customerData.plz.trim())) { toast.error('Bitte eine gültige 5-stellige PLZ eingeben'); return; }
-    if (!customerData.telefonnr.trim()) { toast.error('Bitte Telefonnummer ausfüllen'); return; }
+    const result = customerBaseSchema.safeParse(customerData);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as string;
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      setValidationErrors(fieldErrors);
+      setActiveTab('stammdaten');
+      const firstMsg = Object.values(fieldErrors)[0];
+      toast.error(firstMsg || 'Bitte alle Pflichtfelder ausfüllen');
+      return;
+    }
+    setValidationErrors({});
 
     setIsLoading(true);
     try {
@@ -187,13 +206,17 @@ export default function CreateCustomerWizard({ open, onOpenChange, employees, on
         {step === 'customer' && (
           <div className="space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className={`grid w-full ${customerData.kategorie === 'Kunde' ? 'grid-cols-3' : 'grid-cols-1'}`}>
                 <TabsTrigger value="stammdaten">Persönliche Daten</TabsTrigger>
-                <TabsTrigger value="abrechnung"><Euro className="h-4 w-4 mr-1" />Abrechnung</TabsTrigger>
-                <TabsTrigger value="dokumente"><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
+                {customerData.kategorie === 'Kunde' && (
+                  <>
+                    <TabsTrigger value="abrechnung"><Euro className="h-4 w-4 mr-1" />Abrechnung</TabsTrigger>
+                    <TabsTrigger value="dokumente"><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
+                  </>
+                )}
               </TabsList>
               <TabsContent value="stammdaten">
-                <StepStammdaten customerData={customerData} setCustomerData={setCustomerData} weekMatrix={weekMatrix} setWeekMatrix={setWeekMatrix} employees={employees} />
+                <StepStammdaten customerData={customerData} setCustomerData={setCustomerData} employees={employees} />
               </TabsContent>
               <TabsContent value="abrechnung">
                 <StepAbrechnung customerData={customerData} setCustomerData={setCustomerData} budgetOrder={budgetOrder} setBudgetOrder={setBudgetOrder} draggedBudget={draggedBudget} setDraggedBudget={setDraggedBudget} />
@@ -203,9 +226,23 @@ export default function CreateCustomerWizard({ open, onOpenChange, employees, on
               </TabsContent>
             </Tabs>
 
+            {Object.keys(validationErrors).length > 0 && (
+              <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md border border-destructive/20">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium">Bitte korrigieren Sie folgende Felder:</p>
+                  <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                    {Object.entries(validationErrors).map(([key, msg]) => (
+                      <li key={key}>{msg}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 border-t pt-4">
               <Button type="button" variant="outline" onClick={handleClose}>Abbrechen</Button>
-              <Button onClick={handleSaveCustomerAndTimeWindows} disabled={isLoading || !customerData.vorname || !customerData.nachname}>
+              <Button onClick={handleSaveCustomerAndTimeWindows} disabled={isLoading}>
                 {isLoading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Speichern...</>) : customerData.has_regular_appointments && customerData.zeitfenster.length > 0 ? (<>Weiter zum Mitarbeiter-Matching<ArrowRight className="h-4 w-4 ml-2" /></>) : 'Kunden anlegen'}
               </Button>
             </div>

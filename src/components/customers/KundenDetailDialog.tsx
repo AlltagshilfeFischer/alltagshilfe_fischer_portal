@@ -208,10 +208,6 @@ export function KundenDetailDialog({ isOpen, onClose, kundenId }: KundenDetailDi
                     <p className="font-medium">{kunde.pflegegrad ?? 'Nicht angegeben'}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Kasse/Privat</span>
-                    <p>{kunde.kasse_privat || '-'}</p>
-                  </div>
-                  <div>
                     <span className="text-muted-foreground">Pflegekasse</span>
                     <p>{kunde.pflegekasse || '-'}</p>
                   </div>
@@ -229,6 +225,10 @@ export function KundenDetailDialog({ isOpen, onClose, kundenId }: KundenDetailDi
                 <span className="flex items-center gap-2"><CreditCard className="h-4 w-4" /> Abrechnung & Budgets</span>
               </AccordionTrigger>
               <AccordionContent className="space-y-3 pt-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Abrechnungsart</span>
+                  <p className="font-medium">{kunde.kasse_privat || '-'}</p>
+                </div>
                 {/* Verhinderungspflege */}
                 <div className="border rounded-md p-3 space-y-1">
                   <div className="flex items-center justify-between">

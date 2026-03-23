@@ -12,7 +12,9 @@ import {
 } from '@/components/ui/select';
 import { Plus, Trash2, Sparkles } from 'lucide-react';
 import AITimeWindowsCreator from '@/components/schedule/ai/AITimeWindowsCreator';
-import { useState } from 'react';
+import { PflegekasseCombobox } from '@/components/customers/PflegekasseCombobox';
+import { WeekMatrixPicker } from '@/components/customers/WeekMatrixPicker';
+import { useState, useMemo } from 'react';
 
 interface TimeWindow {
   wochentag: number;
@@ -37,22 +39,26 @@ const SHIFT_BLOCKS = [
 interface StepStammdatenProps {
   customerData: any;
   setCustomerData: (fn: (prev: any) => any) => void;
-  weekMatrix: Record<number, Record<string, boolean>>;
-  setWeekMatrix: (fn: (prev: Record<number, Record<string, boolean>>) => Record<number, Record<string, boolean>>) => void;
   employees: any[];
 }
 
-export function StepStammdaten({ customerData, setCustomerData, weekMatrix, setWeekMatrix, employees }: StepStammdatenProps) {
+export function StepStammdaten({ customerData, setCustomerData, employees }: StepStammdatenProps) {
   const [showAITimeWindows, setShowAITimeWindows] = useState(false);
 
-  const toggleMatrixCell = (day: number, shiftKey: string) => {
-    setWeekMatrix((prev) => {
-      const updated = { ...prev };
-      if (!updated[day]) updated[day] = {};
-      updated[day] = { ...updated[day], [shiftKey]: !updated[day][shiftKey] };
-      return updated;
+  // weekMatrix abgeleitet aus zeitfenster (bidirektionale Synchronisation)
+  const weekMatrix = useMemo(() => {
+    const matrix: Record<number, Record<string, boolean>> = {};
+    (customerData.zeitfenster || []).forEach((z: TimeWindow) => {
+      const shift = SHIFT_BLOCKS.find((s) => s.von === z.von && s.bis === z.bis);
+      if (shift) {
+        if (!matrix[z.wochentag]) matrix[z.wochentag] = {};
+        matrix[z.wochentag][shift.key] = true;
+      }
     });
+    return matrix;
+  }, [customerData.zeitfenster]);
 
+  const toggleMatrixCell = (day: number, shiftKey: string) => {
     const shift = SHIFT_BLOCKS.find((s) => s.key === shiftKey)!;
     const isCurrentlyActive = weekMatrix[day]?.[shiftKey];
 
@@ -91,6 +97,8 @@ export function StepStammdaten({ customerData, setCustomerData, weekMatrix, setW
     });
   };
 
+  const isKunde = customerData.kategorie === 'Kunde';
+
   return (
     <div className="space-y-6 mt-4">
       {/* Kategorie-Auswahl */}
@@ -113,6 +121,12 @@ export function StepStammdaten({ customerData, setCustomerData, weekMatrix, setW
             </button>
           ))}
         </div>
+        {!isKunde && (
+          <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
+            <p>Als Interessent werden nur die wichtigsten Daten erfasst.</p>
+            <p>Weitere Felder werden verfügbar, wenn der Interessent zum Kunden konvertiert wird.</p>
+          </div>
+        )}
       </div>
 
       {/* Basis-Informationen */}
@@ -174,43 +188,39 @@ export function StepStammdaten({ customerData, setCustomerData, weekMatrix, setW
         </div>
       </div>
 
-      {/* Pflege-Informationen */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Pflege-Informationen</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div><Label htmlFor="pflegekasse">Pflegekasse</Label><Input id="pflegekasse" value={customerData.pflegekasse} onChange={(e) => setCustomerData((p: any) => ({ ...p, pflegekasse: e.target.value }))} placeholder="AOK, Barmer, etc." /></div>
-          <div><Label htmlFor="versichertennummer">Versichertennummer</Label><Input id="versichertennummer" value={customerData.versichertennummer} onChange={(e) => setCustomerData((p: any) => ({ ...p, versichertennummer: e.target.value }))} /></div>
-          <div>
-            <Label htmlFor="pflegegrad">Pflegegrad</Label>
-            <Select value={customerData.pflegegrad} onValueChange={(v) => setCustomerData((p: any) => ({ ...p, pflegegrad: v }))}>
-              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="nicht_vorhanden">Nicht vorhanden</SelectItem>
-                {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-              </SelectContent>
-            </Select>
+      {/* Pflege-Informationen — nur fuer Kunden */}
+      {isKunde && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Pflege-Informationen</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div><Label>Pflegekasse</Label><PflegekasseCombobox value={customerData.pflegekasse} onValueChange={(v) => setCustomerData((p: any) => ({ ...p, pflegekasse: v }))} /></div>
+            <div><Label htmlFor="versichertennummer">Versichertennummer</Label><Input id="versichertennummer" value={customerData.versichertennummer} onChange={(e) => setCustomerData((p: any) => ({ ...p, versichertennummer: e.target.value }))} /></div>
+            <div>
+              <Label htmlFor="pflegegrad">Pflegegrad</Label>
+              <Select value={customerData.pflegegrad} onValueChange={(v) => setCustomerData((p: any) => ({ ...p, pflegegrad: v }))}>
+                <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nicht_vorhanden">Nicht vorhanden</SelectItem>
+                  {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div><Label htmlFor="verhinderungspflege_status">Verhinderungspflege</Label><Input id="verhinderungspflege_status" value={customerData.verhinderungspflege_status} onChange={(e) => setCustomerData((p: any) => ({ ...p, verhinderungspflege_status: e.target.value }))} /></div>
+            <div>
+              <Label>Kopie LW</Label>
+              <Select value={customerData.kopie_lw} onValueChange={(v) => setCustomerData((p: any) => ({ ...p, kopie_lw: v }))}>
+                <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                <SelectContent><SelectItem value="Ja">Ja</SelectItem><SelectItem value="Nein">Nein</SelectItem></SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <Label>Kasse/Privat</Label>
-            <Select value={customerData.kasse_privat} onValueChange={(v) => setCustomerData((p: any) => ({ ...p, kasse_privat: v }))}>
-              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
-              <SelectContent><SelectItem value="Kasse">Kasse</SelectItem><SelectItem value="Privat">Privat</SelectItem></SelectContent>
-            </Select>
-          </div>
-          <div><Label htmlFor="verhinderungspflege_status">Verhinderungspflege</Label><Input id="verhinderungspflege_status" value={customerData.verhinderungspflege_status} onChange={(e) => setCustomerData((p: any) => ({ ...p, verhinderungspflege_status: e.target.value }))} /></div>
-          <div>
-            <Label>Kopie LW</Label>
-            <Select value={customerData.kopie_lw} onValueChange={(v) => setCustomerData((p: any) => ({ ...p, kopie_lw: v }))}>
-              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
-              <SelectContent><SelectItem value="Ja">Ja</SelectItem><SelectItem value="Nein">Nein</SelectItem></SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
+      )}
 
-      {/* Rechnungskopie */}
+      {/* Rechnungskopie — nur fuer Kunden */}
+      {isKunde && (
       <div className="space-y-3 border-t pt-4">
         <h3 className="text-lg font-semibold">Rechnungskopie</h3>
         <div className="space-y-2">
@@ -234,8 +244,10 @@ export function StepStammdaten({ customerData, setCustomerData, weekMatrix, setW
           </div>
         )}
       </div>
+      )}
 
-      {/* Terminplanung */}
+      {/* Terminplanung — nur fuer Kunden */}
+      {isKunde && (
       <div className="space-y-4 border-t pt-4">
         <h3 className="text-lg font-semibold">Terminplanung</h3>
         <div className="grid grid-cols-3 gap-4">
@@ -259,11 +271,18 @@ export function StepStammdaten({ customerData, setCustomerData, weekMatrix, setW
           <div><Label>Startdatum</Label><Input type="date" value={customerData.startdatum} onChange={(e) => setCustomerData((p: any) => ({ ...p, startdatum: e.target.value }))} /></div>
         </div>
       </div>
+      )}
 
-      {/* Zeitfenster */}
+      {/* Zeitfenster — nur fuer Kunden */}
+      {isKunde && (
       <div className="space-y-3 border-t pt-4">
+        <h3 className="text-lg font-semibold">Zeitfenster</h3>
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">Klicken Sie auf die gewünschten Zeitblöcke:</p>
+          <WeekMatrixPicker matrix={weekMatrix} onToggle={toggleMatrixCell} />
+        </div>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Zeitfenster</h3>
+          <p className="text-sm text-muted-foreground">Oder: Individuelle Zeiten</p>
           <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setShowAITimeWindows(true)}>
               <Sparkles className="h-4 w-4 mr-1" />KI-Zeitfenster
@@ -294,14 +313,6 @@ export function StepStammdaten({ customerData, setCustomerData, weekMatrix, setW
         {showAITimeWindows && (
           <AITimeWindowsCreator
             onConfirm={(windows: TimeWindow[]) => {
-              setWeekMatrix((prev) => {
-                const newMatrix = { ...prev };
-                windows.forEach(w => {
-                  const matchingShift = SHIFT_BLOCKS.find(s => s.von === w.von && s.bis === w.bis);
-                  if (matchingShift) { if (!newMatrix[w.wochentag]) newMatrix[w.wochentag] = {}; newMatrix[w.wochentag][matchingShift.key] = true; }
-                });
-                return newMatrix;
-              });
               setCustomerData((prev: any) => ({ ...prev, zeitfenster: [...prev.zeitfenster, ...windows] }));
               setShowAITimeWindows(false);
             }}
@@ -309,8 +320,10 @@ export function StepStammdaten({ customerData, setCustomerData, weekMatrix, setW
           />
         )}
       </div>
+      )}
 
-      {/* Notfallkontakte */}
+      {/* Notfallkontakte — nur fuer Kunden */}
+      {isKunde && (
       <div className="space-y-3 border-t pt-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Notfallkontakte</h3>
@@ -327,6 +340,7 @@ export function StepStammdaten({ customerData, setCustomerData, weekMatrix, setW
           </div>
         ))}
       </div>
+      )}
 
       {/* Sonstiges */}
       <div className="space-y-3 border-t pt-4">
@@ -334,13 +348,15 @@ export function StepStammdaten({ customerData, setCustomerData, weekMatrix, setW
         <Textarea value={customerData.sonstiges} onChange={(e) => setCustomerData((p: any) => ({ ...p, sonstiges: e.target.value }))} placeholder="Weitere Notizen, Hinweise, Kommentare..." className="min-h-[80px]" />
       </div>
 
-      {/* Betreuung */}
+      {/* Betreuung — nur fuer Kunden */}
+      {isKunde && (
       <div className="space-y-4 border-t pt-4">
         <div className="flex items-center space-x-2">
           <Checkbox id="has_regular_appointments" checked={customerData.has_regular_appointments} onCheckedChange={(checked) => setCustomerData((p: any) => ({ ...p, has_regular_appointments: checked as boolean }))} />
           <Label htmlFor="has_regular_appointments" className="cursor-pointer">Kunde hat regelmäßige Termine → Mitarbeiter-Matching starten</Label>
         </div>
       </div>
+      )}
     </div>
   );
 }
