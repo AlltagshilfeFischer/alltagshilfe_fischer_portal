@@ -352,8 +352,8 @@ export function ProScheduleCalendar({
 
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden">
-      {/* Header Row */}
-      <div className="grid border-b border-border bg-muted/30" 
+      {/* Header Row — sticky */}
+      <div className="grid border-b border-border bg-muted/30 sticky top-0 z-20"
            style={{ gridTemplateColumns: '220px repeat(7, 1fr)' }}>
         {/* Mitarbeiter Header with Settings */}
         <div className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border flex items-center justify-between">
@@ -413,11 +413,11 @@ export function ProScheduleCalendar({
         })}
       </div>
 
-      {/* Unzugeordnete Termine — Zeile direkt unter dem Header */}
+      {/* Unzugeordnete Termine — sticky unter dem Header */}
       {hasUnassignedThisWeek && (
         <div
-          className="grid border-b border-dashed border-amber-300/70 dark:border-amber-700/50 bg-amber-50/40 dark:bg-amber-950/10"
-          style={{ gridTemplateColumns: '220px repeat(7, 1fr)' }}
+          className="grid border-b border-dashed border-amber-300/70 dark:border-amber-700/50 bg-amber-50/80 dark:bg-amber-950/20 sticky z-10"
+          style={{ gridTemplateColumns: '220px repeat(7, 1fr)', top: '64px' }}
         >
           <div className="px-4 py-2 border-r border-border flex items-center gap-2 min-h-[64px]">
             <UserX className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
