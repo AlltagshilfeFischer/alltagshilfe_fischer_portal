@@ -27,6 +27,7 @@ import { ProCalendarLegend } from '@/components/schedule/calendar/ProCalendarLeg
 import { EmployeeManagementDialog } from '@/components/schedule/dialogs/EmployeeManagementDialog';
 
 import { AppointmentApprovalBar } from '@/components/schedule/AppointmentApprovalBar';
+import { UnassignedAppointmentsBar } from '@/components/schedule/UnassignedAppointmentsBar';
 import { AppointmentDetailDialog } from '@/components/schedule/dialogs/AppointmentDetailDialog';
 // CreateAppointmentDialog entfernt — CreateAppointmentFromSlotDialog wird für beides genutzt
 import { CreateRecurringAppointmentDialog } from '@/components/schedule/dialogs/CreateRecurringAppointmentDialog';
@@ -1142,12 +1143,18 @@ const ScheduleBuilderModern = () => {
               <Plus className="h-4 w-4" />
               Neuer Termin
             </Button>
-            <Button variant="outline" onClick={() => setShowCreateRecurring(true)} size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Serientermin
-            </Button>
           </div>
         </div>
+
+        {/* Unzugeordnete Termine */}
+        <UnassignedAppointmentsBar
+          appointments={appointments}
+          weekDates={weekDates}
+          activeId={activeId}
+          onEditAppointment={setEditingAppointment}
+          onCut={handleCutAppointment}
+          onCopy={handleCopyAppointment}
+        />
 
         {/* Main Calendar Content */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden rounded-lg border border-border bg-card shadow-sm">

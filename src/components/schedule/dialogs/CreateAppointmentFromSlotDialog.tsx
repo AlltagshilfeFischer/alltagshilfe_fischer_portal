@@ -285,7 +285,10 @@ export function CreateAppointmentFromSlotDialog({
               <Label>Kategorie / Label (optional)</Label>
               <Select value={singleKategorie} onValueChange={(val) => {
                 setSingleKategorie(val);
-                setIsInternTermin(val === 'Schulung' || val === 'Intern');
+                // Nur automatisch auf Intern setzen, nie zuruecksetzen
+                if (val === 'Schulung' || val === 'Intern' || val === 'Blocker') {
+                  setIsInternTermin(true);
+                }
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Kategorie wählen" />

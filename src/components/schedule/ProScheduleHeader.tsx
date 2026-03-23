@@ -53,31 +53,38 @@ export function ProScheduleHeader({
       </div>
 
       {/* Center: Navigation */}
-      <div className="flex items-center gap-1 bg-muted rounded-full px-1 py-1">
+      <div className="flex items-center gap-2">
         <Button
-          variant="ghost"
-          size="icon"
-          onClick={onPreviousWeek}
-          className="h-8 w-8 rounded-full"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
-        <button
+          variant="outline"
+          size="sm"
           onClick={onToday}
-          className="px-4 py-1.5 text-sm font-medium hover:bg-background/80 rounded-full transition-colors min-w-[180px]"
+          className="h-8 text-xs font-medium"
         >
-          {dateRange}
-        </button>
-        
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onNextWeek}
-          className="h-8 w-8 rounded-full"
-        >
-          <ChevronRight className="h-4 w-4" />
+          Heute
         </Button>
+        <div className="flex items-center gap-1 bg-muted rounded-full px-1 py-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onPreviousWeek}
+            className="h-8 w-8 rounded-full"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          <span className="px-4 py-1.5 text-sm font-medium min-w-[180px] text-center select-none">
+            {dateRange}
+          </span>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onNextWeek}
+            className="h-8 w-8 rounded-full"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       
       {/* Right: View Toggle */}
