@@ -83,8 +83,14 @@ export default function BenutzerverwaltungNeu() {
     const channel = supabase
       .channel('benutzerverwaltung-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'mitarbeiter' }, () => loadData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'benutzer' }, () => loadData())
-      .subscribe();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'benutzer' }, () => loadData());
+    try {
+      channel.subscribe((status, err) => {
+        if (err) console.warn('[Realtime] benutzerverwaltung subscription error:', err.message);
+      });
+    } catch (e) {
+      console.warn('[Realtime] WebSocket not available:', e);
+    }
 
     return () => { supabase.removeChannel(channel); };
   }, []);

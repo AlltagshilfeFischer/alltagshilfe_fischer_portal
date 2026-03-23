@@ -76,7 +76,7 @@ export function AppointmentApprovalBar() {
     loadPendingChanges();
 
     // Subscribe to changes
-    const subscription = supabase
+    const channel = supabase
       .channel('termin_aenderungen_changes')
       .on('postgres_changes', {
         event: '*',
@@ -84,12 +84,18 @@ export function AppointmentApprovalBar() {
         table: 'termin_aenderungen'
       }, () => {
         loadPendingChanges();
-      })
-      .subscribe();
+      });
+    try {
+      channel.subscribe((status, err) => {
+        if (err) console.warn('[Realtime] termin_aenderungen subscription error:', err.message);
+      });
+    } catch (e) {
+      console.warn('[Realtime] WebSocket not available:', e);
+    }
 
     return () => {
       mountedRef.current = false;
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, []);
 

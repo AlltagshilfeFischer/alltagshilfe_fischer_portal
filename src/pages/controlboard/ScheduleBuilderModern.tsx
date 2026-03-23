@@ -4,7 +4,8 @@ import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks, subDays, a
 import { de } from 'date-fns/locale';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, X, AlertCircle, Users } from 'lucide-react';
+import { Plus, X, AlertCircle, Users, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
   AlertDialogAction,

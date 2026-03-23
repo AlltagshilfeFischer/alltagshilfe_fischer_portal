@@ -76,6 +76,10 @@ export function CreateAppointmentFromSlotDialog({
   const [kundenId, setKundenId] = useState('');
   const [isNewInteressent, setIsNewInteressent] = useState(false);
   const [newInteressentName, setNewInteressentName] = useState('');
+  const [newInteressentStrasse, setNewInteressentStrasse] = useState('');
+  const [newInteressentPlz, setNewInteressentPlz] = useState('');
+  const [newInteressentStadt, setNewInteressentStadt] = useState('');
+  const [newInteressentTelefon, setNewInteressentTelefon] = useState('');
   const [isInternTermin, setIsInternTermin] = useState(false);
   const [mitarbeiterId, setMitarbeiterId] = useState(defaultEmployeeId);
   const [date, setDate] = useState<Date>(defaultDate);
@@ -111,6 +115,10 @@ export function CreateAppointmentFromSlotDialog({
     setKundenId('');
     setIsNewInteressent(false);
     setNewInteressentName('');
+    setNewInteressentStrasse('');
+    setNewInteressentPlz('');
+    setNewInteressentStadt('');
+    setNewInteressentTelefon('');
     setIsInternTermin(false);
     setMitarbeiterId(defaultEmployeeId);
     setDate(defaultDate);
@@ -149,7 +157,16 @@ export function CreateAppointmentFromSlotDialog({
 
         const { data: newKunde, error: kundeError } = await supabase
           .from('kunden')
-          .insert([{ vorname, nachname, kategorie: 'Interessent', aktiv: true }])
+          .insert([{
+            vorname,
+            nachname,
+            kategorie: 'Interessent',
+            aktiv: true,
+            strasse: newInteressentStrasse.trim() || null,
+            plz: newInteressentPlz.trim() || null,
+            stadt: newInteressentStadt.trim() || null,
+            telefonnr: newInteressentTelefon.trim() || null,
+          }])
           .select()
           .single();
 
@@ -306,7 +323,15 @@ export function CreateAppointmentFromSlotDialog({
                 {!isNewInteressent ? (
                   <CustomerSearchCombobox customers={customers} value={kundenId} onValueChange={setKundenId} placeholder="Kunde suchen..." />
                 ) : (
-                  <Input value={newInteressentName} onChange={(e) => setNewInteressentName(e.target.value)} placeholder="Name des Interessenten eingeben..." required />
+                  <div className="space-y-2">
+                    <Input value={newInteressentName} onChange={(e) => setNewInteressentName(e.target.value)} placeholder="Vor- und Nachname *" required />
+                    <Input value={newInteressentTelefon} onChange={(e) => setNewInteressentTelefon(e.target.value)} placeholder="Telefonnummer" />
+                    <Input value={newInteressentStrasse} onChange={(e) => setNewInteressentStrasse(e.target.value)} placeholder="Straße und Hausnummer" />
+                    <div className="grid grid-cols-[120px,1fr] gap-2">
+                      <Input value={newInteressentPlz} onChange={(e) => { const val = e.target.value.replace(/\D/g, '').slice(0, 5); setNewInteressentPlz(val); }} placeholder="PLZ" maxLength={5} inputMode="numeric" />
+                      <Input value={newInteressentStadt} onChange={(e) => setNewInteressentStadt(e.target.value)} placeholder="Stadt" />
+                    </div>
+                  </div>
                 )}
               </div>
             )}

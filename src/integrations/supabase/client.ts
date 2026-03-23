@@ -13,5 +13,30 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
 });
+
+/**
+ * Sichere Channel-Subscription die in Firefox nicht crasht.
+ * Firefox blockiert WebSocket in bestimmten Kontexten ("The operation is insecure").
+ * Diese Wrapper-Funktion faengt den Fehler ab statt die App zu crashen.
+ */
+export function safeSubscribe(
+  channel: ReturnType<typeof supabase.channel>
+): ReturnType<typeof supabase.channel> {
+  try {
+    return channel.subscribe((status, err) => {
+      if (err) {
+        console.warn('[Realtime] Subscription error (non-fatal):', err.message);
+      }
+    });
+  } catch (e) {
+    console.warn('[Realtime] WebSocket not available (non-fatal):', e);
+    return channel;
+  }
+}

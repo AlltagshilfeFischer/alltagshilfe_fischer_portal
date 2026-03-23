@@ -29,10 +29,19 @@ class ErrorBoundary extends React.Component<
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    // WebSocket-Fehler in Firefox nicht als fatalen Crash behandeln
+    if (error.message?.includes('insecure') || error.message?.includes('WebSocket')) {
+      console.warn('[ErrorBoundary] Non-fatal WebSocket error suppressed:', error.message);
+      return { hasError: false, error: null };
+    }
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
+    if (error.message?.includes('insecure') || error.message?.includes('WebSocket')) {
+      console.warn('[ErrorBoundary] Non-fatal WebSocket error:', error.message);
+      return;
+    }
     console.error('Unhandled render error:', error, info.componentStack);
   }
 
