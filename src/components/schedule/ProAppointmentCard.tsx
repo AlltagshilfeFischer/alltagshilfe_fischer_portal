@@ -58,6 +58,7 @@ export function ProAppointmentCard({
         <div
           ref={setNodeRef}
           style={style}
+          data-appointment-id={appointment.id}
           className={cn(
             "relative cursor-grab active:cursor-grabbing transition-all duration-200",
             "bg-card border border-border rounded-md overflow-hidden",

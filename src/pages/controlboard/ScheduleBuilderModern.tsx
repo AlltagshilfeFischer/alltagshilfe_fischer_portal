@@ -1131,8 +1131,14 @@ const ScheduleBuilderModern = () => {
                   }
 
                   setHighlightedAppointmentId(appointmentId);
-                  setEditingAppointment(appointment);
-                  setTimeout(() => setHighlightedAppointmentId(null), 3000);
+                  // Zum Termin scrollen (kein Dialog oeffnen)
+                  setTimeout(() => {
+                    const el = document.querySelector(`[data-appointment-id="${appointmentId}"]`);
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }, 100);
+                  setTimeout(() => setHighlightedAppointmentId(null), 4000);
                 }
               }}
             />
