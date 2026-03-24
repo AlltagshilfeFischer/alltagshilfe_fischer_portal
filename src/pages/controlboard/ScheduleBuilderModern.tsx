@@ -1207,9 +1207,10 @@ const ScheduleBuilderModern = () => {
                 title="Vergrößern"
               >+</button>
             </div>
-            <Button onClick={() => setShowCreateAppointment(true)} size="sm" className="gap-2">
+            <Button onClick={() => setShowCreateAppointment(true)} size="sm" className="gap-1 sm:gap-2">
               <Plus className="h-4 w-4" />
-              Neuer Termin
+              <span className="hidden sm:inline">Neuer Termin</span>
+              <span className="sm:hidden">Neu</span>
             </Button>
           </div>
         </div>
