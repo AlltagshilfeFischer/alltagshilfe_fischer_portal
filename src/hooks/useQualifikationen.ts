@@ -29,12 +29,12 @@ export function useMitarbeiterQualifikationen(mitarbeiterId: string | null) {
     queryKey: ['mitarbeiter_qualifikationen', mitarbeiterId],
     enabled: !!mitarbeiterId,
     queryFn: async (): Promise<string[]> => {
-      const { data, error } = await supabase
-        .from('mitarbeiter_qualifikationen')
+      const { data, error } = await (supabase
+        .from('mitarbeiter_qualifikationen' as any)
         .select('qualifikation_id')
-        .eq('mitarbeiter_id', mitarbeiterId!);
+        .eq('mitarbeiter_id', mitarbeiterId!)) as any;
       if (error) throw error;
-      return (data ?? []).map((d) => d.qualifikation_id);
+      return ((data ?? []) as any[]).map((d: any) => d.qualifikation_id);
     },
   });
 }
