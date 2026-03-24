@@ -1479,6 +1479,7 @@ const ScheduleBuilderModern = () => {
                     if (tplErr) throw tplErr;
 
                     // 5. Fetch all future non-exception appointments of this series
+                    //    PLUS den aktuell verschobenen Termin (auch wenn er heute/in der Vergangenheit liegt)
                     const now = new Date().toISOString();
                     const { data: futureTermine, error: ftErr } = await supabase
                       .from('termine')
@@ -1488,9 +1489,15 @@ const ScheduleBuilderModern = () => {
                       .gte('start_at', now);
                     if (ftErr) throw ftErr;
 
-                    // 6. Update each future appointment with recalculated dates
-                    if (futureTermine && futureTermine.length > 0) {
-                      const updates = futureTermine.map((termin) => {
+                    // Den aktuellen Termin hinzufuegen falls er nicht in der Liste ist
+                    const allTermine = [...(futureTermine || [])];
+                    if (!allTermine.some((t) => t.id === appointment.id)) {
+                      allTermine.push({ id: appointment.id, start_at: appointment.start_at, end_at: appointment.end_at });
+                    }
+
+                    // 6. Update each appointment with recalculated dates
+                    if (allTermine.length > 0) {
+                      const updates = allTermine.map((termin) => {
                         const origDate = new Date(termin.start_at);
                         const origJsDay = origDate.getDay();
                         const origMondayIdx = origJsDay === 0 ? 6 : origJsDay - 1;
@@ -1527,7 +1534,7 @@ const ScheduleBuilderModern = () => {
 
                     toast({
                       title: 'Serie verschoben',
-                      description: `Vorlage und ${futureTermine?.length || 0} zukünftige Termine wurden aktualisiert.`,
+                      description: `Vorlage und ${allTermine.length} Termine wurden aktualisiert.`,
                     });
 
                     await loadData();
