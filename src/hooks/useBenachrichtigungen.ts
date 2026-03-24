@@ -21,14 +21,14 @@ export function useBenachrichtigungen() {
     queryKey: ['benachrichtigungen', user?.id],
     enabled: !!user?.id,
     queryFn: async (): Promise<Benachrichtigung[]> => {
-      const { data, error } = await supabase
-        .from('benachrichtigungen')
+      const { data, error } = await (supabase
+        .from('benachrichtigungen' as any)
         .select('id, typ, titel, nachricht, gelesen, termin_id, created_at')
         .eq('benutzer_id', user!.id)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(50)) as any;
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as Benachrichtigung[];
     },
     refetchInterval: 30000, // Poll every 30s
   });
