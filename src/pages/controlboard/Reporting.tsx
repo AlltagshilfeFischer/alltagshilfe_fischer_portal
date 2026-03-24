@@ -24,7 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 
 import {
-  CalendarIcon, Download, Clock, Users, TrendingDown,
+  CalendarIcon, Download, Clock, Users, TrendingDown, TrendingUp,
   CalendarDays, Loader2, X, Filter, ChevronDown,
   Euro, UserCheck, UserX, Heart,
 } from 'lucide-react';

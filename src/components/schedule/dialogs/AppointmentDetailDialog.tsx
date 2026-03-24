@@ -19,6 +19,7 @@ import { CreateRecurringAppointmentDialog } from './CreateRecurringAppointmentDi
 import { AppointmentAttachments } from '@/components/schedule/AppointmentAttachments';
 import { KundenDetailDialog } from '@/components/customers/KundenDetailDialog';
 import { useUserRole } from '@/hooks/useUserRole';
+import { CustomerSearchCombobox } from '@/components/schedule/CustomerSearchCombobox';
 import type { Employee, Customer, Appointment, CustomerTimeWindow } from '@/types/domain';
 
 interface AppointmentDetailDialogProps {
@@ -374,13 +375,14 @@ export function AppointmentDetailDialog({
           {/* Kunde */}
           <div>
             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Kunde</Label>
-            <Select value={editedAppointment.kunden_id ?? '__none__'} onValueChange={(v) => updateField({ kunden_id: v === '__none__' ? null : v })}>
-              <SelectTrigger className="mt-1.5 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Kein Kunde</SelectItem>
-                {customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <div className="mt-1.5">
+              <CustomerSearchCombobox
+                customers={customers.map((c) => ({ id: c.id, name: c.name || [c.vorname, c.nachname].filter(Boolean).join(' ') || 'Unbekannt', vorname: c.vorname ?? null, nachname: c.nachname ?? null, farbe_kalender: c.farbe_kalender ?? '#10B981' }))}
+                value={editedAppointment.kunden_id || ''}
+                onValueChange={(v) => updateField({ kunden_id: v || null })}
+                placeholder="Kunde suchen..."
+              />
+            </div>
             {customer && (
               <div className="mt-2 p-2.5 rounded-md bg-muted/50 text-xs space-y-1">
                 <div className="flex items-center justify-between">

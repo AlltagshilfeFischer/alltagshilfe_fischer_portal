@@ -74,7 +74,7 @@ export function LeistungsnachweisSignature() {
       const { data, error } = await supabase
         .from('leistungsnachweise')
         .select('*')
-        .in('status', ['veröffentlicht', 'unterschrieben'])
+        .in('status', ['offen', 'unterschrieben'])
         .order('jahr', { ascending: false })
         .order('monat', { ascending: false });
       if (error) throw error;
@@ -120,14 +120,34 @@ export function LeistungsnachweisSignature() {
     mutationFn: async () => {
       if (!selectedLN || !canvasRef.current) throw new Error('Keine Daten');
       const signatureData = canvasRef.current.toDataURL('image/png');
-      
+
+      // Calculate frozen hours from termine
+      let frozenGeplant = 0;
+      let frozenGeleistet = 0;
+      if (termine) {
+        const now = new Date();
+        for (const t of termine) {
+          if (['cancelled', 'abgesagt_rechtzeitig'].includes(t.status)) continue;
+          const start = new Date(t.start_at);
+          const end = new Date(t.end_at);
+          const duration = (end.getTime() - start.getTime()) / 3600000;
+          frozenGeplant += duration;
+          const effectiveStatus = (t.status === 'scheduled' && end < now) ? 'completed' : t.status;
+          if (['completed', 'nicht_angetroffen'].includes(effectiveStatus)) {
+            frozenGeleistet += t.iststunden ? Number(t.iststunden) : duration;
+          }
+        }
+      }
+
       const { error } = await supabase
         .from('leistungsnachweise')
         .update({
           unterschrift_kunde_bild: signatureData,
           unterschrift_kunde_zeitstempel: new Date().toISOString(),
           unterschrift_kunde_durch: signerName || 'Kunde',
-          status: 'unterschrieben'
+          status: 'unterschrieben',
+          frozen_geplante_stunden: Math.round(frozenGeplant * 100) / 100,
+          frozen_geleistete_stunden: Math.round(frozenGeleistet * 100) / 100,
         })
         .eq('id', selectedLN.id);
       if (error) throw error;
@@ -225,7 +245,7 @@ export function LeistungsnachweisSignature() {
     );
   }
 
-  const pendingNachweise = nachweise?.filter(n => n.status === 'veröffentlicht') || [];
+  const pendingNachweise = nachweise?.filter(n => n.status === 'offen' && !n.unterschrift_kunde_zeitstempel) || [];
   const signedNachweise = nachweise?.filter(n => n.status === 'unterschrieben') || [];
 
   return (

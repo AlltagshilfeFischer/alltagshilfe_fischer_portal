@@ -14,17 +14,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   FileText, Eye, Printer, Calendar, Clock,
   CheckCircle2, XCircle, AlertTriangle, Loader2, RefreshCw,
   Search, ArrowUpDown, ChevronLeft, ChevronRight, X,
-  User, TrendingUp, FileCheck, PenLine, Send, ExternalLink,
-  WifiOff, Wifi
+  User, TrendingUp, FileCheck, PenLine, ExternalLink,
+  WifiOff, Wifi, RotateCcw, Lock
 } from 'lucide-react';
 import { format, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import LeistungsnachweisPreview from '@/components/leistungsnachweis/LeistungsnachweisPreview';
-import { supabase as supabaseClient } from '@/integrations/supabase/client';
 import { exportElementToPdf } from '@/lib/pdfExport';
 import { downloadCsv } from '@/lib/csvExport';
 import { Download } from 'lucide-react';
@@ -56,6 +60,8 @@ interface LeistungsnachweisRow {
   cb_haushaltshilfe: boolean;
   cb_deckeln_45b: boolean;
   cb_deckeln_45b_betrag: number | null;
+  frozen_geplante_stunden: number | null;
+  frozen_geleistete_stunden: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -71,11 +77,9 @@ interface Termin {
 }
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode; dotColor: string }> = {
-  entwurf: { label: 'Entwurf', variant: 'secondary', icon: <PenLine className="h-3 w-3" />, dotColor: 'bg-muted-foreground' },
-  veröffentlicht: { label: 'Veröffentlicht', variant: 'outline', icon: <Send className="h-3 w-3" />, dotColor: 'bg-primary' },
   offen: { label: 'Offen', variant: 'outline', icon: <Clock className="h-3 w-3" />, dotColor: 'bg-warning' },
   unterschrieben: { label: 'Unterschrieben', variant: 'default', icon: <CheckCircle2 className="h-3 w-3" />, dotColor: 'bg-success' },
-  abgeschlossen: { label: 'Abgeschlossen', variant: 'default', icon: <FileCheck className="h-3 w-3" />, dotColor: 'bg-success' },
+  abgeschlossen: { label: 'Abgeschlossen', variant: 'secondary', icon: <FileCheck className="h-3 w-3" />, dotColor: 'bg-muted-foreground' },
 };
 
 const terminStatusLabel: Record<string, { label: string; color: string }> = {
@@ -108,36 +112,8 @@ export default function Leistungsnachweise() {
   const [showDetail, setShowDetail] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
   const [signerName, setSignerName] = useState('');
-  const [generating, setGenerating] = useState(false);
-
-  const handleGenerateLN = async () => {
-    setGenerating(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-leistungsnachweise`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({ monat: selectedMonth, jahr: selectedYear }),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Fehler');
-      toast.success(`${result.created} Leistungsnachweise erstellt`, {
-        description: result.skipped > 0 ? `${result.skipped} bereits vorhanden` : undefined,
-      });
-      queryClient.invalidateQueries({ queryKey: ['leistungsnachweise', selectedMonth, selectedYear] });
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Fehler beim Generieren';
-      toast.error(msg);
-    } finally {
-      setGenerating(false);
-    }
-  };
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showStornierConfirm, setShowStornierConfirm] = useState(false);
 
   // Online status tracking
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -233,79 +209,24 @@ export default function Leistungsnachweise() {
       });
   }, [termine]);
 
-  // Auto-generate/update Leistungsnachweise when month data is loaded
+  // Auto-create missing Leistungsnachweise for all active customers
   const autoGenerateNachweise = async () => {
     if (!kunden) return;
-    const von = new Date(selectedYear, selectedMonth - 1, 1).toISOString();
-    const bis = new Date(selectedYear, selectedMonth, 0, 23, 59, 59).toISOString();
 
-    const { data: allTermine, error: tErr } = await supabase
-      .from('termine')
-      .select('id, kunden_id, iststunden, start_at, end_at, status')
-      .gte('start_at', von)
-      .lte('start_at', bis);
-    if (tErr) return;
+    // Batch upsert: create LNs for all active customers (ignoreDuplicates = true: existing LNs are NOT overwritten)
+    const rows = kunden.map(kunde => ({
+      kunden_id: kunde.id,
+      monat: selectedMonth,
+      jahr: selectedYear,
+      geplante_stunden: 0,
+      geleistete_stunden: 0,
+      status: 'offen' as const,
+    }));
 
-    // Auto-complete: Vergangene scheduled-Termine als completed behandeln
-    const now = new Date();
-    const autoCompleteIds: string[] = [];
-    const effectiveTermine = (allTermine || []).map(t => {
-      if (t.status === 'scheduled' && new Date(t.end_at) < now) {
-        autoCompleteIds.push(t.id);
-        return { ...t, status: 'completed' as typeof t.status };
-      }
-      return t;
-    });
-
-    // Fire-and-forget: DB-Update für auto-completed Termine
-    if (autoCompleteIds.length > 0) {
-      const autoNow = new Date().toISOString();
-      supabase
-        .from('termine')
-        .update({ status: 'completed' as any, auto_completed_at: autoNow, updated_at: autoNow })
-        .in('id', autoCompleteIds)
-        .eq('status', 'scheduled')
-        .then(({ error }) => {
-          if (error) console.error('Auto-complete update error:', error);
-        });
-    }
-
-    const terminsByKunde = new Map<string, typeof effectiveTermine>();
-    for (const t of effectiveTermine) {
-      const arr = terminsByKunde.get(t.kunden_id) || [];
-      arr.push(t);
-      terminsByKunde.set(t.kunden_id, arr);
-    }
-
-    for (const kunde of kunden) {
-      const kundeTermine = terminsByKunde.get(kunde.id) || [];
-      if (kundeTermine.length === 0) continue;
-
-      const geleistet = kundeTermine
-        .filter(t => ['completed', 'nicht_angetroffen'].includes(t.status))
-        .reduce((sum, t) => {
-          if (t.iststunden) return sum + Number(t.iststunden);
-          const start = new Date(t.start_at);
-          const end = new Date(t.end_at);
-          return sum + (end.getTime() - start.getTime()) / 3600000;
-        }, 0);
-
-      const geplant = kundeTermine.reduce((sum, t) => {
-        const start = new Date(t.start_at);
-        const end = new Date(t.end_at);
-        return sum + (end.getTime() - start.getTime()) / 3600000;
-      }, 0);
-
+    if (rows.length > 0) {
       await supabase
         .from('leistungsnachweise')
-        .upsert({
-          kunden_id: kunde.id,
-          monat: selectedMonth,
-          jahr: selectedYear,
-          geplante_stunden: Math.round(geplant * 100) / 100,
-          geleistete_stunden: Math.round(geleistet * 100) / 100,
-          status: 'entwurf'
-        }, { onConflict: 'kunden_id,monat,jahr', ignoreDuplicates: false });
+        .upsert(rows, { onConflict: 'kunden_id,monat,jahr', ignoreDuplicates: true });
     }
 
     queryClient.invalidateQueries({ queryKey: ['leistungsnachweise', selectedMonth, selectedYear] });
@@ -337,26 +258,34 @@ export default function Leistungsnachweise() {
     }
   });
 
-  // Publish mutation
-  const publishMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('leistungsnachweise')
-        .update({ status: 'veröffentlicht' })
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Leistungsnachweis veröffentlicht – Mitarbeiter kann jetzt die Unterschrift einholen');
-      queryClient.invalidateQueries({ queryKey: ['leistungsnachweise'] });
-    },
-    onError: (err) => {
-      toast.error('Fehler', { description: err instanceof Error ? err.message : 'Unbekannt' });
-    }
-  });
+  // Helper: calculate hours from termine
+  const calculateHoursFromTermine = (terminList: Termin[]) => {
+    const relevant = terminList.filter(t => !['cancelled', 'abgesagt_rechtzeitig'].includes(t.status));
+    const now = new Date();
+    const effective = relevant.map(t =>
+      t.status === 'scheduled' && new Date(t.end_at) < now ? { ...t, status: 'completed' } : t
+    );
+    const geplant = effective.reduce((sum, t) => {
+      const start = new Date(t.start_at);
+      const end = new Date(t.end_at);
+      return sum + (end.getTime() - start.getTime()) / 3600000;
+    }, 0);
+    const geleistet = effective
+      .filter(t => ['completed', 'nicht_angetroffen'].includes(t.status))
+      .reduce((sum, t) => {
+        if (t.iststunden) return sum + Number(t.iststunden);
+        const start = new Date(t.start_at);
+        const end = new Date(t.end_at);
+        return sum + (end.getTime() - start.getTime()) / 3600000;
+      }, 0);
+    return {
+      geplant: Math.round(geplant * 100) / 100,
+      geleistet: Math.round(geleistet * 100) / 100,
+    };
+  };
 
   // Helper to sync a pending signature to the database
-  const syncSignatureToDb = async (lnId: string, data: { dataUrl: string; zeitstempel: string; durch: string }) => {
+  const syncSignatureToDb = async (lnId: string, data: { dataUrl: string; zeitstempel: string; durch: string; frozenGeplant?: number; frozenGeleistet?: number }) => {
     const { error } = await supabase
       .from('leistungsnachweise')
       .update({
@@ -364,10 +293,57 @@ export default function Leistungsnachweise() {
         unterschrift_kunde_zeitstempel: data.zeitstempel,
         unterschrift_kunde_durch: data.durch,
         status: 'unterschrieben',
+        ...(data.frozenGeplant != null && { frozen_geplante_stunden: data.frozenGeplant }),
+        ...(data.frozenGeleistet != null && { frozen_geleistete_stunden: data.frozenGeleistet }),
       })
       .eq('id', lnId);
     if (error) throw error;
   };
+
+  // Stornieren mutation: revert signed LN back to offen
+  const stornierMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('leistungsnachweise')
+        .update({
+          status: 'offen',
+          unterschrift_kunde_bild: null,
+          unterschrift_kunde_zeitstempel: null,
+          unterschrift_kunde_durch: null,
+          frozen_geplante_stunden: null,
+          frozen_geleistete_stunden: null,
+        })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Leistungsnachweis storniert – Status zurück auf Offen');
+      setShowStornierConfirm(false);
+      queryClient.invalidateQueries({ queryKey: ['leistungsnachweise'] });
+    },
+    onError: (err) => {
+      toast.error('Fehler', { description: err instanceof Error ? err.message : 'Unbekannt' });
+    },
+  });
+
+  // Bulk close mutation: set selected LNs to abgeschlossen
+  const bulkCloseMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('leistungsnachweise')
+        .update({ status: 'abgeschlossen' })
+        .in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(`${selectedIds.size} Leistungsnachweise abgeschlossen`);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['leistungsnachweise'] });
+    },
+    onError: (err) => {
+      toast.error('Fehler', { description: err instanceof Error ? err.message : 'Unbekannt' });
+    },
+  });
 
   // Signature mutation – offline-capable
   const signMutation = useMutation({
@@ -376,7 +352,10 @@ export default function Leistungsnachweise() {
       const dataUrl = canvasRef.current.toDataURL('image/png');
       const zeitstempel = new Date().toISOString();
       const durch = signerName || 'Kunde';
-      const pendingData = { dataUrl, zeitstempel, durch };
+
+      // Freeze hours at signing time
+      const hours = termine ? calculateHoursFromTermine(termine) : { geplant: 0, geleistet: 0 };
+      const pendingData = { dataUrl, zeitstempel, durch, frozenGeplant: hours.geplant, frozenGeleistet: hours.geleistet };
 
       // Always save to localStorage first
       localStorage.setItem(`pending_signature_${selectedLN.id}`, JSON.stringify(pendingData));
@@ -505,16 +484,26 @@ export default function Leistungsnachweise() {
     else { setSortKey(key); setSortAsc(true); }
   };
 
-  // Stats
+  // Stats (uses live hours for open LNs, frozen for signed/closed)
   const stats = useMemo(() => {
-    if (!nachweise) return { total: 0, signed: 0, totalPlanned: 0, totalDone: 0 };
+    if (!nachweise) return { total: 0, signed: 0, abgeschlossen: 0, totalPlanned: 0, totalDone: 0 };
+    let totalPlanned = 0;
+    let totalDone = 0;
+    for (const n of nachweise) {
+      const h = (n.status !== 'offen' && n.frozen_geplante_stunden != null)
+        ? { geplant: n.frozen_geplante_stunden, geleistet: n.frozen_geleistete_stunden ?? 0 }
+        : (hoursByKunde.get(n.kunden_id) || { geplant: 0, geleistet: 0 });
+      totalPlanned += h.geplant;
+      totalDone += h.geleistet;
+    }
     return {
       total: nachweise.length,
       signed: nachweise.filter(n => n.unterschrift_kunde_zeitstempel).length,
-      totalPlanned: nachweise.reduce((s, n) => s + n.geplante_stunden, 0),
-      totalDone: nachweise.reduce((s, n) => s + n.geleistete_stunden, 0),
+      abgeschlossen: nachweise.filter(n => n.status === 'abgeschlossen').length,
+      totalPlanned,
+      totalDone,
     };
-  }, [nachweise]);
+  }, [nachweise, hoursByKunde]);
 
   // Canvas drawing helpers
   const initCanvas = useCallback(() => {
@@ -573,10 +562,10 @@ export default function Leistungsnachweise() {
 
   // Initialize canvas when detail dialog opens for signing
   useEffect(() => {
-    if (showDetail && selectedLN?.status === 'veröffentlicht') {
+    if (showDetail && selectedLN?.status === 'offen' && !selectedLN?.unterschrift_kunde_zeitstempel) {
       setTimeout(initCanvas, 100);
     }
-  }, [showDetail, selectedLN?.status, initCanvas]);
+  }, [showDetail, selectedLN?.status, selectedLN?.unterschrift_kunde_zeitstempel, initCanvas]);
 
   // Pre-fill billing checkboxes from customer data when opening an entwurf
   useEffect(() => {
@@ -608,7 +597,75 @@ export default function Leistungsnachweise() {
     return `/dashboard/controlboard/schedule-builder?week=${format(weekStart, 'yyyy-MM-dd')}`;
   };
 
-  const canSign = selectedLN?.status === 'veröffentlicht' && !selectedLN?.unterschrift_kunde_zeitstempel;
+  const canSign = selectedLN?.status === 'offen' && !selectedLN?.unterschrift_kunde_zeitstempel;
+
+  // Live hours for the selected LN
+  const liveHours = useMemo(() => {
+    if (!termine) return { geplant: 0, geleistet: 0 };
+    return calculateHoursFromTermine(termine);
+  }, [termine]);
+
+  // Display hours: frozen for signed/closed, live for open
+  const displayHours = useMemo(() => {
+    if (!selectedLN) return { geplant: 0, geleistet: 0 };
+    if (selectedLN.status !== 'offen' && selectedLN.frozen_geplante_stunden != null) {
+      return { geplant: selectedLN.frozen_geplante_stunden, geleistet: selectedLN.frozen_geleistete_stunden ?? 0 };
+    }
+    return liveHours;
+  }, [selectedLN, liveHours]);
+
+  // Compute live hours per customer for the table
+  const allTermineQuery = useQuery({
+    queryKey: ['termine-alle-ln', selectedMonth, selectedYear],
+    queryFn: async () => {
+      const von = new Date(selectedYear, selectedMonth - 1, 1).toISOString();
+      const bis = new Date(selectedYear, selectedMonth, 0, 23, 59, 59).toISOString();
+      const { data, error } = await supabase
+        .from('termine')
+        .select('id, kunden_id, iststunden, start_at, end_at, status')
+        .gte('start_at', von)
+        .lte('start_at', bis);
+      if (error) throw error;
+      return data as { id: string; kunden_id: string; iststunden: number | null; start_at: string; end_at: string; status: string }[];
+    },
+  });
+
+  const hoursByKunde = useMemo(() => {
+    const map = new Map<string, { geplant: number; geleistet: number }>();
+    if (!allTermineQuery.data) return map;
+    const byKunde = new Map<string, typeof allTermineQuery.data>();
+    for (const t of allTermineQuery.data) {
+      const arr = byKunde.get(t.kunden_id) || [];
+      arr.push(t);
+      byKunde.set(t.kunden_id, arr);
+    }
+    for (const [kundenId, kundeTermine] of byKunde) {
+      map.set(kundenId, calculateHoursFromTermine(kundeTermine as any));
+    }
+    return map;
+  }, [allTermineQuery.data]);
+
+  // Helper: get display hours for a LN row (frozen for signed/closed, live for open)
+  const getRowHours = (ln: LeistungsnachweisRow) => {
+    if (ln.status !== 'offen' && ln.frozen_geplante_stunden != null) {
+      return { geplant: ln.frozen_geplante_stunden, geleistet: ln.frozen_geleistete_stunden ?? 0 };
+    }
+    return hoursByKunde.get(ln.kunden_id) || { geplant: 0, geleistet: 0 };
+  };
+
+  // Multi-select helpers
+  const unterschriebeneIds = useMemo(() =>
+    (nachweise || []).filter(n => n.status === 'unterschrieben').map(n => n.id),
+    [nachweise]
+  );
+  const allUnterschriebeneSelected = unterschriebeneIds.length > 0 && unterschriebeneIds.every(id => selectedIds.has(id));
+  const toggleSelectAll = () => {
+    if (allUnterschriebeneSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(unterschriebeneIds));
+    }
+  };
 
   return (
     <div className="flex flex-col h-full gap-6">
@@ -620,15 +677,17 @@ export default function Leistungsnachweise() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleGenerateLN}
-            disabled={generating}
-          >
-            {generating ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <FileText className="h-4 w-4 mr-1.5" />}
-            LN generieren
-          </Button>
+          {selectedIds.size > 0 && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => bulkCloseMutation.mutate([...selectedIds])}
+              disabled={bulkCloseMutation.isPending}
+            >
+              {bulkCloseMutation.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Lock className="h-4 w-4 mr-1.5" />}
+              {selectedIds.size} abschließen
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -721,8 +780,6 @@ export default function Leistungsnachweise() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="alle">Alle Status</SelectItem>
-                <SelectItem value="entwurf">Entwurf</SelectItem>
-                <SelectItem value="veröffentlicht">Veröffentlicht</SelectItem>
                 <SelectItem value="offen">Offen</SelectItem>
                 <SelectItem value="unterschrieben">Unterschrieben</SelectItem>
                 <SelectItem value="abgeschlossen">Abgeschlossen</SelectItem>
@@ -753,6 +810,14 @@ export default function Leistungsnachweise() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allUnterschriebeneSelected && unterschriebeneIds.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                        disabled={unterschriebeneIds.length === 0}
+                        aria-label="Alle unterschriebenen auswählen"
+                      />
+                    </TableHead>
                     <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('name')}>
                       <span className="flex items-center gap-1">Kunde <ArrowUpDown className="h-3 w-3" /></span>
                     </TableHead>
@@ -767,20 +832,33 @@ export default function Leistungsnachweise() {
                       <span className="flex items-center gap-1">Status <ArrowUpDown className="h-3 w-3" /></span>
                     </TableHead>
                     <TableHead>Signiert</TableHead>
-                    <TableHead className="text-right">Aktion</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredNachweise.map(ln => {
                     const kunde = kundenMap.get(ln.kunden_id);
-                    const cfg = statusConfig[ln.status] || statusConfig.entwurf;
-                    const isSelected = selectedLN?.id === ln.id;
+                    const cfg = statusConfig[ln.status] || statusConfig.offen;
+                    const isActive = selectedLN?.id === ln.id;
+                    const rowHours = getRowHours(ln);
+                    const canCheck = ln.status === 'unterschrieben';
                     return (
                       <TableRow
                         key={ln.id}
-                        className={`cursor-pointer transition-colors ${isSelected ? 'bg-primary/5 border-l-2 border-l-primary' : 'hover:bg-muted/50'}`}
+                        className={`cursor-pointer transition-colors ${isActive ? 'bg-primary/5 border-l-2 border-l-primary' : 'hover:bg-muted/50'}`}
                         onClick={() => { setSelectedLN(ln); setShowDetail(true); }}
                       >
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(ln.id)}
+                            onCheckedChange={(checked) => {
+                              const next = new Set(selectedIds);
+                              if (checked) next.add(ln.id); else next.delete(ln.id);
+                              setSelectedIds(next);
+                            }}
+                            disabled={!canCheck}
+                            aria-label={`${getKundeName(ln.kunden_id)} auswählen`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{getKundeName(ln.kunden_id)}</TableCell>
                         <TableCell>
                           {kunde?.pflegegrad ? (
@@ -789,8 +867,8 @@ export default function Leistungsnachweise() {
                             </span>
                           ) : '–'}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">{ln.geplante_stunden}h</TableCell>
-                        <TableCell className="text-right tabular-nums font-semibold">{ln.geleistete_stunden}h</TableCell>
+                        <TableCell className="text-right tabular-nums">{rowHours.geplant}h</TableCell>
+                        <TableCell className="text-right tabular-nums font-semibold">{rowHours.geleistet}h</TableCell>
                         <TableCell>
                           <Badge variant={cfg.variant} className="gap-1 text-xs">
                             {cfg.icon} {cfg.label}
@@ -801,22 +879,6 @@ export default function Leistungsnachweise() {
                             <CheckCircle2 className="h-4 w-4 text-success" />
                           ) : (
                             <Clock className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {ln.status === 'entwurf' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                publishMutation.mutate(ln.id);
-                              }}
-                              disabled={publishMutation.isPending}
-                            >
-                              <Send className="h-3 w-3" /> Veröffentlichen
-                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
@@ -871,11 +933,11 @@ export default function Leistungsnachweise() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg border border-border p-3 text-center">
                       <p className="text-xs text-muted-foreground uppercase tracking-wider">Geplant</p>
-                      <p className="text-2xl font-bold text-foreground mt-1">{selectedLN.geplante_stunden}h</p>
+                      <p className="text-2xl font-bold text-foreground mt-1">{displayHours.geplant}h</p>
                     </div>
                     <div className="rounded-lg border border-border p-3 text-center">
                       <p className="text-xs text-muted-foreground uppercase tracking-wider">Geleistet</p>
-                      <p className="text-2xl font-bold text-primary mt-1">{selectedLN.geleistete_stunden}h</p>
+                      <p className="text-2xl font-bold text-primary mt-1">{displayHours.geleistet}h</p>
                     </div>
                   </div>
 
@@ -914,7 +976,7 @@ export default function Leistungsnachweise() {
                               const end = new Date(t.end_at);
                               const hours = t.iststunden ?? ((end.getTime() - start.getTime()) / 3600000);
                               const sts = terminStatusLabel[t.status] || { label: t.status, color: 'text-muted-foreground bg-muted' };
-                              const canEdit = selectedLN && ['entwurf', 'veröffentlicht'].includes(selectedLN.status);
+                              const canEdit = selectedLN?.status === 'offen';
                               return (
                                 <TableRow key={t.id} className="hover:bg-muted/20">
                                   <TableCell className="text-sm font-medium">
@@ -991,7 +1053,7 @@ export default function Leistungsnachweise() {
 
                   <Separator />
 
-                  {/* Signature Section – only if veröffentlicht */}
+                  {/* Signature Section – available when offen */}
                   {canSign && (
                     <div className="space-y-3">
                       <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -1060,9 +1122,38 @@ export default function Leistungsnachweise() {
                   {/* Signature info if already signed */}
                   {selectedLN.unterschrift_kunde_zeitstempel && (
                     <div className="rounded-lg bg-success/10 border border-success/20 p-3">
-                      <div className="flex items-center gap-2 text-sm text-success">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span className="font-medium">Kunde hat unterschrieben</span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-success">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span className="font-medium">Kunde hat unterschrieben</span>
+                        </div>
+                        {selectedLN.status === 'unterschrieben' && (
+                          <AlertDialog open={showStornierConfirm} onOpenChange={setShowStornierConfirm}>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-destructive hover:text-destructive">
+                                <RotateCcw className="h-3 w-3" /> Stornieren
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Leistungsnachweis stornieren?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Die Unterschrift wird gelöscht und der Status auf "Offen" zurückgesetzt. Diese Aktion wird im Aktivitätslog protokolliert.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => stornierMutation.mutate(selectedLN.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  {stornierMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                  Stornieren
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {selectedLN.unterschrift_kunde_durch && `Durch: ${selectedLN.unterschrift_kunde_durch} · `}
