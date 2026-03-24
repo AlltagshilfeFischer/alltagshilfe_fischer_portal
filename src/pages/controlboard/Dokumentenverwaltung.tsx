@@ -548,11 +548,11 @@ export default function Dokumentenverwaltung() {
   };
 
   return (
-    <div className="p-6 h-[calc(100vh-4rem)] flex flex-col">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-3 sm:p-6 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] flex flex-col">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Dokumentenverwaltung</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-3xl font-bold">Dokumentenverwaltung</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Dokumente nach Kunden und Mitarbeitern organisiert
           </p>
         </div>
@@ -561,9 +561,10 @@ export default function Dokumentenverwaltung() {
           if (!open) resetUploadForm();
         }}>
           <DialogTrigger asChild>
-            <Button size="lg">
-              <Upload className="mr-2 h-5 w-5" />
-              Dokumente hochladen
+            <Button size="sm" className="sm:size-default gap-2 self-start sm:self-auto">
+              <Upload className="h-4 w-4" />
+              <span className="hidden sm:inline">Dokumente hochladen</span>
+              <span className="sm:hidden">Hochladen</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
