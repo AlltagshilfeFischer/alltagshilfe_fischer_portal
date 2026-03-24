@@ -74,7 +74,7 @@ export function LeistungsnachweisSignature() {
       const { data, error } = await supabase
         .from('leistungsnachweise')
         .select('*')
-        .in('status', ['offen', 'unterschrieben'])
+        .eq('status', 'offen')
         .order('jahr', { ascending: false })
         .order('monat', { ascending: false });
       if (error) throw error;
@@ -245,8 +245,7 @@ export function LeistungsnachweisSignature() {
     );
   }
 
-  const pendingNachweise = nachweise?.filter(n => n.status === 'offen' && !n.unterschrift_kunde_zeitstempel) || [];
-  const signedNachweise = nachweise?.filter(n => n.status === 'unterschrieben') || [];
+  const pendingNachweise = nachweise?.filter(n => !n.unterschrift_kunde_zeitstempel) || [];
 
   return (
     <>
@@ -258,56 +257,28 @@ export function LeistungsnachweisSignature() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!nachweise?.length ? (
+          {!pendingNachweise.length ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Keine Leistungsnachweise vorhanden
+              Keine offenen Leistungsnachweise zur Unterschrift
             </p>
           ) : (
-            <div className="space-y-4">
-              {pendingNachweise.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Zur Unterschrift</h3>
-                  <div className="space-y-2">
-                    {pendingNachweise.map(ln => (
-                      <div key={ln.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{getKundeName(ln.kunden_id)}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {monthNames[ln.monat - 1]} {ln.jahr} • {ln.geleistete_stunden}h geleistet
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => { setSelectedLN(ln); setSignDialogOpen(true); }}
-                        >
-                          <PenLine className="h-4 w-4 mr-1" /> Unterschreiben
-                        </Button>
-                      </div>
-                    ))}
+            <div className="space-y-2">
+              {pendingNachweise.map(ln => (
+                <div key={ln.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="font-medium">{getKundeName(ln.kunden_id)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {monthNames[ln.monat - 1]} {ln.jahr} • {ln.geleistete_stunden}h geleistet
+                    </p>
                   </div>
+                  <Button
+                    size="sm"
+                    onClick={() => { setSelectedLN(ln); setSignDialogOpen(true); }}
+                  >
+                    <PenLine className="h-4 w-4 mr-1" /> Unterschreiben
+                  </Button>
                 </div>
-              )}
-
-              {signedNachweise.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Bereits unterschrieben</h3>
-                  <div className="space-y-2">
-                    {signedNachweise.map(ln => (
-                      <div key={ln.id} className="flex items-center justify-between p-3 border rounded-lg opacity-70">
-                        <div>
-                          <p className="font-medium">{getKundeName(ln.kunden_id)}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {monthNames[ln.monat - 1]} {ln.jahr}
-                          </p>
-                        </div>
-                        <Badge variant="default" className="gap-1">
-                          <CheckCircle2 className="h-3 w-3" /> Unterschrieben
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              ))}
             </div>
           )}
         </CardContent>

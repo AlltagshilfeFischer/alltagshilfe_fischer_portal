@@ -14,11 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import {
   FileText, Eye, Printer, Calendar, Clock,
   CheckCircle2, XCircle, AlertTriangle, Loader2, RefreshCw,
   Search, ArrowUpDown, ChevronLeft, ChevronRight, X,
@@ -1127,32 +1122,37 @@ export default function Leistungsnachweise() {
                           <CheckCircle2 className="h-4 w-4" />
                           <span className="font-medium">Kunde hat unterschrieben</span>
                         </div>
-                        {selectedLN.status === 'unterschrieben' && (
-                          <AlertDialog open={showStornierConfirm} onOpenChange={setShowStornierConfirm}>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-destructive hover:text-destructive">
-                                <RotateCcw className="h-3 w-3" /> Stornieren
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Leistungsnachweis stornieren?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Die Unterschrift wird gelöscht und der Status auf "Offen" zurückgesetzt. Diese Aktion wird im Aktivitätslog protokolliert.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => stornierMutation.mutate(selectedLN.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  {stornierMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                  Stornieren
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                        {selectedLN.status === 'unterschrieben' && !showStornierConfirm && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
+                            onClick={() => setShowStornierConfirm(true)}
+                          >
+                            <RotateCcw className="h-3 w-3" /> Stornieren
+                          </Button>
+                        )}
+                        {selectedLN.status === 'unterschrieben' && showStornierConfirm && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => stornierMutation.mutate(selectedLN.id)}
+                              disabled={stornierMutation.isPending}
+                            >
+                              {stornierMutation.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+                              Ja, stornieren
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => setShowStornierConfirm(false)}
+                            >
+                              Abbrechen
+                            </Button>
+                          </div>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
