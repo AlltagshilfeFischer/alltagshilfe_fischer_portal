@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -13,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { 
   FileText, PenLine, CheckCircle2, Clock,
-  Loader2, Trash2, Calendar, EyeOff
+  Loader2, Trash2, Calendar, EyeOff, Eye, ChevronDown
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -82,19 +83,42 @@ export function LeistungsnachweisSignature() {
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Fetch leistungsnachweise for this employee's customers
+  // Fetch open leistungsnachweise, then filter to only those where
+  // this MA had termine in that specific month
   const { data: nachweise, isLoading } = useQuery({
     queryKey: ['mitarbeiter-leistungsnachweise', mitarbeiterId],
     queryFn: async () => {
       if (!mitarbeiterId) return [];
-      const { data, error } = await supabase
+
+      // 1. Get all open LN
+      const { data: allLN, error: lnError } = await supabase
         .from('leistungsnachweise')
         .select('*')
         .eq('status', 'offen')
         .order('jahr', { ascending: false })
         .order('monat', { ascending: false });
-      if (error) throw error;
-      return data as LNRow[];
+      if (lnError) throw lnError;
+      if (!allLN?.length) return [];
+
+      // 2. Get kunden_ids where this MA has termine, grouped by month
+      const { data: myTermine, error: tError } = await supabase
+        .from('termine')
+        .select('kunden_id, start_at')
+        .eq('mitarbeiter_id', mitarbeiterId)
+        .not('kunden_id', 'is', null);
+      if (tError) throw tError;
+
+      // Build set of "kundenId-monat-jahr" keys
+      const myKeys = new Set<string>();
+      for (const t of myTermine ?? []) {
+        const d = new Date(t.start_at);
+        myKeys.add(`${t.kunden_id}-${d.getMonth() + 1}-${d.getFullYear()}`);
+      }
+
+      // 3. Filter LN to only those matching
+      return (allLN as LNRow[]).filter(ln =>
+        myKeys.has(`${ln.kunden_id}-${ln.monat}-${ln.jahr}`)
+      );
     },
     enabled: !!mitarbeiterId
   });
@@ -262,6 +286,16 @@ export function LeistungsnachweisSignature() {
   }
 
   const pendingNachweise = nachweise?.filter(n => !n.unterschrift_kunde_zeitstempel && !hiddenIds.has(n.id)) || [];
+  const hiddenNachweise = nachweise?.filter(n => !n.unterschrift_kunde_zeitstempel && hiddenIds.has(n.id)) || [];
+
+  const unhideNachweis = (id: string) => {
+    setHiddenIds(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      localStorage.setItem('ln-hidden-ids', JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   return (
     <>
@@ -307,6 +341,36 @@ export function LeistungsnachweisSignature() {
                 </div>
               ))}
             </div>
+          )}
+          {hiddenNachweise.length > 0 && (
+            <Collapsible className="mt-4">
+              <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full">
+                <ChevronDown className="h-3 w-3" />
+                {hiddenNachweise.length} ausgeblendet
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-2 mt-2">
+                  {hiddenNachweise.map(ln => (
+                    <div key={ln.id} className="flex items-center justify-between p-2 border border-dashed rounded-lg opacity-50">
+                      <div>
+                        <p className="text-sm">{getKundeName(ln.kunden_id)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {monthNames[ln.monat - 1]} {ln.jahr}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs"
+                        onClick={() => unhideNachweis(ln.id)}
+                      >
+                        <Eye className="h-3.5 w-3.5 mr-1" /> Einblenden
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
         </CardContent>
       </Card>
