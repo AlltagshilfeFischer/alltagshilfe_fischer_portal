@@ -1117,13 +1117,13 @@ const ScheduleBuilderModern = () => {
         />
 
         {/* Kundenfilter */}
-        <div className="flex items-center gap-2 px-1">
+        <div className="flex items-center gap-2 px-1 flex-wrap">
           <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
           <Select
             value={filterKundenId ?? '__all__'}
             onValueChange={(v) => setFilterKundenId(v === '__all__' ? null : v)}
           >
-            <SelectTrigger className="w-56 h-8 text-sm">
+            <SelectTrigger className="w-40 sm:w-56 h-8 text-xs sm:text-sm">
               <SelectValue placeholder="Alle Kunden" />
             </SelectTrigger>
             <SelectContent>
