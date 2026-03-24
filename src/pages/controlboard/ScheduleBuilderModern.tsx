@@ -1095,7 +1095,7 @@ const ScheduleBuilderModern = () => {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="h-[calc(100vh-4rem)] flex flex-col gap-3 p-4 bg-background overflow-hidden">
+      <div className="h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] flex flex-col gap-2 sm:gap-3 p-2 sm:p-4 bg-background overflow-hidden">
         {/* Pro Header */}
         <ProScheduleHeader
           currentWeek={currentWeek}
