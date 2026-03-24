@@ -1021,11 +1021,11 @@ const ScheduleBuilderModern = () => {
 
         // Add new appointment to local state
         if (newAppointment) {
-          const mapped: LocalAppointment = {
+          const mapped = {
             ...newAppointment,
             customer: newAppointment.kunden ? { id: newAppointment.kunden.id, name: newAppointment.kunden.name, farbe_kalender: newAppointment.kunden.farbe_kalender } : undefined,
             employee: newAppointment.mitarbeiter ? { id: newAppointment.mitarbeiter.id, name: `${newAppointment.mitarbeiter.vorname || ''} ${newAppointment.mitarbeiter.nachname || ''}`.trim(), farbe_kalender: newAppointment.mitarbeiter.farbe_kalender || '#3B82F6' } : undefined,
-          } as LocalAppointment;
+          } as unknown as LocalAppointment;
           setAppointments(prev => [...prev, mapped]);
         }
         // Keep clipboard for multiple pastes in copy mode

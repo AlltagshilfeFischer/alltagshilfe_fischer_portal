@@ -369,9 +369,9 @@ export function useUmsatzReport(filters: ReportingFilters) {
         .lte('service_date', dateTo.toISOString().split('T')[0]);
 
       if (error) throw error;
-      const rows = data ?? [];
+      const rows = (data ?? []) as any[];
 
-      const gesamtUmsatz = rows.reduce((sum, r) => sum + (r.total_amount ?? 0), 0);
+      const gesamtUmsatz = rows.reduce((sum: number, r: any) => sum + (r.total_amount ?? 0), 0);
 
       // Nach Typ aggregieren
       const typMap = new Map<string, { betrag: number; stunden: number }>();
