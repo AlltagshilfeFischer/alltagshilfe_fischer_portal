@@ -998,15 +998,27 @@ export type Database = {
         Row: {
           adresse: string | null
           avatar_url: string | null
+          bank_institut: string | null
           benutzer_id: string | null
           created_at: string
+          email: string | null
           email_benachrichtigungen: boolean | null
           employment_type: string | null
           farbe_kalender: string | null
+          geburtsdatum: string | null
+          geburtsland: string | null
+          geburtsname: string | null
+          geburtsort: string | null
+          gehalt_pro_monat: number | null
+          geschlecht: string | null
           hourly_rate: number | null
+          iban: string | null
           id: string
           is_bookable: boolean
           ist_aktiv: boolean
+          kinderfreibetrag: number | null
+          konfession: string | null
+          krankenkasse: string | null
           max_termine_pro_tag: number | null
           nachname: string | null
           plz: string | null
@@ -1014,24 +1026,41 @@ export type Database = {
           soll_wochenstunden: number | null
           stadt: string | null
           standort: Database["public"]["Enums"]["standort"] | null
+          steuer_id: string | null
+          steuerklasse: number | null
           strasse: string | null
+          sv_rv_nummer: string | null
           telefon: string | null
           updated_at: string
+          vertragsstunden_pro_monat: number | null
           vorname: string | null
+          weitere_beschaeftigung: boolean | null
           zustaendigkeitsbereich: string | null
         }
         Insert: {
           adresse?: string | null
           avatar_url?: string | null
+          bank_institut?: string | null
           benutzer_id?: string | null
           created_at?: string
+          email?: string | null
           email_benachrichtigungen?: boolean | null
           employment_type?: string | null
           farbe_kalender?: string | null
+          geburtsdatum?: string | null
+          geburtsland?: string | null
+          geburtsname?: string | null
+          geburtsort?: string | null
+          gehalt_pro_monat?: number | null
+          geschlecht?: string | null
           hourly_rate?: number | null
+          iban?: string | null
           id?: string
           is_bookable?: boolean
           ist_aktiv?: boolean
+          kinderfreibetrag?: number | null
+          konfession?: string | null
+          krankenkasse?: string | null
           max_termine_pro_tag?: number | null
           nachname?: string | null
           plz?: string | null
@@ -1039,24 +1068,41 @@ export type Database = {
           soll_wochenstunden?: number | null
           stadt?: string | null
           standort?: Database["public"]["Enums"]["standort"] | null
+          steuer_id?: string | null
+          steuerklasse?: number | null
           strasse?: string | null
+          sv_rv_nummer?: string | null
           telefon?: string | null
           updated_at?: string
+          vertragsstunden_pro_monat?: number | null
           vorname?: string | null
+          weitere_beschaeftigung?: boolean | null
           zustaendigkeitsbereich?: string | null
         }
         Update: {
           adresse?: string | null
           avatar_url?: string | null
+          bank_institut?: string | null
           benutzer_id?: string | null
           created_at?: string
+          email?: string | null
           email_benachrichtigungen?: boolean | null
           employment_type?: string | null
           farbe_kalender?: string | null
+          geburtsdatum?: string | null
+          geburtsland?: string | null
+          geburtsname?: string | null
+          geburtsort?: string | null
+          gehalt_pro_monat?: number | null
+          geschlecht?: string | null
           hourly_rate?: number | null
+          iban?: string | null
           id?: string
           is_bookable?: boolean
           ist_aktiv?: boolean
+          kinderfreibetrag?: number | null
+          konfession?: string | null
+          krankenkasse?: string | null
           max_termine_pro_tag?: number | null
           nachname?: string | null
           plz?: string | null
@@ -1064,10 +1110,15 @@ export type Database = {
           soll_wochenstunden?: number | null
           stadt?: string | null
           standort?: Database["public"]["Enums"]["standort"] | null
+          steuer_id?: string | null
+          steuerklasse?: number | null
           strasse?: string | null
+          sv_rv_nummer?: string | null
           telefon?: string | null
           updated_at?: string
+          vertragsstunden_pro_monat?: number | null
           vorname?: string | null
+          weitere_beschaeftigung?: boolean | null
           zustaendigkeitsbereich?: string | null
         }
         Relationships: [
@@ -1076,6 +1127,50 @@ export type Database = {
             columns: ["benutzer_id"]
             isOneToOne: true
             referencedRelation: "benutzer"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mitarbeiter_nebenbeschaeftigung: {
+        Row: {
+          id: string
+          mitarbeiter_id: string
+          arbeitgeber: string
+          art_beschaeftigung: string | null
+          arbeitszeit_stunden_woche: number | null
+          gehalt_monatlich: number | null
+          sv_pflicht: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          mitarbeiter_id: string
+          arbeitgeber: string
+          art_beschaeftigung?: string | null
+          arbeitszeit_stunden_woche?: number | null
+          gehalt_monatlich?: number | null
+          sv_pflicht?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          mitarbeiter_id?: string
+          arbeitgeber?: string
+          art_beschaeftigung?: string | null
+          arbeitszeit_stunden_woche?: number | null
+          gehalt_monatlich?: number | null
+          sv_pflicht?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mitarbeiter_nebenbeschaeftigung_mitarbeiter_id_fkey"
+            columns: ["mitarbeiter_id"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
             referencedColumns: ["id"]
           },
         ]

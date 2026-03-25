@@ -8,10 +8,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Trash2, UserX, UserCheck, Pencil, Users, Search, Upload, Shield, KeyRound, CheckCircle2, Mail, Send, ChevronDown, ChevronRight, Plus, Sparkles, UserPlus } from 'lucide-react';
 import { AvatarUpload } from '@/components/mitarbeiter/AvatarUpload';
@@ -19,9 +17,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useUserRole, type UserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { AddMitarbeiterDialog } from '@/components/mitarbeiter/AddMitarbeiterDialog';
-import { QualifikationenPicker } from '@/components/mitarbeiter/QualifikationenPicker';
-import { VerfuegbarkeitEditor } from '@/components/mitarbeiter/VerfuegbarkeitEditor';
-import { useMitarbeiterQualifikationen, useSaveMitarbeiterQualifikationen } from '@/hooks/useQualifikationen';
+import { MitarbeiterEditDialog } from '@/components/mitarbeiter/edit-dialog/MitarbeiterEditDialog';
 import { downloadCsv } from '@/lib/csvExport';
 import { Download } from 'lucide-react';
 
@@ -49,6 +45,26 @@ interface Mitarbeiter {
   employment_type: string | null;
   avatar_url: string | null;
   benutzer_id: string | null;
+  // Reiter 1: Persoenliche Daten & Vertrag
+  gehalt_pro_monat: number | null;
+  vertragsstunden_pro_monat: number | null;
+  geburtsdatum: string | null;
+  geburtsname: string | null;
+  geburtsort: string | null;
+  geburtsland: string | null;
+  geschlecht: string | null;
+  konfession: string | null;
+  email: string | null;
+  bank_institut: string | null;
+  iban: string | null;
+  // Reiter 2: Steuer & SV
+  steuer_id: string | null;
+  steuerklasse: number | null;
+  kinderfreibetrag: number | null;
+  sv_rv_nummer: string | null;
+  krankenkasse: string | null;
+  // Reiter 3
+  weitere_beschaeftigung: boolean | null;
   benutzer?: {
     email: string;
     status: string;
@@ -74,13 +90,7 @@ export default function BenutzerverwaltungNeu() {
    const [createUserForm, setCreateUserForm] = useState({ email: '', password: '', vorname: '', nachname: '', rolle: 'geschaeftsfuehrer' });
    const [createUserLoading, setCreateUserLoading] = useState(false);
    const [deactivatedSectionOpen, setDeactivatedSectionOpen] = useState(false);
-   const [editQualifikationIds, setEditQualifikationIds] = useState<string[]>([]);
-
-  // Multi-select removed - unified list now
-
   const { toast } = useToast();
-  const saveQualifikationen = useSaveMitarbeiterQualifikationen();
-  const { data: currentQualifikationIds = [] } = useMitarbeiterQualifikationen(editingMitarbeiter?.id ?? null);
   const { isGeschaeftsfuehrer, isAdmin } = useUserRole();
   const { user } = useAuth();
   
@@ -103,13 +113,6 @@ export default function BenutzerverwaltungNeu() {
 
     return () => { supabase.removeChannel(channel); };
   }, []);
-
-  // Sync qualifikation IDs when edit dialog opens or data loads
-  useEffect(() => {
-    if (editDialogOpen && currentQualifikationIds.length >= 0) {
-      setEditQualifikationIds(currentQualifikationIds);
-    }
-  }, [editDialogOpen, currentQualifikationIds]);
 
   const loadData = async () => {
     try {
@@ -241,39 +244,10 @@ export default function BenutzerverwaltungNeu() {
     setEditDialogOpen(true);
   };
 
-  const handleSaveMitarbeiter = async () => {
-    if (!editingMitarbeiter) return;
-    setActionLoading(editingMitarbeiter.id);
-    try {
-      const { error } = await supabase.from('mitarbeiter').update({
-        vorname: editingMitarbeiter.vorname,
-        nachname: editingMitarbeiter.nachname,
-        telefon: editingMitarbeiter.telefon,
-        strasse: editingMitarbeiter.strasse,
-        stadt: editingMitarbeiter.stadt,
-        plz: editingMitarbeiter.plz,
-        farbe_kalender: editingMitarbeiter.farbe_kalender,
-        standort: editingMitarbeiter.standort,
-        zustaendigkeitsbereich: editingMitarbeiter.zustaendigkeitsbereich,
-        soll_wochenstunden: editingMitarbeiter.soll_wochenstunden,
-        max_termine_pro_tag: editingMitarbeiter.max_termine_pro_tag,
-        employment_type: editingMitarbeiter.employment_type,
-      }).eq('id', editingMitarbeiter.id);
-      if (error) throw error;
-      // Save qualifikationen
-      await saveQualifikationen.mutateAsync({
-        mitarbeiterId: editingMitarbeiter.id,
-        qualifikationIds: editQualifikationIds,
-      });
-      toast({ title: 'Erfolgreich', description: 'Mitarbeiter-Daten wurden aktualisiert.' });
-      setEditDialogOpen(false);
-      setEditingMitarbeiter(null);
-      loadData();
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Fehler', description: error.message });
-    } finally {
-      setActionLoading(null);
-    }
+  const handleSaveMitarbeiterSuccess = () => {
+    setEditDialogOpen(false);
+    setEditingMitarbeiter(null);
+    loadData();
   };
 
   const handleOpenActivateDialog = (m: Mitarbeiter) => {
@@ -731,121 +705,13 @@ export default function BenutzerverwaltungNeu() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Mitarbeiter bearbeiten</DialogTitle>
-            <DialogDescription>Stammdaten des Mitarbeiters anpassen</DialogDescription>
-          </DialogHeader>
-          {editingMitarbeiter && (
-            <div className="grid gap-4 py-4">
-              <div className="flex justify-center pb-4 border-b">
-                <div className="text-center">
-                  <AvatarUpload
-                    mitarbeiterId={editingMitarbeiter.id}
-                    currentAvatarUrl={editingMitarbeiter.avatar_url}
-                    name={`${editingMitarbeiter.vorname || ''} ${editingMitarbeiter.nachname || ''}`.trim() || 'Mitarbeiter'}
-                    color={editingMitarbeiter.farbe_kalender || '#3B82F6'}
-                    size="lg"
-                    onUploadComplete={() => loadData()}
-                    onRemove={() => loadData()}
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">Hover für Upload-Optionen</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Vorname</Label>
-                  <Input value={editingMitarbeiter.vorname || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, vorname: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Nachname</Label>
-                  <Input value={editingMitarbeiter.nachname || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, nachname: e.target.value })} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Telefon</Label>
-                <Input value={editingMitarbeiter.telefon || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, telefon: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 col-span-2">
-                  <Label>Straße</Label>
-                  <Input value={editingMitarbeiter.strasse || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, strasse: e.target.value })} placeholder="Straße und Hausnummer" />
-                </div>
-                <div className="space-y-2">
-                  <Label>PLZ</Label>
-                  <Input value={editingMitarbeiter.plz || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, plz: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Stadt</Label>
-                  <Input value={editingMitarbeiter.stadt || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, stadt: e.target.value })} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Kalenderfarbe</Label>
-                  <Input type="color" value={editingMitarbeiter.farbe_kalender || '#3B82F6'} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, farbe_kalender: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Standort</Label>
-                  <Select value={editingMitarbeiter.standort || 'Hannover'} onValueChange={(v: 'Hannover') => setEditingMitarbeiter({ ...editingMitarbeiter, standort: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="Hannover">Hannover</SelectItem></SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Zuständigkeitsbereich</Label>
-                <Input value={editingMitarbeiter.zustaendigkeitsbereich || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, zustaendigkeitsbereich: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Beschäftigungsart</Label>
-                  <Select value={editingMitarbeiter.employment_type || ''} onValueChange={(val) => setEditingMitarbeiter({ ...editingMitarbeiter, employment_type: val || null })}>
-                    <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Vollzeit">Vollzeit</SelectItem>
-                      <SelectItem value="Teilzeit">Teilzeit</SelectItem>
-                      <SelectItem value="Minijob">Minijob</SelectItem>
-                      <SelectItem value="Werkstudent">Werkstudent</SelectItem>
-                      <SelectItem value="Praktikant">Praktikant</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Soll-Wochenstunden</Label>
-                  <Input type="number" min="0" step="0.5" value={editingMitarbeiter.soll_wochenstunden || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, soll_wochenstunden: e.target.value ? parseFloat(e.target.value) : null })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Max. Termine/Tag</Label>
-                  <Input type="number" min="0" value={editingMitarbeiter.max_termine_pro_tag || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, max_termine_pro_tag: e.target.value ? parseInt(e.target.value) : null })} />
-                </div>
-              </div>
-
-              {/* Qualifikationen */}
-              <div className="border-t pt-4">
-                <QualifikationenPicker
-                  selectedIds={editQualifikationIds}
-                  onChange={setEditQualifikationIds}
-                />
-              </div>
-
-              {/* Verfuegbarkeiten */}
-              <div className="border-t pt-4">
-                <VerfuegbarkeitEditor mitarbeiterId={editingMitarbeiter.id} />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleSaveMitarbeiter} disabled={actionLoading === editingMitarbeiter?.id}>
-              {actionLoading === editingMitarbeiter?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Speichern
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Dialog — neue Tab-basierte Komponente */}
+      <MitarbeiterEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        mitarbeiter={editingMitarbeiter}
+        onSuccess={handleSaveMitarbeiterSuccess}
+      />
 
       {/* Create User Manual Dialog */}
       <Dialog open={createUserDialogOpen} onOpenChange={setCreateUserDialogOpen}>

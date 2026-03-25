@@ -220,6 +220,37 @@ export interface MitarbeiterRow {
   plz: string | null;
   stadt: string | null;
   zustaendigkeitsbereich: string | null;
+  // Reiter 1: Persoenliche Daten & Vertrag
+  gehalt_pro_monat: number | null;
+  vertragsstunden_pro_monat: number | null;
+  geburtsdatum: string | null;
+  geburtsname: string | null;
+  geburtsort: string | null;
+  geburtsland: string | null;
+  geschlecht: string | null;
+  konfession: string | null;
+  email: string | null;
+  bank_institut: string | null;
+  iban: string | null;
+  // Reiter 2: Steuer & Sozialversicherung
+  steuer_id: string | null;
+  steuerklasse: number | null;
+  kinderfreibetrag: number | null;
+  sv_rv_nummer: string | null;
+  krankenkasse: string | null;
+  // Reiter 3: Weitere Beschaeftigungsverhaeltnisse
+  weitere_beschaeftigung: boolean | null;
+}
+
+// ─── Nebenbeschaeftigung ────────────────────────────────────
+export interface MitarbeiterNebenbeschaeftigung {
+  id: string;
+  mitarbeiter_id: string;
+  arbeitgeber: string;
+  art_beschaeftigung: string | null;
+  arbeitszeit_stunden_woche: number | null;
+  gehalt_monatlich: number | null;
+  sv_pflicht: boolean;
 }
 
 // ─── Pflegebudget ───────────────────────────────────────────

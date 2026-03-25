@@ -1,0 +1,311 @@
+import { useState } from 'react';
+import { UseFormReturn } from 'react-hook-form';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Card, CardContent } from '@/components/ui/card';
+import { Plus, Trash2, Loader2, Briefcase } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  useNebenbeschaeftigungen,
+  useCreateNebenbeschaeftigung,
+  useUpdateNebenbeschaeftigung,
+  useDeleteNebenbeschaeftigung,
+} from '@/hooks/useNebenbeschaeftigung';
+import type { MitarbeiterFormValues } from './mitarbeiterFormSchema';
+import type { MitarbeiterNebenbeschaeftigung } from '@/types/domain';
+
+const ART_LABELS: Record<string, string> = {
+  minijob: 'Minijob',
+  sv_pflichtig: 'SV-pflichtig',
+  kurzfristig: 'Kurzfristig',
+  ehrenamt: 'Ehrenamt',
+};
+
+interface SideEmploymentTabProps {
+  form: UseFormReturn<MitarbeiterFormValues>;
+  mitarbeiterId: string;
+}
+
+export function SideEmploymentTab({ form, mitarbeiterId }: SideEmploymentTabProps) {
+  const { setValue, watch } = form;
+  const weitereBeschaeftigung = watch('weitere_beschaeftigung');
+
+  const { data: nebenbeschaeftigungen = [], isLoading } = useNebenbeschaeftigungen(mitarbeiterId);
+  const createMutation = useCreateNebenbeschaeftigung();
+  const updateMutation = useUpdateNebenbeschaeftigung();
+  const deleteMutation = useDeleteNebenbeschaeftigung();
+
+  const [addingNew, setAddingNew] = useState(false);
+  const [newEntry, setNewEntry] = useState({
+    arbeitgeber: '',
+    art_beschaeftigung: '' as string,
+    arbeitszeit_stunden_woche: '' as string,
+    gehalt_monatlich: '' as string,
+    sv_pflicht: false,
+  });
+
+  const handleToggle = (checked: boolean) => {
+    setValue('weitere_beschaeftigung', checked);
+  };
+
+  const handleAddEntry = async () => {
+    if (!newEntry.arbeitgeber.trim()) {
+      toast.error('Arbeitgeber ist erforderlich');
+      return;
+    }
+    try {
+      await createMutation.mutateAsync({
+        mitarbeiter_id: mitarbeiterId,
+        arbeitgeber: newEntry.arbeitgeber.trim(),
+        art_beschaeftigung: newEntry.art_beschaeftigung || null,
+        arbeitszeit_stunden_woche: newEntry.arbeitszeit_stunden_woche ? parseFloat(newEntry.arbeitszeit_stunden_woche) : null,
+        gehalt_monatlich: newEntry.gehalt_monatlich ? parseFloat(newEntry.gehalt_monatlich) : null,
+        sv_pflicht: newEntry.sv_pflicht,
+      });
+      toast.success('Nebenbeschäftigung hinzugefügt');
+      setNewEntry({ arbeitgeber: '', art_beschaeftigung: '', arbeitszeit_stunden_woche: '', gehalt_monatlich: '', sv_pflicht: false });
+      setAddingNew(false);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unbekannter Fehler';
+      toast.error('Fehler', { description: message });
+    }
+  };
+
+  const handleDeleteEntry = async (entry: MitarbeiterNebenbeschaeftigung) => {
+    try {
+      await deleteMutation.mutateAsync({ id: entry.id, mitarbeiter_id: mitarbeiterId });
+      toast.success('Nebenbeschäftigung entfernt');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unbekannter Fehler';
+      toast.error('Fehler', { description: message });
+    }
+  };
+
+  const handleUpdateField = async (
+    entry: MitarbeiterNebenbeschaeftigung,
+    field: keyof Omit<MitarbeiterNebenbeschaeftigung, 'id' | 'mitarbeiter_id'>,
+    value: string | number | boolean | null
+  ) => {
+    try {
+      await updateMutation.mutateAsync({
+        id: entry.id,
+        mitarbeiter_id: mitarbeiterId,
+        [field]: value,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unbekannter Fehler';
+      toast.error('Fehler beim Speichern', { description: message });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
+        Angaben zur Vermeidung von Überschreitungen bei Arbeitszeitgesetz und Pauschalversteuerung.
+      </p>
+
+      {/* Toggle */}
+      <div className="flex items-center gap-3">
+        <Switch checked={weitereBeschaeftigung} onCheckedChange={handleToggle} />
+        <Label className="cursor-pointer" onClick={() => handleToggle(!weitereBeschaeftigung)}>
+          Weitere Beschäftigung vorhanden
+        </Label>
+      </div>
+
+      {/* Dynamische Liste */}
+      {weitereBeschaeftigung && (
+        <div className="space-y-4">
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Lade Nebenbeschäftigungen...
+            </div>
+          ) : (
+            <>
+              {nebenbeschaeftigungen.map((entry) => (
+                <Card key={entry.id} className="relative">
+                  <CardContent className="pt-4 pb-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-sm">{entry.arbeitgeber}</span>
+                        {entry.art_beschaeftigung && (
+                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                            {ART_LABELS[entry.art_beschaeftigung] || entry.art_beschaeftigung}
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteEntry(entry)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Arbeitgeber</Label>
+                        <Input
+                          defaultValue={entry.arbeitgeber}
+                          onBlur={(e) => {
+                            if (e.target.value !== entry.arbeitgeber) {
+                              handleUpdateField(entry, 'arbeitgeber', e.target.value);
+                            }
+                          }}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Art</Label>
+                        <Select
+                          defaultValue={entry.art_beschaeftigung || ''}
+                          onValueChange={(v) => handleUpdateField(entry, 'art_beschaeftigung', v || null)}
+                        >
+                          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="—" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="minijob">Minijob</SelectItem>
+                            <SelectItem value="sv_pflichtig">SV-pflichtig</SelectItem>
+                            <SelectItem value="kurzfristig">Kurzfristig</SelectItem>
+                            <SelectItem value="ehrenamt">Ehrenamt</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Std./Woche</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          defaultValue={entry.arbeitszeit_stunden_woche ?? ''}
+                          onBlur={(e) => {
+                            const val = e.target.value ? parseFloat(e.target.value) : null;
+                            if (val !== entry.arbeitszeit_stunden_woche) {
+                              handleUpdateField(entry, 'arbeitszeit_stunden_woche', val);
+                            }
+                          }}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Gehalt/Monat (€)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          defaultValue={entry.gehalt_monatlich ?? ''}
+                          onBlur={(e) => {
+                            const val = e.target.value ? parseFloat(e.target.value) : null;
+                            if (val !== entry.gehalt_monatlich) {
+                              handleUpdateField(entry, 'gehalt_monatlich', val);
+                            }
+                          }}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Switch
+                        checked={entry.sv_pflicht}
+                        onCheckedChange={(checked) => handleUpdateField(entry, 'sv_pflicht', checked)}
+                      />
+                      <Label className="text-xs">SV-Pflicht</Label>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {/* Neue Nebenbeschaeftigung hinzufuegen */}
+              {addingNew ? (
+                <Card className="border-dashed">
+                  <CardContent className="pt-4 pb-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Arbeitgeber *</Label>
+                        <Input
+                          value={newEntry.arbeitgeber}
+                          onChange={(e) => setNewEntry({ ...newEntry, arbeitgeber: e.target.value })}
+                          placeholder="Firmenname"
+                          className="h-8 text-sm"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Art der Beschäftigung</Label>
+                        <Select value={newEntry.art_beschaeftigung} onValueChange={(v) => setNewEntry({ ...newEntry, art_beschaeftigung: v })}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="minijob">Minijob</SelectItem>
+                            <SelectItem value="sv_pflichtig">SV-pflichtig</SelectItem>
+                            <SelectItem value="kurzfristig">Kurzfristig</SelectItem>
+                            <SelectItem value="ehrenamt">Ehrenamt</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Arbeitszeit (Std./Woche)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={newEntry.arbeitszeit_stunden_woche}
+                          onChange={(e) => setNewEntry({ ...newEntry, arbeitszeit_stunden_woche: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Gehalt / Monat (€)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={newEntry.gehalt_monatlich}
+                          onChange={(e) => setNewEntry({ ...newEntry, gehalt_monatlich: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={newEntry.sv_pflicht}
+                        onCheckedChange={(checked) => setNewEntry({ ...newEntry, sv_pflicht: checked })}
+                      />
+                      <Label className="text-xs">SV-Pflicht</Label>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" onClick={handleAddEntry} disabled={createMutation.isPending}>
+                        {createMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                        Hinzufügen
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setAddingNew(false)}>
+                        Abbrechen
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => setAddingNew(true)}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Nebenbeschäftigung hinzufügen
+                </Button>
+              )}
+
+              {nebenbeschaeftigungen.length === 0 && !addingNew && (
+                <p className="text-sm text-muted-foreground italic">
+                  Keine Nebenbeschäftigungen eingetragen.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
