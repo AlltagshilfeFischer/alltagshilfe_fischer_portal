@@ -87,7 +87,7 @@ export default function BenutzerverwaltungNeu() {
    const [searchQuery, setSearchQuery] = useState('');
    const [importDialogOpen, setImportDialogOpen] = useState(false);
    const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
-   const [createUserForm, setCreateUserForm] = useState({ email: '', password: '', vorname: '', nachname: '', rolle: 'geschaeftsfuehrer' });
+   const [createUserForm, setCreateUserForm] = useState({ email: '', password: '', vorname: '', nachname: '', rolle: 'geschaeftsfuehrer', employment_type: '' });
    const [createUserLoading, setCreateUserLoading] = useState(false);
    const [deactivatedSectionOpen, setDeactivatedSectionOpen] = useState(false);
   const { toast } = useToast();
@@ -422,6 +422,7 @@ export default function BenutzerverwaltungNeu() {
           vorname: createUserForm.vorname,
           nachname: createUserForm.nachname,
           rolle: createUserForm.rolle,
+          employment_type: createUserForm.employment_type || null,
         },
       });
       if (error) {
@@ -430,7 +431,7 @@ export default function BenutzerverwaltungNeu() {
       }
       toast({ title: 'Erfolgreich', description: data?.message || 'Benutzer erstellt.' });
       setCreateUserDialogOpen(false);
-      setCreateUserForm({ email: '', password: '', vorname: '', nachname: '', rolle: 'geschaeftsfuehrer' });
+      setCreateUserForm({ email: '', password: '', vorname: '', nachname: '', rolle: 'geschaeftsfuehrer', employment_type: '' });
       loadData();
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Fehler', description: error.message });
@@ -744,16 +745,31 @@ export default function BenutzerverwaltungNeu() {
               <Label>Passwort *</Label>
               <Input type="text" value={createUserForm.password} onChange={(e) => setCreateUserForm({ ...createUserForm, password: e.target.value })} placeholder="Mindestens 6 Zeichen" />
             </div>
-            <div className="space-y-2">
-              <Label>Rolle</Label>
-              <Select value={createUserForm.rolle} onValueChange={(v) => setCreateUserForm({ ...createUserForm, rolle: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent className="z-[300] bg-popover">
-                  {isGeschaeftsfuehrer && <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>}
-                  <SelectItem value="buchhaltung">Buchhaltung</SelectItem>
-                  <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Rolle</Label>
+                <Select value={createUserForm.rolle} onValueChange={(v) => setCreateUserForm({ ...createUserForm, rolle: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent className="z-[300] bg-popover">
+                    {isGeschaeftsfuehrer && <SelectItem value="geschaeftsfuehrer">Geschäftsführer</SelectItem>}
+                    <SelectItem value="buchhaltung">Buchhaltung</SelectItem>
+                    <SelectItem value="mitarbeiter">Mitarbeiter</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Beschäftigungsart</Label>
+                <Select value={createUserForm.employment_type} onValueChange={(v) => setCreateUserForm({ ...createUserForm, employment_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                  <SelectContent className="z-[300] bg-popover">
+                    <SelectItem value="Vollzeit">Vollzeit</SelectItem>
+                    <SelectItem value="Teilzeit">Teilzeit</SelectItem>
+                    <SelectItem value="Minijob">Minijob</SelectItem>
+                    <SelectItem value="Werkstudent">Werkstudent</SelectItem>
+                    <SelectItem value="Praktikant">Praktikant</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>

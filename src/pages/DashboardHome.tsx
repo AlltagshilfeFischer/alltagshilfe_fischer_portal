@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Building, AlertCircle, Clock, Calendar } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +8,8 @@ import QuickActionChat from '@/components/dashboard/QuickActionChat';
 
 export default function DashboardHome() {
   const {
-    data: customersCount
+    data: customersCount,
+    isLoading: isLoadingCustomers
   } = useQuery({
     queryKey: ['customers-count'],
     queryFn: async () => {
@@ -23,7 +25,8 @@ export default function DashboardHome() {
     }
   });
   const {
-    data: pendingApprovalsCount
+    data: pendingApprovalsCount,
+    isLoading: isLoadingApprovals
   } = useQuery({
     queryKey: ['pending-approvals-count'],
     queryFn: async () => {
@@ -40,7 +43,8 @@ export default function DashboardHome() {
   });
 
   const {
-    data: avgHoursPerCustomer
+    data: avgHoursPerCustomer,
+    isLoading: isLoadingAvgHours
   } = useQuery({
     queryKey: ['avg-hours-per-customer'],
     queryFn: async () => {
@@ -63,7 +67,8 @@ export default function DashboardHome() {
   });
 
   const {
-    data: monthlyHours
+    data: monthlyHours,
+    isLoading: isLoadingMonthly
   } = useQuery({
     queryKey: ['monthly-hours'],
     queryFn: async () => {
@@ -107,7 +112,9 @@ export default function DashboardHome() {
             <AlertCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{pendingApprovalsCount || 0}</div>
+            <div className="text-2xl font-bold text-destructive">
+              {isLoadingApprovals ? <Skeleton className="h-8 w-12" /> : (pendingApprovalsCount ?? 0)}
+            </div>
             <p className="text-xs text-muted-foreground">Zu genehmigen</p>
           </CardContent>
         </Card>
@@ -118,7 +125,9 @@ export default function DashboardHome() {
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{customersCount || 0}</div>
+            <div className="text-2xl font-bold">
+              {isLoadingCustomers ? <Skeleton className="h-8 w-12" /> : (customersCount ?? 0)}
+            </div>
             <p className="text-xs text-muted-foreground">Aktive Kunden</p>
           </CardContent>
         </Card>
@@ -129,7 +138,9 @@ export default function DashboardHome() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{avgHoursPerCustomer || 0}h</div>
+            <div className="text-2xl font-bold">
+              {isLoadingAvgHours ? <Skeleton className="h-8 w-16" /> : <>{avgHoursPerCustomer ?? 0}h</>}
+            </div>
             <p className="text-xs text-muted-foreground">Pro Kunde</p>
           </CardContent>
         </Card>
@@ -140,9 +151,13 @@ export default function DashboardHome() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{monthlyHours?.actual || 0}h</div>
+            <div className="text-2xl font-bold">
+              {isLoadingMonthly ? <Skeleton className="h-8 w-16" /> : <>{monthlyHours?.actual ?? 0}h</>}
+            </div>
             <p className="text-xs text-muted-foreground">Geleistet</p>
-            <div className="text-lg font-semibold mt-2">{monthlyHours?.planned || 0}h</div>
+            <div className="text-lg font-semibold mt-2">
+              {isLoadingMonthly ? <Skeleton className="h-6 w-16" /> : <>{monthlyHours?.planned ?? 0}h</>}
+            </div>
             <p className="text-xs text-muted-foreground">Geplant</p>
           </CardContent>
         </Card>

@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       throw new Error('Not authorized - admin role required');
     }
 
-    const { email, password, vorname, nachname, rolle } = await req.json();
+    const { email, password, vorname, nachname, rolle, employment_type } = await req.json();
 
     if (!email || !password) {
       throw new Error('E-Mail und Passwort sind erforderlich');
@@ -134,6 +134,7 @@ Deno.serve(async (req) => {
           vorname: vorname || null,
           nachname: nachname || null,
           ist_aktiv: true,
+          employment_type: employment_type || null,
         });
 
       if (mitarbeiterError) {

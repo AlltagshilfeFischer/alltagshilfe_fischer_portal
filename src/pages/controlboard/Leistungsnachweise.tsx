@@ -853,7 +853,7 @@ export default function Leistungsnachweise() {
                         className={`cursor-pointer transition-colors ${isActive ? 'bg-primary/5 border-l-2 border-l-primary' : 'hover:bg-muted/50'}`}
                         onClick={() => { setSelectedLN(ln); setShowDetail(true); }}
                       >
-                        <TableCell onClick={e => e.stopPropagation()}>
+                        <TableCell onClick={e => e.stopPropagation()} title={!canCheck ? 'Erst nach Unterschrift auswählbar' : ''}>
                           <Checkbox
                             checked={selectedIds.has(ln.id)}
                             onCheckedChange={(checked) => {
@@ -862,6 +862,7 @@ export default function Leistungsnachweise() {
                               setSelectedIds(next);
                             }}
                             disabled={!canCheck}
+                            className={!canCheck ? 'opacity-30' : ''}
                             aria-label={`${getKundeName(ln.kunden_id)} auswählen`}
                           />
                         </TableCell>
