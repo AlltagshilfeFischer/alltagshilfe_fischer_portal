@@ -1,6 +1,5 @@
 import React from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { useDraggable } from '@dnd-kit/core';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
@@ -34,13 +33,11 @@ export function DraggableAppointment({
     listeners,
     setNodeRef,
     transform,
-    transition,
-  } = useSortable({ id: appointment.id });
+  } = useDraggable({ id: appointment.id });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : {};
 
   const customerColor = appointment.customer?.farbe_kalender || '#10B981';
 

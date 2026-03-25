@@ -10,6 +10,7 @@ import type {
   BillingSuggestion,
   AllocationStatus,
   ServiceType,
+  SplitAllocation,
   Tariff,
   CareLevel,
   AbrechnungsRow,
@@ -155,9 +156,13 @@ type KundeForBudget = {
   verhinderungspflege_genehmigt?: boolean | null;
   pflegesachleistung_genehmigt?: boolean | null; // = kombileistung
   initial_budget_entlastung?: number | null;
+  budget_prioritaet?: string[] | null;
 };
 
-type TransactionWithSuggestion = BudgetTransaction & { suggestedType: ServiceType };
+type TransactionWithSuggestion = BudgetTransaction & {
+  suggestedType: ServiceType;
+  splitAllocations?: SplitAllocation[];
+};
 
 export function assignTransactionTypes(
   transactions: BudgetTransaction[],
@@ -194,40 +199,97 @@ export function assignTransactionTypes(
 
     const { totalAmount } = calculateTransactionAmount(tx.hours, tx.visits, 'ENTLASTUNG', tariffs);
 
-    // Priorität 1: KOMBI (monatlich, verfällt)
-    if (remainingKombi > 0 && totalAmount <= remainingKombi) {
-      remainingKombi -= totalAmount;
-      return { ...tx, suggestedType: 'KOMBI' as ServiceType };
+    // Budget-Töpfe in Prioritätsreihenfolge durchlaufen und ggf. splitten
+    type Pool = { type: ServiceType; remaining: () => number; consume: (amt: number) => void; calcAmount?: number };
+    const vpCalc = calculateTransactionAmount(tx.hours, tx.visits, 'VERHINDERUNG', tariffs);
+
+    const kombiPool: Pool = {
+      type: 'KOMBI',
+      remaining: () => remainingKombi,
+      consume: (amt) => { remainingKombi -= amt; },
+    };
+    const vpPool: Pool | null = pflegegrad >= 2
+      ? {
+          type: 'VERHINDERUNG',
+          remaining: () => remainingVP,
+          consume: (amt) => { remainingVP -= amt; },
+          calcAmount: vpCalc.totalAmount,
+        }
+      : null;
+
+    // Kundenspezifische Priorisierung: 'pflegesachleistung' = KOMBI, 'verhinderungspflege' = VP
+    const budgetPrio = kunde.budget_prioritaet;
+    let configurablePools: Pool[];
+    if (budgetPrio && budgetPrio.length > 0) {
+      configurablePools = budgetPrio
+        .map((key) => {
+          if (key === 'pflegesachleistung') return kombiPool;
+          if (key === 'verhinderungspflege') return vpPool;
+          return null;
+        })
+        .filter((p): p is Pool => p !== null);
+    } else {
+      // Default-Reihenfolge: KOMBI → VP
+      configurablePools = [kombiPool, ...(vpPool ? [vpPool] : [])];
     }
 
-    // Priorität 2: Verfallender Entlastungsbetrag (Vorjahresrest vor VP schützen)
-    if (remainingExpiringEntl > 0 && totalAmount <= remainingExpiringEntl) {
-      remainingExpiringEntl -= totalAmount;
-      return { ...tx, suggestedType: 'ENTLASTUNG' as ServiceType };
-    }
+    const pools: Pool[] = [
+      ...configurablePools,
+      {
+        type: 'ENTLASTUNG', // Expiring Vorjahresrest
+        remaining: () => remainingExpiringEntl,
+        consume: (amt) => { remainingExpiringEntl -= amt; },
+      },
+      {
+        type: 'ENTLASTUNG', // Regulärer EB
+        remaining: () => remainingEntlastung,
+        consume: (amt) => { remainingEntlastung -= amt; },
+      },
+    ];
 
-    // Priorität 3: Verhinderungspflege (höherer Satz, bevorzugt)
-    if (remainingVP > 0 && pflegegrad >= 2) {
-      const { totalAmount: vpAmount } = calculateTransactionAmount(
-        tx.hours,
-        tx.visits,
-        'VERHINDERUNG',
-        tariffs,
-      );
-      if (vpAmount <= remainingVP) {
-        remainingVP -= vpAmount;
-        return { ...tx, suggestedType: 'VERHINDERUNG' as ServiceType };
+    let remaining = totalAmount;
+    const allocations: SplitAllocation[] = [];
+
+    for (const pool of pools) {
+      if (remaining <= 0) break;
+      const poolRemaining = pool.remaining();
+      if (poolRemaining <= 0) continue;
+
+      // VP hat eigenen Tarif — Anteil proportional umrechnen
+      const effectiveAmount = pool.type === 'VERHINDERUNG'
+        ? (pool.calcAmount ?? totalAmount) * (remaining / totalAmount)
+        : remaining;
+      const allocatable = Math.min(effectiveAmount, poolRemaining);
+
+      if (allocatable > 0.01) { // Rundungsschwelle
+        pool.consume(allocatable);
+        // Für den Restbetrag-Tracker: bei VP zurückrechnen auf EB-Basis
+        const deducted = pool.type === 'VERHINDERUNG' && totalAmount > 0
+          ? remaining * (allocatable / effectiveAmount)
+          : allocatable;
+        allocations.push({ type: pool.type, amount: Math.round(allocatable * 100) / 100 });
+        remaining = Math.round((remaining - deducted) * 100) / 100;
       }
     }
 
-    // Priorität 4: Regulärer Entlastungsbetrag
-    if (remainingEntlastung > 0 && totalAmount <= remainingEntlastung) {
-      remainingEntlastung -= totalAmount;
-      return { ...tx, suggestedType: 'ENTLASTUNG' as ServiceType };
+    // Rest auf Privat
+    if (remaining > 0.01) {
+      allocations.push({ type: 'PRIVAT', amount: Math.round(remaining * 100) / 100 });
     }
 
-    // Priorität 5: Privat (Fallback)
-    return { ...tx, suggestedType: 'PRIVAT' as ServiceType };
+    // Primärer Typ = Topf mit dem höchsten Anteil
+    const primaryType = allocations.length > 0
+      ? allocations.reduce((a, b) => (b.amount > a.amount ? b : a)).type
+      : 'PRIVAT' as ServiceType;
+
+    // Nur splitAllocations setzen wenn tatsächlich ein Split vorliegt
+    const isSplit = allocations.length > 1;
+
+    return {
+      ...tx,
+      suggestedType: primaryType,
+      ...(isSplit ? { splitAllocations: allocations } : {}),
+    };
   });
 }
 
@@ -243,26 +305,30 @@ export function buildBillingSuggestion(
   let privat = 0;
 
   for (const tx of assignedTransactions) {
-    const { totalAmount } = calculateTransactionAmount(
-      tx.hours,
-      tx.visits,
-      tx.suggestedType,
-      tariffs,
-    );
+    // Bei Split-Transaktionen die einzelnen Allokationen nutzen
+    if (tx.splitAllocations && tx.splitAllocations.length > 0) {
+      for (const alloc of tx.splitAllocations) {
+        switch (alloc.type) {
+          case 'ENTLASTUNG': entlastung += alloc.amount; break;
+          case 'KOMBI': kombi += alloc.amount; break;
+          case 'VERHINDERUNG': verhinderung += alloc.amount; break;
+          case 'PRIVAT': privat += alloc.amount; break;
+        }
+      }
+    } else {
+      const { totalAmount } = calculateTransactionAmount(
+        tx.hours,
+        tx.visits,
+        tx.suggestedType,
+        tariffs,
+      );
 
-    switch (tx.suggestedType) {
-      case 'ENTLASTUNG':
-        entlastung += totalAmount;
-        break;
-      case 'KOMBI':
-        kombi += totalAmount;
-        break;
-      case 'VERHINDERUNG':
-        verhinderung += totalAmount;
-        break;
-      case 'PRIVAT':
-        privat += totalAmount;
-        break;
+      switch (tx.suggestedType) {
+        case 'ENTLASTUNG': entlastung += totalAmount; break;
+        case 'KOMBI': kombi += totalAmount; break;
+        case 'VERHINDERUNG': verhinderung += totalAmount; break;
+        case 'PRIVAT': privat += totalAmount; break;
+      }
     }
   }
 

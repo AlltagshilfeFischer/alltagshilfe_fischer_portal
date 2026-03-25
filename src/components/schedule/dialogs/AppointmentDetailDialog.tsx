@@ -35,8 +35,9 @@ interface AppointmentDetailDialogProps {
 }
 
 const KATEGORIE_OPTIONS = [
-  'Erstgespräch', 'Schulung', 'Meeting', 'Bewerbungsgespräch',
-  'Blocker', 'Intern', 'Regelbesuch', 'Sonstiges',
+  'Kundentermin', 'Erstgespräch', 'Regelbesuch', 'Schulung', 'Meeting',
+  'Bewerbungsgespräch', 'Blocker', 'Intern',
+  'Ausfall (abrechenbar)', 'Ausfall (nicht abrechenbar)', 'Sonstiges',
 ] as const;
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {

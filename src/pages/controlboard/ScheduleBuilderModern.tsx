@@ -79,12 +79,14 @@ const ScheduleBuilderModern = () => {
     appointmentId: string;
     employeeId: string;
     conflicts: any[];
+    pauseViolations: any[];
     targetDate?: Date;
   }>({
     show: false,
     appointmentId: '',
     employeeId: '',
     conflicts: [],
+    pauseViolations: [],
     targetDate: undefined
   });
   const [abwesenheiten, setAbwesenheiten] = useState<any[]>([]);
@@ -396,14 +398,15 @@ const ScheduleBuilderModern = () => {
     setActiveId(event.active.id as string);
   };
 
+  const PAUSE_MINUTES = 15;
+
   const checkForConflicts = (appointmentId: string, employeeId: string, targetDate?: Date) => {
     const appointment = appointments.find(app => app.id === appointmentId);
-    if (!appointment) return [];
+    if (!appointment) return { overlaps: [] as typeof appointments, pauseViolations: [] as typeof appointments };
 
     let appointmentStart = new Date(appointment.start_at);
     let appointmentEnd = new Date(appointment.end_at);
 
-    // Wenn ein Ziel-Datum angegeben ist, berechne die neuen Zeiten
     if (targetDate) {
       const originalStart = new Date(appointment.start_at);
       const durationMs = new Date(appointment.end_at).getTime() - originalStart.getTime();
@@ -412,12 +415,28 @@ const ScheduleBuilderModern = () => {
       appointmentEnd = new Date(appointmentStart.getTime() + durationMs);
     }
 
-    return appointments.filter(existingApp =>
-      existingApp.mitarbeiter_id === employeeId &&
-      existingApp.id !== appointmentId &&
-      new Date(existingApp.start_at) < appointmentEnd &&
-      new Date(existingApp.end_at) > appointmentStart
+    const pauseMs = PAUSE_MINUTES * 60 * 1000;
+    const sameEmployee = appointments.filter(
+      a => a.mitarbeiter_id === employeeId && a.id !== appointmentId
     );
+
+    const overlaps = sameEmployee.filter(existing =>
+      new Date(existing.start_at) < appointmentEnd &&
+      new Date(existing.end_at) > appointmentStart
+    );
+
+    const pauseViolations = sameEmployee.filter(existing => {
+      const existStart = new Date(existing.start_at);
+      const existEnd = new Date(existing.end_at);
+      // Skip if already a direct overlap
+      if (existStart < appointmentEnd && existEnd > appointmentStart) return false;
+      // Check if gap < 15 min (before or after)
+      const gapBefore = appointmentStart.getTime() - existEnd.getTime();
+      const gapAfter = existStart.getTime() - appointmentEnd.getTime();
+      return (gapBefore >= 0 && gapBefore < pauseMs) || (gapAfter >= 0 && gapAfter < pauseMs);
+    });
+
+    return { overlaps, pauseViolations };
   };
 
   const assignAppointment = async (appointmentId: string, employeeId: string, targetDate?: Date, makeException: boolean = false) => {
@@ -639,14 +658,15 @@ const ScheduleBuilderModern = () => {
       // Warning only — don't block the assignment (per spec: "warnen, aber nicht blockieren")
     }
 
-    const conflicts = checkForConflicts(appointmentId, employeeId, targetDate);
+    const { overlaps, pauseViolations } = checkForConflicts(appointmentId, employeeId, targetDate);
 
-    if (conflicts.length > 0) {
+    if (overlaps.length > 0 || pauseViolations.length > 0) {
       setConflictWarning({
         show: true,
         appointmentId,
         employeeId,
-        conflicts,
+        conflicts: overlaps,
+        pauseViolations,
         targetDate
       });
     } else {
@@ -672,6 +692,7 @@ const ScheduleBuilderModern = () => {
       appointmentId: '',
       employeeId: '',
       conflicts: [],
+      pauseViolations: [],
       targetDate: undefined
     });
   };
@@ -726,20 +747,34 @@ const ScheduleBuilderModern = () => {
       if (payload.mitarbeiter_id && !data._skipConflictCheck) {
         const newStart = new Date(payload.start_at);
         const newEnd = new Date(payload.end_at);
-        const conflicts = appointments.filter(existing =>
-          existing.mitarbeiter_id === payload.mitarbeiter_id &&
+        const pauseMs = PAUSE_MINUTES * 60 * 1000;
+
+        const sameEmployee = appointments.filter(
+          a => a.mitarbeiter_id === payload.mitarbeiter_id
+        );
+
+        const overlaps = sameEmployee.filter(existing =>
           new Date(existing.start_at) < newEnd &&
           new Date(existing.end_at) > newStart
         );
 
-        if (conflicts.length > 0) {
-          // Daten zwischenspeichern, ConflictWarning zeigen
+        const pauseViolations = sameEmployee.filter(existing => {
+          const existStart = new Date(existing.start_at);
+          const existEnd = new Date(existing.end_at);
+          if (existStart < newEnd && existEnd > newStart) return false;
+          const gapBefore = newStart.getTime() - existEnd.getTime();
+          const gapAfter = existStart.getTime() - newEnd.getTime();
+          return (gapBefore >= 0 && gapBefore < pauseMs) || (gapAfter >= 0 && gapAfter < pauseMs);
+        });
+
+        if (overlaps.length > 0 || pauseViolations.length > 0) {
           setPendingCreateData(data);
           setConflictWarning({
             show: true,
             appointmentId: '__new__',
             employeeId: payload.mitarbeiter_id,
-            conflicts,
+            conflicts: overlaps,
+            pauseViolations,
             targetDate: newStart,
           });
           return;
@@ -1378,6 +1413,7 @@ const ScheduleBuilderModern = () => {
             appointmentId: '',
             employeeId: '',
             conflicts: [],
+            pauseViolations: [],
             targetDate: undefined
           })}
           onConfirm={handleConflictConfirm}
@@ -1388,6 +1424,7 @@ const ScheduleBuilderModern = () => {
               : appointments.find(app => app.id === conflictWarning.appointmentId)?.titel || ''
           }
           conflictingAppointments={conflictWarning.conflicts}
+          pauseViolations={conflictWarning.pauseViolations}
           newAppointmentTime={
             conflictWarning.appointmentId === '__new__'
               ? { start: (pendingCreateData?.start_at as string) || '', end: (pendingCreateData?.end_at as string) || '' }
@@ -1413,18 +1450,19 @@ const ScheduleBuilderModern = () => {
                 onClick={async () => {
                   if (seriesMoveDialog) {
                     // Move only this appointment as an exception
-                    const conflicts = checkForConflicts(
+                    const { overlaps, pauseViolations } = checkForConflicts(
                       seriesMoveDialog.appointment.id,
                       seriesMoveDialog.employeeId,
                       seriesMoveDialog.targetDate
                     );
-                    
-                    if (conflicts.length > 0) {
+
+                    if (overlaps.length > 0 || pauseViolations.length > 0) {
                       setConflictWarning({
                         show: true,
                         appointmentId: seriesMoveDialog.appointment.id,
                         employeeId: seriesMoveDialog.employeeId,
-                        conflicts,
+                        conflicts: overlaps,
+                        pauseViolations,
                         targetDate: seriesMoveDialog.targetDate
                       });
                       setSeriesMoveDialog(null);

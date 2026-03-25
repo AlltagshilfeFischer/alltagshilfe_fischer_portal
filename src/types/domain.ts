@@ -125,7 +125,7 @@ export interface CustomerSummary {
 // ─── Appointment / Termin ───────────────────────────────────
 
 /** Minimal appointment fields used by calendar/grid components */
-export type TerminKategorie = 'Erstgespräch' | 'Schulung' | 'Meeting' | 'Bewerbungsgespräch' | 'Blocker' | 'Intern' | 'Regelbesuch' | 'Sonstiges';
+export type TerminKategorie = 'Kundentermin' | 'Erstgespräch' | 'Schulung' | 'Meeting' | 'Bewerbungsgespräch' | 'Blocker' | 'Intern' | 'Regelbesuch' | 'Ausfall (abrechenbar)' | 'Ausfall (nicht abrechenbar)' | 'Sonstiges';
 export type AbsageKanal = 'Telefonisch' | 'E-Mail' | 'Persönlich' | 'WhatsApp' | 'Sonstiges';
 
 export interface CalendarAppointment {
@@ -228,6 +228,11 @@ export type ServiceType = 'ENTLASTUNG' | 'KOMBI' | 'VERHINDERUNG' | 'PRIVAT';
 export type TransactionSource = 'APLANO_IMPORT' | 'MANUAL';
 export type AllocationStatus = 'OK' | 'OPTIMIZE' | 'BUDGET_EXCEEDED';
 
+export interface SplitAllocation {
+  type: ServiceType;
+  amount: number;
+}
+
 export interface BudgetTransaction {
   id: string;
   budget_id?: string | null;
@@ -281,7 +286,7 @@ export interface BillingSuggestion {
   verhinderung: number;
   privat: number;
   total: number;
-  transactions: (BudgetTransaction & { suggestedType: ServiceType })[];
+  transactions: (BudgetTransaction & { suggestedType: ServiceType; splitAllocations?: SplitAllocation[] })[];
 }
 
 export interface AbrechnungsRow {

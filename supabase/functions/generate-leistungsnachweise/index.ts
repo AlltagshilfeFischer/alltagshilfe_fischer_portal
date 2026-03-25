@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
           jahr: targetJahr,
           geplante_stunden: Math.round(geplanteStunden * 100) / 100,
           geleistete_stunden: Math.round(geleisteteStunden * 100) / 100,
-          status: 'entwurf',
+          status: 'offen',
           ist_privat: kunde?.ist_privat ?? false,
           cb_entlastungsleistung: !kunde?.ist_privat,
         });

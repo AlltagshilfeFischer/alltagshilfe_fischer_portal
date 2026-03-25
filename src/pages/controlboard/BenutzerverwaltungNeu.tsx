@@ -46,6 +46,7 @@ interface Mitarbeiter {
   zustaendigkeitsbereich: string | null;
   soll_wochenstunden: number | null;
   max_termine_pro_tag: number | null;
+  employment_type: string | null;
   avatar_url: string | null;
   benutzer_id: string | null;
   benutzer?: {
@@ -256,6 +257,7 @@ export default function BenutzerverwaltungNeu() {
         zustaendigkeitsbereich: editingMitarbeiter.zustaendigkeitsbereich,
         soll_wochenstunden: editingMitarbeiter.soll_wochenstunden,
         max_termine_pro_tag: editingMitarbeiter.max_termine_pro_tag,
+        employment_type: editingMitarbeiter.employment_type,
       }).eq('id', editingMitarbeiter.id);
       if (error) throw error;
       // Save qualifikationen
@@ -797,13 +799,26 @@ export default function BenutzerverwaltungNeu() {
                 <Label>Zuständigkeitsbereich</Label>
                 <Input value={editingMitarbeiter.zustaendigkeitsbereich || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, zustaendigkeitsbereich: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Beschäftigungsart</Label>
+                  <Select value={editingMitarbeiter.employment_type || ''} onValueChange={(val) => setEditingMitarbeiter({ ...editingMitarbeiter, employment_type: val || null })}>
+                    <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Vollzeit">Vollzeit</SelectItem>
+                      <SelectItem value="Teilzeit">Teilzeit</SelectItem>
+                      <SelectItem value="Minijob">Minijob</SelectItem>
+                      <SelectItem value="Werkstudent">Werkstudent</SelectItem>
+                      <SelectItem value="Praktikant">Praktikant</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <Label>Soll-Wochenstunden</Label>
                   <Input type="number" min="0" step="0.5" value={editingMitarbeiter.soll_wochenstunden || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, soll_wochenstunden: e.target.value ? parseFloat(e.target.value) : null })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Max. Termine pro Tag</Label>
+                  <Label>Max. Termine/Tag</Label>
                   <Input type="number" min="0" value={editingMitarbeiter.max_termine_pro_tag || ''} onChange={(e) => setEditingMitarbeiter({ ...editingMitarbeiter, max_termine_pro_tag: e.target.value ? parseInt(e.target.value) : null })} />
                 </div>
               </div>

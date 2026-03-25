@@ -106,6 +106,7 @@ export default function BudgetTracker() {
         verhinderungspflege_genehmigt?: boolean | null;
         pflegesachleistung_genehmigt?: boolean | null;
         initial_budget_entlastung?: number | null;
+        budget_prioritaet?: string[] | null;
       };
 
       if (!budgetDataReady) {

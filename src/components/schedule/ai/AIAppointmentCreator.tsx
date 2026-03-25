@@ -24,11 +24,24 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const loadCustomersAndEmployees = async () => {
+  const loadContextData = async () => {
     try {
-      const [customersData, employeesData] = await Promise.all([
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay() + 1); // Montag
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 13); // 2 Wochen voraus
+      weekEnd.setHours(23, 59, 59, 999);
+
+      const [customersData, employeesData, verfuegbarkeitenData, termineData] = await Promise.all([
         supabase.from('kunden').select('id, name, vorname, nachname').eq('aktiv', true),
-        supabase.from('mitarbeiter').select('id, vorname, nachname, benutzer:benutzer!inner(vorname, nachname)').eq('ist_aktiv', true)
+        supabase.from('mitarbeiter').select('id, vorname, nachname, benutzer:benutzer!inner(vorname, nachname)').eq('ist_aktiv', true),
+        supabase.from('mitarbeiter_verfuegbarkeit').select('mitarbeiter_id, wochentag, von, bis'),
+        supabase.from('termine').select('id, mitarbeiter_id, start_at, end_at, status')
+          .gte('start_at', weekStart.toISOString())
+          .lte('start_at', weekEnd.toISOString())
+          .not('status', 'in', '("cancelled","abgesagt_rechtzeitig")')
       ]);
 
       if (customersData.error) throw customersData.error;
@@ -45,7 +58,7 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
         const benutzer = e.benutzer;
         return {
           id: e.id,
-          name: e.vorname && e.nachname 
+          name: e.vorname && e.nachname
             ? `${e.vorname} ${e.nachname}`
             : benutzer?.vorname && benutzer?.nachname
             ? `${benutzer.vorname} ${benutzer.nachname}`
@@ -53,13 +66,27 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
         };
       }) || [];
 
+      // Verfügbarkeiten pro MA gruppieren
+      const verfuegbarkeiten = (verfuegbarkeitenData.data || []).reduce((acc: Record<string, { wochentag: number; von: string; bis: string }[]>, v) => {
+        if (!acc[v.mitarbeiter_id]) acc[v.mitarbeiter_id] = [];
+        acc[v.mitarbeiter_id].push({ wochentag: v.wochentag, von: v.von, bis: v.bis });
+        return acc;
+      }, {});
+
+      // Bestehende Termine kompakt
+      const bestehendeTermine = (termineData.data || []).map(t => ({
+        mitarbeiter_id: t.mitarbeiter_id,
+        start: t.start_at,
+        end: t.end_at,
+      }));
+
       setCustomers(transformedCustomers);
       setEmployees(transformedEmployees);
 
-      return { customers: transformedCustomers, employees: transformedEmployees };
+      return { customers: transformedCustomers, employees: transformedEmployees, verfuegbarkeiten, bestehendeTermine };
     } catch (error) {
       console.error('Error loading data:', error);
-      return { customers: [], employees: [] };
+      return { customers: [], employees: [], verfuegbarkeiten: {}, bestehendeTermine: [] };
     }
   };
 
@@ -75,13 +102,15 @@ export function AIAppointmentCreator({ onAppointmentCreated }: AIAppointmentCrea
 
     setIsLoading(true);
     try {
-      const { customers: loadedCustomers, employees: loadedEmployees } = await loadCustomersAndEmployees();
+      const { customers: loadedCustomers, employees: loadedEmployees, verfuegbarkeiten, bestehendeTermine } = await loadContextData();
 
       const { data, error } = await supabase.functions.invoke('parse-appointment-text', {
-        body: { 
+        body: {
           text: prompt,
           customers: loadedCustomers,
-          employees: loadedEmployees
+          employees: loadedEmployees,
+          verfuegbarkeiten,
+          bestehendeTermine,
         }
       });
 

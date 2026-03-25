@@ -17,13 +17,16 @@ import { TIME_SLOTS, DURATION_OPTIONS, addMinutesToTime } from '../timeSlots';
 import type { CustomerSummary, EmployeeSummary, TerminKategorie } from '@/types/domain';
 
 const KATEGORIE_OPTIONS: { value: TerminKategorie; label: string }[] = [
+  { value: 'Kundentermin', label: 'Kundentermin' },
   { value: 'Erstgespräch', label: 'Erstgespräch' },
+  { value: 'Regelbesuch', label: 'Regelbesuch' },
   { value: 'Schulung', label: 'Schulung' },
   { value: 'Meeting', label: 'Meeting' },
   { value: 'Bewerbungsgespräch', label: 'Bewerbungsgespräch' },
   { value: 'Blocker', label: 'Blocker (nicht Arbeitszeit)' },
   { value: 'Intern', label: 'Intern' },
-  { value: 'Regelbesuch', label: 'Regelbesuch' },
+  { value: 'Ausfall (abrechenbar)', label: 'Ausfall (kurzfristig, abrechenbar)' },
+  { value: 'Ausfall (nicht abrechenbar)', label: 'Ausfall (rechtzeitig, nicht abrechenbar)' },
   { value: 'Sonstiges', label: 'Sonstiges' },
 ];
 

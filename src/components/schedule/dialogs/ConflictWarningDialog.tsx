@@ -24,19 +24,21 @@ interface ConflictWarningDialogProps {
   employeeName: string;
   appointmentTitle: string;
   conflictingAppointments: ConflictingAppointment[];
+  pauseViolations?: ConflictingAppointment[];
   newAppointmentTime: {
     start: string;
     end: string;
   };
 }
 
-export function ConflictWarningDialog({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  employeeName, 
+export function ConflictWarningDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  employeeName,
   appointmentTitle,
   conflictingAppointments,
+  pauseViolations = [],
   newAppointmentTime
 }: ConflictWarningDialogProps) {
   // Validate that we have valid date strings
@@ -54,12 +56,13 @@ export function ConflictWarningDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-orange-600">
             <AlertTriangle className="h-5 w-5" />
-            Terminkonflikt erkannt
+            {conflictingAppointments.length > 0 ? 'Terminkonflikt erkannt' : 'Pausenzeit unterschritten'}
           </DialogTitle>
           <DialogDescription className="sr-only">Konfliktwarnung beim Zuweisen eines Termins</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {conflictingAppointments.length > 0 && (
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
             <p className="text-sm font-medium text-orange-900 mb-2">
               Der Termin überschneidet sich mit {conflictingAppointments.length} anderen Termin(en):
@@ -111,11 +114,49 @@ export function ConflictWarningDialog({
               ))}
             </div>
           </div>
+          )}
+
+          {pauseViolations.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-sm font-medium text-amber-900 mb-2">
+              Weniger als 15 Minuten Pause zu {pauseViolations.length} Termin(en):
+            </p>
+            <div className="space-y-2">
+              {pauseViolations
+                .filter(pv => pv.start_at && pv.end_at &&
+                        !isNaN(new Date(pv.start_at).getTime()) &&
+                        !isNaN(new Date(pv.end_at).getTime()))
+                .map((pv) => (
+                <div key={pv.id} className="bg-white rounded border border-amber-200 p-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                      Pause &lt; 15 Min.
+                    </Badge>
+                  </div>
+                  <p className="text-sm font-medium">{pv.titel}</p>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {format(new Date(pv.start_at), 'dd.MM.yyyy HH:mm', { locale: de })} -
+                    {format(new Date(pv.end_at), 'HH:mm', { locale: de })}
+                  </div>
+                  {pv.customer && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      {pv.customer.vorname} {pv.customer.nachname}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          )}
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
             <p className="text-sm text-yellow-800">
-              <strong>Warnung:</strong> Die Zuweisung dieses Termins würde zu einem Terminkonflikt führen. 
-              Möchten Sie den Termin trotzdem zuweisen?
+              <strong>Warnung:</strong> {conflictingAppointments.length > 0
+                ? 'Die Zuweisung dieses Termins würde zu einem Terminkonflikt führen.'
+                : 'Die Mindestpause von 15 Minuten zwischen Terminen wird nicht eingehalten.'}
+              {' '}Möchten Sie den Termin trotzdem zuweisen?
             </p>
           </div>
         </div>

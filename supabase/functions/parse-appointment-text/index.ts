@@ -11,18 +11,52 @@ serve(async (req) => {
   }
 
   try {
-    const { text, customers, employees } = await req.json();
+    const { text, customers, employees, verfuegbarkeiten, bestehendeTermine } = await req.json();
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    
+
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not configured");
     }
 
-    const systemPrompt = `Du bist ein Assistent für die Erstellung von Pflegeterminen. 
+    // Verfügbarkeiten pro MA formatieren
+    const wochentage = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    let verfuegbarkeitText = '';
+    if (verfuegbarkeiten && Object.keys(verfuegbarkeiten).length > 0) {
+      const maMap = new Map(employees.map((e: any) => [e.id, e.name]));
+      verfuegbarkeitText = '\n\nVerfügbarkeiten der Mitarbeiter:\n' +
+        Object.entries(verfuegbarkeiten).map(([maId, slots]: [string, any]) => {
+          const name = maMap.get(maId) || maId;
+          const slotStr = slots.map((s: any) => `${wochentage[s.wochentag]} ${s.von}-${s.bis}`).join(', ');
+          return `- ${name}: ${slotStr}`;
+        }).join('\n');
+    }
+
+    // Bestehende Termine kompakt
+    let termineText = '';
+    if (bestehendeTermine && bestehendeTermine.length > 0) {
+      const maMap = new Map(employees.map((e: any) => [e.id, e.name]));
+      termineText = '\n\nBereits geplante Termine (nächste 2 Wochen):\n' +
+        bestehendeTermine.slice(0, 50).map((t: any) => {
+          const start = new Date(t.start);
+          const end = new Date(t.end);
+          const ma = maMap.get(t.mitarbeiter_id) || 'Unzugeordnet';
+          return `- ${ma}: ${start.toISOString().slice(0, 10)} ${start.toISOString().slice(11, 16)}-${end.toISOString().slice(11, 16)}`;
+        }).join('\n');
+    }
+
+    const systemPrompt = `Du bist ein Assistent für die Erstellung von Pflegeterminen.
 Analysiere den Text des Benutzers und extrahiere daraus Terminvorschläge.
 
 Verfügbare Kunden: ${JSON.stringify(customers.map((c: any) => ({ id: c.id, name: c.name })))}
 Verfügbare Mitarbeiter: ${JSON.stringify(employees.map((e: any) => ({ id: e.id, name: e.name })))}
+${verfuegbarkeitText}
+${termineText}
+
+WICHTIGE REGELN:
+- Mindestens 15 Minuten Pause zwischen Terminen desselben Mitarbeiters.
+- Termine nur innerhalb der Verfügbarkeitszeiten des Mitarbeiters planen.
+- Keine Überschneidungen mit bestehenden Terminen.
+- Wenn ein Mitarbeiter nicht verfügbar ist, schlage einen anderen vor oder lasse mitarbeiter_id null.
 
 Erstelle strukturierte Terminvorschläge mit folgenden Informationen:
 - kunde_id: ID des Kunden (aus der Liste)

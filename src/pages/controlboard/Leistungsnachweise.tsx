@@ -241,16 +241,23 @@ export default function Leistungsnachweise() {
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<LeistungsnachweisRow>) => {
       if (!selectedLN) throw new Error('Kein LN ausgewählt');
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('leistungsnachweise')
         .update(updates)
-        .eq('id', selectedLN.id);
+        .eq('id', selectedLN.id)
+        .select()
+        .single();
       if (error) throw error;
+      return data as LeistungsnachweisRow;
     },
-    onSuccess: () => {
-      toast.success('Gespeichert');
+    onSuccess: (data) => {
+      toast.success('Änderungen gespeichert');
+      setSelectedLN(data);
       queryClient.invalidateQueries({ queryKey: ['leistungsnachweise'] });
-    }
+    },
+    onError: (err) => {
+      toast.error('Fehler beim Speichern', { description: err instanceof Error ? err.message : 'Unbekannt' });
+    },
   });
 
   // Helper: calculate hours from termine
@@ -298,7 +305,7 @@ export default function Leistungsnachweise() {
   // Stornieren mutation: revert signed LN back to offen
   const stornierMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('leistungsnachweise')
         .update({
           status: 'offen',
@@ -308,12 +315,16 @@ export default function Leistungsnachweise() {
           frozen_geplante_stunden: null,
           frozen_geleistete_stunden: null,
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .single();
       if (error) throw error;
+      return data as LeistungsnachweisRow;
     },
-    onSuccess: () => {
-      toast.success('Leistungsnachweis storniert – Status zurück auf Offen');
+    onSuccess: (data) => {
+      toast.success('Unterschrift gelöscht – Status zurück auf Offen');
       setShowStornierConfirm(false);
+      setSelectedLN(data);
       queryClient.invalidateQueries({ queryKey: ['leistungsnachweise'] });
     },
     onError: (err) => {
@@ -562,7 +573,7 @@ export default function Leistungsnachweise() {
     }
   }, [showDetail, selectedLN?.status, selectedLN?.unterschrift_kunde_zeitstempel, initCanvas]);
 
-  // Pre-fill billing checkboxes from customer data when opening an entwurf
+  // Pre-fill billing checkboxes from customer data when opening a new LN
   useEffect(() => {
     if (!showDetail || !selectedLN || !kunden) return;
     const noneSet = !selectedLN.cb_kombinationsleistung && !selectedLN.cb_entlastungsleistung &&
@@ -888,7 +899,7 @@ export default function Leistungsnachweise() {
 
       {/* Detail Dialog – wide fullscreen-like */}
       <Dialog open={showDetail && !!selectedLN} onOpenChange={(open) => { if (!open) setShowDetail(false); }}>
-        <DialogContent className="max-w-5xl w-[95vw] max-h-[92vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-5xl w-[95vw] h-[95vh] overflow-hidden flex flex-col">
           {selectedLN && (
             <>
               {/* Dialog Header */}
@@ -1109,10 +1120,10 @@ export default function Leistungsnachweise() {
 
                   <Separator />
 
-                  {/* Unterschrift Kunde – ganz unten */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <PenLine className="h-4 w-4 text-muted-foreground" />
+                  {/* Unterschrift Kunde – prominent am Ende */}
+                  <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
+                    <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                      <PenLine className="h-5 w-5 text-primary" />
                       Unterschrift Kunde
                     </h3>
 
@@ -1120,10 +1131,10 @@ export default function Leistungsnachweise() {
                     {selectedLN.unterschrift_kunde_zeitstempel ? (
                       <div className="space-y-3">
                         <div className="rounded-lg bg-success/10 border border-success/20 p-4">
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 text-sm text-success">
                               <CheckCircle2 className="h-4 w-4" />
-                              <span className="font-medium">Kunde hat unterschrieben</span>
+                              <span className="font-medium">Unterschrieben</span>
                             </div>
                             <p className="text-xs text-muted-foreground">
                               {selectedLN.unterschrift_kunde_durch && `${selectedLN.unterschrift_kunde_durch} · `}
@@ -1131,7 +1142,7 @@ export default function Leistungsnachweise() {
                             </p>
                           </div>
                           {selectedLN.unterschrift_kunde_bild && (
-                            <img src={selectedLN.unterschrift_kunde_bild} alt="Unterschrift" className="w-full max-h-40 object-contain border rounded-lg bg-card p-2" />
+                            <img src={selectedLN.unterschrift_kunde_bild} alt="Unterschrift" className="w-full h-32 object-contain border rounded-lg bg-card p-2" />
                           )}
                         </div>
 
@@ -1143,7 +1154,7 @@ export default function Leistungsnachweise() {
                             className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
                             onClick={() => setShowStornierConfirm(true)}
                           >
-                            <RotateCcw className="h-3.5 w-3.5" /> Unterschrift löschen & stornieren
+                            <RotateCcw className="h-3.5 w-3.5" /> Unterschrift löschen & zurücksetzen
                           </Button>
                         )}
                         {selectedLN.status === 'unterschrieben' && showStornierConfirm && (
@@ -1160,11 +1171,7 @@ export default function Leistungsnachweise() {
                                 {stornierMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                                 Ja, löschen
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setShowStornierConfirm(false)}
-                              >
+                              <Button variant="outline" size="sm" onClick={() => setShowStornierConfirm(false)}>
                                 Abbrechen
                               </Button>
                             </div>
@@ -1173,7 +1180,6 @@ export default function Leistungsnachweise() {
                       </div>
                     ) : canSign ? (
                       <div className="space-y-3">
-                        {/* Offline indicator */}
                         {!isOnline && (
                           <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm">
                             <WifiOff className="h-4 w-4 text-warning" />
@@ -1189,10 +1195,10 @@ export default function Leistungsnachweise() {
                           </div>
                         )}
 
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           <Label className="text-xs">Name des Unterzeichners</Label>
                           <Input
-                            className="h-8 text-sm max-w-xs"
+                            className="h-9 text-sm"
                             value={signerName}
                             onChange={e => setSignerName(e.target.value)}
                             placeholder="Name eingeben..."
@@ -1201,7 +1207,7 @@ export default function Leistungsnachweise() {
                         <div className="relative">
                           <canvas
                             ref={canvasRef}
-                            className="w-full h-44 border-2 border-dashed border-border rounded-lg bg-card cursor-crosshair touch-none"
+                            className="w-full h-56 border-2 border-dashed border-primary/30 rounded-lg bg-card cursor-crosshair touch-none"
                             onMouseDown={startDraw}
                             onMouseMove={draw}
                             onMouseUp={endDraw}
@@ -1213,15 +1219,15 @@ export default function Leistungsnachweise() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="absolute top-1.5 right-1.5 h-7 text-xs text-muted-foreground hover:text-destructive"
+                            className="absolute top-2 right-2 h-7 text-xs text-muted-foreground hover:text-destructive gap-1"
                             onClick={clearCanvas}
                           >
-                            Löschen
+                            <X className="h-3 w-3" /> Löschen
                           </Button>
                         </div>
                         <p className="text-xs text-muted-foreground text-center">Bitte hier unterschreiben (Touch oder Maus)</p>
                         <Button
-                          className="w-full gap-2"
+                          className="w-full gap-2 h-11 text-base"
                           onClick={() => signMutation.mutate()}
                           disabled={signMutation.isPending}
                         >
@@ -1231,7 +1237,7 @@ export default function Leistungsnachweise() {
                         </Button>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Keine Unterschrift möglich (Status: {statusConfig[selectedLN.status]?.label || selectedLN.status})</p>
+                      <p className="text-sm text-muted-foreground">Status: {statusConfig[selectedLN.status]?.label || selectedLN.status} – Unterschrift nicht möglich</p>
                     )}
                   </div>
                 </div>
