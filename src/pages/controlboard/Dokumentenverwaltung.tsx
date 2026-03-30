@@ -799,10 +799,10 @@ export default function Dokumentenverwaltung() {
               </div>
             ) : previewUrl && previewDokument ? (
               previewDokument.mime_type.includes('pdf') ? (
-                <iframe
+                <embed
                   src={previewUrl}
+                  type="application/pdf"
                   className="w-full h-[60vh]"
-                  title={previewDokument.titel}
                 />
               ) : previewDokument.mime_type.includes('image') ? (
                 <div className="flex items-center justify-center h-full p-4">

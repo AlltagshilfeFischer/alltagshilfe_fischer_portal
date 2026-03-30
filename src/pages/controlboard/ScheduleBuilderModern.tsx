@@ -28,6 +28,9 @@ import { ProCalendarLegend } from '@/components/schedule/calendar/ProCalendarLeg
 import { EmployeeManagementDialog } from '@/components/schedule/dialogs/EmployeeManagementDialog';
 
 import { AppointmentApprovalBar } from '@/components/schedule/AppointmentApprovalBar';
+import { AbwesenheitVerwaltung } from '@/components/mitarbeiter/AbwesenheitVerwaltung';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Palmtree } from 'lucide-react';
 
 import { AppointmentDetailDialog } from '@/components/schedule/dialogs/AppointmentDetailDialog';
 // CreateAppointmentDialog entfernt — CreateAppointmentFromSlotDialog wird für beides genutzt
@@ -1214,6 +1217,20 @@ const ScheduleBuilderModern = () => {
               }}
             />
             <AppointmentApprovalBar />
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Palmtree className="h-4 w-4 text-emerald-600" />
+                  Abwesenheiten
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+                <SheetHeader className="mb-4">
+                  <SheetTitle>Abwesenheiten verwalten</SheetTitle>
+                </SheetHeader>
+                <AbwesenheitVerwaltung />
+              </SheetContent>
+            </Sheet>
           </div>
           <div className="flex items-center gap-2">
             {/* Zoom-Steuerung */}

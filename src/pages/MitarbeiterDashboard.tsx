@@ -10,7 +10,6 @@ import { TerminBestaetigung } from '@/components/mitarbeiter/TerminBestaetigung'
 import { LeistungsnachweisSignature } from '@/components/mitarbeiter/LeistungsnachweisSignature';
 import { AbwesenheitAnfrage } from '@/components/mitarbeiter/AbwesenheitAnfrage';
 import { AbwesenheitGenehmigung } from '@/components/mitarbeiter/AbwesenheitGenehmigung';
-import { AbwesenheitVerwaltung } from '@/components/mitarbeiter/AbwesenheitVerwaltung';
 import { MeineDokumente } from '@/components/mitarbeiter/MeineDokumente';
 import { Benachrichtigungen } from '@/components/mitarbeiter/Benachrichtigungen';
 import { EmployeeWeekCalendar } from '@/components/schedule/calendar/EmployeeWeekCalendar';
@@ -163,8 +162,8 @@ export default function MitarbeiterDashboard() {
         </CardContent>
       </Card>
 
-      {/* Abwesenheiten: GF = alle MA verwalten, MA = eigene beantragen */}
-      {isGF ? <AbwesenheitVerwaltung /> : <AbwesenheitAnfrage />}
+      {/* Abwesenheiten: nur für Mitarbeiter sichtbar, GF verwaltet über Dienstplan */}
+      {!isGF && <AbwesenheitAnfrage />}
 
       {/* Meine Dokumente - NUR für Mitarbeiter, nicht für GF */}
       {!isGF && <MeineDokumente />}
