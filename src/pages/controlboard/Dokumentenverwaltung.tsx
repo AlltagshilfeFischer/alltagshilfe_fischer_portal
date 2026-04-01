@@ -425,6 +425,38 @@ export default function Dokumentenverwaltung() {
 
   // Preview functionality
   const handlePreview = async (dokument: Dokument) => {
+    // PDFs: in neuem Tab öffnen — window.open muss synchron aufgerufen werden,
+    // sonst blockiert der Popup-Blocker den Aufruf nach einem await.
+    if (dokument.mime_type.includes('pdf')) {
+      const newTab = window.open('', '_blank');
+      if (!newTab) {
+        toast({
+          title: 'Popup blockiert',
+          description: 'Bitte Popups für diese Seite erlauben',
+          variant: 'destructive',
+        });
+        return;
+      }
+      try {
+        const { data, error } = await supabase.storage
+          .from('dokumente')
+          .download(dokument.dateipfad);
+        if (error) throw error;
+        const url = URL.createObjectURL(data);
+        newTab.location.href = url;
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } catch (error: any) {
+        newTab.close();
+        toast({
+          title: 'Fehler',
+          description: 'PDF konnte nicht geöffnet werden',
+          variant: 'destructive',
+        });
+      }
+      return;
+    }
+
+    // Bilder: im Dialog anzeigen
     setPreviewDokument(dokument);
     setPreviewLoading(true);
     setPreviewUrl(null);

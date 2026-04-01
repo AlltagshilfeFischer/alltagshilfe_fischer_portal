@@ -33,7 +33,12 @@ function getTypLabel(t: string) {
   return TYP_OPTIONS.find((o) => o.value === t)?.label ?? t;
 }
 
-export function AbwesenheitVerwaltung() {
+interface AbwesenheitVerwaltungProps {
+  /** Im Sheet eingebettet — kein Card-Wrapper, kein doppelter Titel */
+  embedded?: boolean;
+}
+
+export function AbwesenheitVerwaltung({ embedded = false }: AbwesenheitVerwaltungProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -151,8 +156,89 @@ export function AbwesenheitVerwaltung() {
     ? abwesenheiten
     : abwesenheiten.filter((a) => a.mitarbeiter_id === filterMaId);
 
+  const toolbar = (
+    <div className="flex items-center gap-2">
+      <Select value={filterMaId} onValueChange={setFilterMaId}>
+        <SelectTrigger className="w-44 h-8 text-sm">
+          <Users className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <SelectValue placeholder="Alle Mitarbeiter" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="alle">Alle Mitarbeiter</SelectItem>
+          {mitarbeiterList.map((ma) => (
+            <SelectItem key={ma.id} value={ma.id}>
+              {getMaName(ma)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button size="sm" onClick={() => setDialogOpen(true)}>
+        <Plus className="h-4 w-4 mr-1" />
+        Eintragen
+      </Button>
+    </div>
+  );
+
+  const list = isLoading ? (
+    <div className="flex justify-center py-6">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ) : !filtered.length ? (
+    <p className="text-sm text-muted-foreground text-center py-4">
+      Keine Abwesenheiten vorhanden
+    </p>
+  ) : (
+    <div className="space-y-2">
+      {filtered.map((a) => (
+        <div key={a.id} className="flex items-center justify-between p-3 border rounded-lg">
+          <div className="flex items-center gap-3 min-w-0">
+            <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <p className="font-medium text-sm truncate">
+                {getMaName(a.mitarbeiter)}
+                <span className="text-muted-foreground font-normal">
+                  {' '}— {getTypLabel(a.typ)}
+                </span>
+                {a.grund && (
+                  <span className="text-muted-foreground font-normal"> ({a.grund})</span>
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {a.von ? format(new Date(a.von), 'dd.MM.yyyy', { locale: de }) : '?'}
+                {' – '}
+                {a.bis ? format(new Date(a.bis), 'dd.MM.yyyy', { locale: de }) : '?'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 text-xs">
+              Genehmigt
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={() => deleteMutation.mutate(a.id)}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <>
+      {embedded ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            {toolbar}
+          </div>
+          {list}
+        </div>
+      ) : (
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -160,80 +246,12 @@ export function AbwesenheitVerwaltung() {
               <Palmtree className="h-5 w-5 text-emerald-600" />
               Abwesenheiten verwalten
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <Select value={filterMaId} onValueChange={setFilterMaId}>
-                <SelectTrigger className="w-44 h-8 text-sm">
-                  <Users className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                  <SelectValue placeholder="Alle Mitarbeiter" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="alle">Alle Mitarbeiter</SelectItem>
-                  {mitarbeiterList.map((ma) => (
-                    <SelectItem key={ma.id} value={ma.id}>
-                      {getMaName(ma)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button size="sm" onClick={() => setDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Eintragen
-              </Button>
-            </div>
+            {toolbar}
           </div>
         </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-6">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : !filtered.length ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Keine Abwesenheiten vorhanden
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {filtered.map((a) => (
-                <div key={a.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">
-                        {getMaName(a.mitarbeiter)}
-                        <span className="text-muted-foreground font-normal">
-                          {' '}— {getTypLabel(a.typ)}
-                        </span>
-                        {a.grund && (
-                          <span className="text-muted-foreground font-normal"> ({a.grund})</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {a.von ? format(new Date(a.von), 'dd.MM.yyyy', { locale: de }) : '?'}
-                        {' – '}
-                        {a.bis ? format(new Date(a.bis), 'dd.MM.yyyy', { locale: de }) : '?'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 text-xs">
-                      Genehmigt
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                      onClick={() => deleteMutation.mutate(a.id)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
+        <CardContent>{list}</CardContent>
       </Card>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-md">

@@ -1228,7 +1228,7 @@ const ScheduleBuilderModern = () => {
                 <SheetHeader className="mb-4">
                   <SheetTitle>Abwesenheiten verwalten</SheetTitle>
                 </SheetHeader>
-                <AbwesenheitVerwaltung />
+                <AbwesenheitVerwaltung embedded />
               </SheetContent>
             </Sheet>
           </div>
