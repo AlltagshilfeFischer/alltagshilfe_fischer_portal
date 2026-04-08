@@ -43,7 +43,6 @@ import { AIAppointmentCreator } from '@/components/schedule/ai/AIAppointmentCrea
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { ConflictsNavigationCard } from '@/components/schedule/panels/ConflictsNavigationCard';
-import { UnassignedAppointmentsPanel } from '@/components/schedule/panels/UnassignedAppointmentsPanel';
 import { useAllVerfuegbarkeiten } from '@/hooks/useAllVerfuegbarkeiten';
 import { DndContext, DragOverlay, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 
@@ -1371,18 +1370,6 @@ const ScheduleBuilderModern = () => {
             <ProCalendarLegend />
           </div>
 
-          {/* Unassigned Appointments Side Panel */}
-          <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-            <UnassignedAppointmentsPanel
-              unassignedAppointments={unassignedAppointments}
-              allAppointments={appointments}
-              employees={employees.filter(e => e.ist_aktiv)}
-              verfuegbarkeiten={allVerfuegbarkeiten}
-              onAssignAppointment={(appointmentId, employeeId) =>
-                assignAppointment(appointmentId, employeeId)
-              }
-            />
-          </div>
         </div>
 
         {/* Cut/Paste Bar */}
