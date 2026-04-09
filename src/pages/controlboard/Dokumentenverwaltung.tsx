@@ -8,14 +8,17 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
-import { 
-  FileText, Download, Trash2, Upload, Search, Calendar, User, Users, Building2, 
-  ChevronRight, ChevronDown, FolderOpen, File, Eye, X, FileImage, FileIcon
+import {
+  FileText, Download, Trash2, Upload, Search, Calendar, User, Users, Building2,
+  ChevronRight, ChevronDown, FolderOpen, File, Eye, X, FileImage, FileIcon,
+  Check, ChevronsUpDown
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -87,6 +90,8 @@ export default function Dokumentenverwaltung() {
   const [uploadKundenId, setUploadKundenId] = useState('');
   const [uploadMitarbeiterId, setUploadMitarbeiterId] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [kundeComboOpen, setKundeComboOpen] = useState(false);
+  const [mitarbeiterComboOpen, setMitarbeiterComboOpen] = useState(false);
 
   // Preview state
   const [previewDokument, setPreviewDokument] = useState<Dokument | null>(null);
@@ -653,42 +658,88 @@ export default function Dokumentenverwaltung() {
                 {uploadKategorie === 'kunde' && (
                   <div className="col-span-2">
                     <Label>Kunde *</Label>
-                    <Select
-                      value={uploadKundenId}
-                      onValueChange={setUploadKundenId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Kunde auswählen..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {kunden.map((kunde) => (
-                          <SelectItem key={kunde.id} value={kunde.id}>
-                            {getEntityFullName(kunde)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={kundeComboOpen} onOpenChange={setKundeComboOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={kundeComboOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          {uploadKundenId
+                            ? getEntityFullName(kunden.find(k => k.id === uploadKundenId)!)
+                            : 'Kunde auswählen...'}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Kunde suchen..." />
+                          <CommandList>
+                            <CommandEmpty>Kein Kunde gefunden.</CommandEmpty>
+                            <CommandGroup>
+                              {kunden.map((kunde) => (
+                                <CommandItem
+                                  key={kunde.id}
+                                  value={getEntityFullName(kunde)}
+                                  onSelect={() => {
+                                    setUploadKundenId(kunde.id);
+                                    setKundeComboOpen(false);
+                                  }}
+                                >
+                                  <Check className={`mr-2 h-4 w-4 ${uploadKundenId === kunde.id ? 'opacity-100' : 'opacity-0'}`} />
+                                  {getEntityFullName(kunde)}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
 
                 {uploadKategorie === 'mitarbeiter' && (
                   <div className="col-span-2">
                     <Label>Mitarbeiter *</Label>
-                    <Select
-                      value={uploadMitarbeiterId}
-                      onValueChange={setUploadMitarbeiterId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Mitarbeiter auswählen..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mitarbeiter.map((ma) => (
-                          <SelectItem key={ma.id} value={ma.id}>
-                            {getEntityFullName(ma)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={mitarbeiterComboOpen} onOpenChange={setMitarbeiterComboOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={mitarbeiterComboOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          {uploadMitarbeiterId
+                            ? getEntityFullName(mitarbeiter.find(m => m.id === uploadMitarbeiterId)!)
+                            : 'Mitarbeiter auswählen...'}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Mitarbeiter suchen..." />
+                          <CommandList>
+                            <CommandEmpty>Kein Mitarbeiter gefunden.</CommandEmpty>
+                            <CommandGroup>
+                              {mitarbeiter.map((ma) => (
+                                <CommandItem
+                                  key={ma.id}
+                                  value={getEntityFullName(ma)}
+                                  onSelect={() => {
+                                    setUploadMitarbeiterId(ma.id);
+                                    setMitarbeiterComboOpen(false);
+                                  }}
+                                >
+                                  <Check className={`mr-2 h-4 w-4 ${uploadMitarbeiterId === ma.id ? 'opacity-100' : 'opacity-0'}`} />
+                                  {getEntityFullName(ma)}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
               </div>
