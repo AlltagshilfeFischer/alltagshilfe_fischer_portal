@@ -1,6 +1,6 @@
 
 -- Leistungsnachweise Tabelle
-CREATE TABLE public.leistungsnachweise (
+CREATE TABLE IF NOT EXISTS public.leistungsnachweise (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   kunden_id uuid NOT NULL REFERENCES public.kunden(id) ON DELETE CASCADE,
   monat smallint NOT NULL CHECK (monat >= 1 AND monat <= 12),
@@ -81,6 +81,7 @@ CREATE POLICY "Buchhaltung can read leistungsnachweise"
   USING (public.is_buchhaltung(auth.uid()));
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_leistungsnachweise_updated_at ON public.leistungsnachweise;
 CREATE TRIGGER update_leistungsnachweise_updated_at
   BEFORE UPDATE ON public.leistungsnachweise
   FOR EACH ROW

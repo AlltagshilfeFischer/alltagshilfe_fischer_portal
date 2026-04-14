@@ -1,16 +1,20 @@
 -- Abrechnungs-Engine: Rechnungen und Positionen mit vollständigem Audit-Trail
 
 -- Rechnungsstatus Enum
-CREATE TYPE public.rechnung_status AS ENUM (
+DO $$ BEGIN
+  CREATE TYPE public.rechnung_status AS ENUM (
   'entwurf',      -- Draft, being prepared
   'freigegeben',  -- Approved for sending
   'versendet',    -- Sent to Kostenträger
   'bezahlt',      -- Paid
   'storniert'     -- Cancelled
-);
+); -- CREATE TYPE
+EXCEPTION WHEN duplicate_object THEN
+  NULL; -- bereits vorhanden, überspringen
+END $$;
 
 -- Haupttabelle: Rechnungen
-CREATE TABLE public.rechnungen (
+CREATE TABLE IF NOT EXISTS public.rechnungen (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   rechnungsnummer TEXT NOT NULL UNIQUE,
   
@@ -48,7 +52,7 @@ CREATE TABLE public.rechnungen (
 );
 
 -- Rechnungspositionen (einzelne Termine)
-CREATE TABLE public.rechnungspositionen (
+CREATE TABLE IF NOT EXISTS public.rechnungspositionen (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   rechnung_id UUID NOT NULL REFERENCES public.rechnungen(id) ON DELETE CASCADE,
   
@@ -78,7 +82,7 @@ CREATE TABLE public.rechnungspositionen (
 );
 
 -- Abrechnungsregeln pro Kostenträger-Typ
-CREATE TABLE public.abrechnungsregeln (
+CREATE TABLE IF NOT EXISTS public.abrechnungsregeln (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   
   -- Geltungsbereich
@@ -104,7 +108,7 @@ CREATE TABLE public.abrechnungsregeln (
 );
 
 -- Abrechnungs-Historie (Append-Only Audit Log)
-CREATE TABLE public.abrechnungs_historie (
+CREATE TABLE IF NOT EXISTS public.abrechnungs_historie (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   rechnung_id UUID NOT NULL REFERENCES public.rechnungen(id),
   
@@ -125,18 +129,20 @@ CREATE TABLE public.abrechnungs_historie (
 );
 
 -- Indexes für Performance
-CREATE INDEX idx_rechnungen_status ON public.rechnungen(status);
-CREATE INDEX idx_rechnungen_zeitraum ON public.rechnungen(abrechnungszeitraum_von, abrechnungszeitraum_bis);
-CREATE INDEX idx_rechnungen_kostentraeger ON public.rechnungen(kostentraeger_id);
-CREATE INDEX idx_rechnungspositionen_rechnung ON public.rechnungspositionen(rechnung_id);
-CREATE INDEX idx_rechnungspositionen_termin ON public.rechnungspositionen(termin_id);
-CREATE INDEX idx_abrechnungsregeln_lookup ON public.abrechnungsregeln(kostentraeger_typ, leistungsart, ist_aktiv);
+CREATE INDEX IF NOT EXISTS idx_rechnungen_status ON public.rechnungen(status);
+CREATE INDEX IF NOT EXISTS idx_rechnungen_zeitraum ON public.rechnungen(abrechnungszeitraum_von, abrechnungszeitraum_bis);
+CREATE INDEX IF NOT EXISTS idx_rechnungen_kostentraeger ON public.rechnungen(kostentraeger_id);
+CREATE INDEX IF NOT EXISTS idx_rechnungspositionen_rechnung ON public.rechnungspositionen(rechnung_id);
+CREATE INDEX IF NOT EXISTS idx_rechnungspositionen_termin ON public.rechnungspositionen(termin_id);
+CREATE INDEX IF NOT EXISTS idx_abrechnungsregeln_lookup ON public.abrechnungsregeln(kostentraeger_typ, leistungsart, ist_aktiv);
 
 -- Trigger für updated_at
+DROP TRIGGER IF EXISTS update_rechnungen_updated_at ON public.rechnungen;
 CREATE TRIGGER update_rechnungen_updated_at
   BEFORE UPDATE ON public.rechnungen
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_abrechnungsregeln_updated_at ON public.abrechnungsregeln;
 CREATE TRIGGER update_abrechnungsregeln_updated_at
   BEFORE UPDATE ON public.abrechnungsregeln
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -192,6 +198,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS log_rechnung_status_changes ON public.rechnungen;
 CREATE TRIGGER log_rechnung_status_changes
   AFTER UPDATE ON public.rechnungen
   FOR EACH ROW EXECUTE FUNCTION public.log_rechnung_status_change();

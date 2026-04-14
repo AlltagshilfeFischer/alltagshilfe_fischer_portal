@@ -1,4 +1,5 @@
 -- Allow users to update their own benutzer status from 'eingeladen' to 'approved'
+DROP POLICY IF EXISTS "Users can update own status from eingeladen to approved" ON public.benutzer;
 CREATE POLICY "Users can update own status from eingeladen to approved"
 ON public.benutzer
 FOR UPDATE

@@ -10,6 +10,7 @@ ALTER TABLE public.mitarbeiter_abwesenheiten
   ADD COLUMN IF NOT EXISTS bis date;
 
 -- Allow employees to INSERT their own absence requests
+DROP POLICY IF EXISTS "Mitarbeiter can request own absences" ON public.mitarbeiter_abwesenheiten;
 CREATE POLICY "Mitarbeiter can request own absences"
 ON public.mitarbeiter_abwesenheiten
 FOR INSERT
@@ -22,6 +23,7 @@ WITH CHECK (
 );
 
 -- Allow employees to read their own absences
+DROP POLICY IF EXISTS "Mitarbeiter can read own absences" ON public.mitarbeiter_abwesenheiten;
 CREATE POLICY "Mitarbeiter can read own absences"
 ON public.mitarbeiter_abwesenheiten
 FOR SELECT

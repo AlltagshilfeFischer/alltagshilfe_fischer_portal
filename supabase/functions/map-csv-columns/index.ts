@@ -66,9 +66,9 @@ serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    const OPENAI_API_KEY = req.headers.get("x-openai-key") || Deno.env.get("OPENAI_API_KEY");
 
-    if (!apiKey) {
+    if (!OPENAI_API_KEY) {
       return new Response(JSON.stringify({ mapping: {} }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -82,38 +82,34 @@ serve(async (req) => {
       });
     }
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: "gpt-4o-mini",
         max_tokens: 500,
-        system: SYSTEM_PROMPT,
         messages: [
-          {
-            role: "user",
-            content: `Mappe diese CSV-Spalten: ${JSON.stringify(columns)}`,
-          },
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: `Mappe diese CSV-Spalten: ${JSON.stringify(columns)}` },
         ],
       }),
     });
 
     if (!response.ok) {
-      console.error("Anthropic API error:", response.status, await response.text());
+      console.error("OpenAI API error:", response.status, await response.text());
       return new Response(JSON.stringify({ mapping: {} }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json() as {
-      content: Array<{ type: string; text: string }>;
+      choices: Array<{ message: { content: string } }>;
     };
 
-    const text = data.content?.[0]?.text ?? "";
+    const text = data.choices?.[0]?.message?.content ?? "";
 
     let mapping: Record<string, string | null> = {};
     try {

@@ -6,6 +6,7 @@ DROP POLICY IF EXISTS "Authenticated users can insert termine" ON public.termine
 DROP POLICY IF EXISTS "Authenticated users can update termine" ON public.termine;
 
 -- Admins können alles mit Terminen machen
+DROP POLICY IF EXISTS "Admins can manage all termine" ON public.termine;
 CREATE POLICY "Admins can manage all termine"
 ON public.termine
 FOR ALL
@@ -19,6 +20,7 @@ DROP POLICY IF EXISTS "Authenticated users can read kunden" ON public.kunden;
 DROP POLICY IF EXISTS "Authenticated users can update kunden" ON public.kunden;
 
 -- Admins können alle Kunden verwalten
+DROP POLICY IF EXISTS "Admins can manage all kunden" ON public.kunden;
 CREATE POLICY "Admins can manage all kunden"
 ON public.kunden
 FOR ALL
@@ -26,6 +28,7 @@ USING (is_admin(auth.uid()))
 WITH CHECK (is_admin(auth.uid()));
 
 -- Mitarbeiter können nur Kunden lesen, die ihnen zugewiesen sind
+DROP POLICY IF EXISTS "Mitarbeiter can read assigned kunden" ON public.kunden;
 CREATE POLICY "Mitarbeiter can read assigned kunden"
 ON public.kunden
 FOR SELECT
@@ -49,6 +52,7 @@ DROP POLICY IF EXISTS "Authenticated users can insert kunden_zeitfenster" ON pub
 DROP POLICY IF EXISTS "Authenticated users can read kunden_zeitfenster" ON public.kunden_zeitfenster;
 DROP POLICY IF EXISTS "Authenticated users can update kunden_zeitfenster" ON public.kunden_zeitfenster;
 
+DROP POLICY IF EXISTS "Admins can manage kunden_zeitfenster" ON public.kunden_zeitfenster;
 CREATE POLICY "Admins can manage kunden_zeitfenster"
 ON public.kunden_zeitfenster
 FOR ALL
@@ -61,6 +65,7 @@ DROP POLICY IF EXISTS "Authenticated users can insert mitarbeiter_verfuegbarkeit
 DROP POLICY IF EXISTS "Authenticated users can read mitarbeiter_verfuegbarkeit" ON public.mitarbeiter_verfuegbarkeit;
 DROP POLICY IF EXISTS "Authenticated users can update mitarbeiter_verfuegbarkeit" ON public.mitarbeiter_verfuegbarkeit;
 
+DROP POLICY IF EXISTS "Admins can manage mitarbeiter_verfuegbarkeit" ON public.mitarbeiter_verfuegbarkeit;
 CREATE POLICY "Admins can manage mitarbeiter_verfuegbarkeit"
 ON public.mitarbeiter_verfuegbarkeit
 FOR ALL
@@ -73,6 +78,7 @@ DROP POLICY IF EXISTS "Authenticated users can insert mitarbeiter_abwesenheiten"
 DROP POLICY IF EXISTS "Authenticated users can read mitarbeiter_abwesenheiten" ON public.mitarbeiter_abwesenheiten;
 DROP POLICY IF EXISTS "Authenticated users can update mitarbeiter_abwesenheiten" ON public.mitarbeiter_abwesenheiten;
 
+DROP POLICY IF EXISTS "Admins can manage mitarbeiter_abwesenheiten" ON public.mitarbeiter_abwesenheiten;
 CREATE POLICY "Admins can manage mitarbeiter_abwesenheiten"
 ON public.mitarbeiter_abwesenheiten
 FOR ALL
@@ -85,6 +91,7 @@ DROP POLICY IF EXISTS "Authenticated users can insert termin_vorlagen" ON public
 DROP POLICY IF EXISTS "Authenticated users can read termin_vorlagen" ON public.termin_vorlagen;
 DROP POLICY IF EXISTS "Authenticated users can update termin_vorlagen" ON public.termin_vorlagen;
 
+DROP POLICY IF EXISTS "Admins can manage termin_vorlagen" ON public.termin_vorlagen;
 CREATE POLICY "Admins can manage termin_vorlagen"
 ON public.termin_vorlagen
 FOR ALL
@@ -97,12 +104,14 @@ DROP POLICY IF EXISTS "Authenticated users can read termin_aenderungen" ON publi
 DROP POLICY IF EXISTS "Authenticated users can update termin_aenderungen" ON public.termin_aenderungen;
 DROP POLICY IF EXISTS "Public can read termin_aenderungen" ON public.termin_aenderungen;
 
+DROP POLICY IF EXISTS "Admins can manage termin_aenderungen" ON public.termin_aenderungen;
 CREATE POLICY "Admins can manage termin_aenderungen"
 ON public.termin_aenderungen
 FOR ALL
 USING (is_admin(auth.uid()))
 WITH CHECK (is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Mitarbeiter can read own change requests" ON public.termin_aenderungen;
 CREATE POLICY "Mitarbeiter can read own change requests"
 ON public.termin_aenderungen
 FOR SELECT

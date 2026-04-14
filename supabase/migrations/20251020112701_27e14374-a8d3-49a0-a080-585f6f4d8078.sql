@@ -4,6 +4,7 @@ DROP POLICY IF EXISTS "Authenticated users can update their own benutzer" ON pub
 
 -- Neue Policy: Nur Admins können Rollen und Status ändern
 -- Normale Nutzer können nur ihre Kontaktdaten (vorname, nachname, geburtsdatum) ändern
+DROP POLICY IF EXISTS "Users can update own contact data only" ON public.benutzer;
 CREATE POLICY "Users can update own contact data only"
 ON public.benutzer
 FOR UPDATE
@@ -21,6 +22,7 @@ WITH CHECK (
 -- Zusätzliche Sicherheit: Verhindere dass neue Benutzer sich als Admin registrieren
 DROP POLICY IF EXISTS "Allow public registration in benutzer" ON public.benutzer;
 
+DROP POLICY IF EXISTS "Allow public registration in benutzer" ON public.benutzer;
 CREATE POLICY "Allow public registration in benutzer"
 ON public.benutzer
 FOR INSERT

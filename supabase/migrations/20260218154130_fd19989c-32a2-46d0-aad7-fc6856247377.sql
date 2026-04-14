@@ -1,6 +1,6 @@
 
 -- 1. Notfallkontakte-Tabelle (unbegrenzt viele pro Kunde)
-CREATE TABLE public.notfallkontakte (
+CREATE TABLE IF NOT EXISTS public.notfallkontakte (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   kunden_id UUID NOT NULL REFERENCES public.kunden(id) ON DELETE CASCADE,
   name TEXT NOT NULL,

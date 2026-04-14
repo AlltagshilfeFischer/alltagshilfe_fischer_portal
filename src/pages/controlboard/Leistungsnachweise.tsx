@@ -609,7 +609,11 @@ export default function Leistungsnachweise() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    // Transform zurücksetzen damit clearRect wirklich ALLES löscht
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
   };
 
   // Initialize canvas when detail dialog opens for signing
@@ -1186,53 +1190,59 @@ export default function Leistungsnachweise() {
 
                   <Separator />
 
-                  {/* Unterschrift Kunde – prominent am Ende */}
-                  <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
-                    <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-                      <PenLine className="h-5 w-5 text-primary" />
-                      Unterschrift Kunde
-                    </h3>
+                  {/* Unterschrift Kunde */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold flex items-center gap-2">
+                        <PenLine className="h-4 w-4 text-muted-foreground" />
+                        Unterschrift Kunde
+                      </h3>
+                      {selectedLN.unterschrift_kunde_zeitstempel ? (
+                        <span className="flex items-center gap-1 text-xs text-success font-medium">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Unterschrieben
+                        </span>
+                      ) : canSign ? (
+                        <span className="text-xs text-muted-foreground">Ausstehend</span>
+                      ) : null}
+                    </div>
 
-                    {/* Bereits unterschrieben: Anzeige + Löschen */}
                     {selectedLN.unterschrift_kunde_zeitstempel ? (
-                      <div className="space-y-3">
-                        <div className="rounded-lg bg-success/10 border border-success/20 p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2 text-sm text-success">
-                              <CheckCircle2 className="h-4 w-4" />
-                              <span className="font-medium">Unterschrieben</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {selectedLN.unterschrift_kunde_durch && `${selectedLN.unterschrift_kunde_durch} · `}
-                              {format(new Date(selectedLN.unterschrift_kunde_zeitstempel), 'dd.MM.yyyy HH:mm', { locale: de })}
-                            </p>
-                          </div>
+                      /* ── BEREITS UNTERSCHRIEBEN ── */
+                      <div className="space-y-2">
+                        <div className="rounded-lg border border-border bg-white p-4 flex flex-col items-center gap-3">
                           {selectedLN.unterschrift_kunde_bild && (
-                            <img src={selectedLN.unterschrift_kunde_bild} alt="Unterschrift" className="w-full h-32 object-contain border rounded-lg bg-card p-2" />
+                            <img
+                              src={selectedLN.unterschrift_kunde_bild}
+                              alt="Unterschrift"
+                              className="max-h-28 w-full object-contain"
+                            />
                           )}
+                          <div className="w-full border-t border-dashed border-border pt-2 flex items-center justify-between text-xs text-muted-foreground">
+                            <span className="font-medium">{selectedLN.unterschrift_kunde_durch || '–'}</span>
+                            <span>{format(new Date(selectedLN.unterschrift_kunde_zeitstempel), 'dd.MM.yyyy, HH:mm', { locale: de })} Uhr</span>
+                          </div>
                         </div>
 
-                        {/* Stornieren / Unterschrift löschen */}
                         {selectedLN.status === 'unterschrieben' && !showStornierConfirm && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
+                            className="w-full gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
                             onClick={() => setShowStornierConfirm(true)}
                           >
-                            <RotateCcw className="h-3.5 w-3.5" /> Unterschrift löschen & zurücksetzen
+                            <RotateCcw className="h-3.5 w-3.5" /> Unterschrift zurücksetzen
                           </Button>
                         )}
-                        {selectedLN.status === 'unterschrieben' && showStornierConfirm && (
-                          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
-                            <p className="text-sm text-foreground">Unterschrift wirklich löschen? Der LN wird auf "Offen" zurückgesetzt.</p>
-                            <div className="flex items-center gap-2">
+                        {showStornierConfirm && (
+                          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 space-y-2 text-sm">
+                            <p className="text-foreground">Unterschrift wirklich löschen? Der LN wird auf „Offen" zurückgesetzt.</p>
+                            <div className="flex gap-2">
                               <Button
                                 variant="destructive"
                                 size="sm"
-                                className="gap-1"
                                 onClick={() => stornierMutation.mutate(selectedLN.id)}
                                 disabled={stornierMutation.isPending}
+                                className="gap-1"
                               >
                                 {stornierMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                                 Ja, löschen
@@ -1245,35 +1255,38 @@ export default function Leistungsnachweise() {
                         )}
                       </div>
                     ) : canSign ? (
+                      /* ── UNTERSCHRIFT AUFNEHMEN ── */
                       <div className="space-y-3">
                         {!isOnline && (
-                          <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm">
-                            <WifiOff className="h-4 w-4 text-warning" />
-                            <span className="text-warning font-medium">Offline-Modus</span>
-                            <span className="text-muted-foreground">– Unterschrift wird lokal gespeichert</span>
+                          <div className="flex items-center gap-2 text-xs rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
+                            <WifiOff className="h-3.5 w-3.5 text-warning" />
+                            <span className="text-warning font-medium">Offline</span>
+                            <span className="text-muted-foreground">– Wird lokal gespeichert und später synchronisiert</span>
                           </div>
                         )}
-
                         {hasPendingSignatures && isOnline && (
-                          <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
-                            <RefreshCw className="h-4 w-4 text-primary animate-spin" />
-                            <span className="text-primary font-medium">Synchronisiere ausstehende Unterschriften...</span>
+                          <div className="flex items-center gap-2 text-xs rounded-md border border-primary/30 bg-primary/10 px-3 py-2">
+                            <RefreshCw className="h-3.5 w-3.5 text-primary animate-spin" />
+                            <span className="text-primary font-medium">Ausstehende Unterschriften werden synchronisiert…</span>
                           </div>
                         )}
 
-                        <div className="space-y-1">
-                          <Label className="text-xs">Name des Unterzeichners</Label>
-                          <Input
-                            className="h-9 text-sm"
-                            value={signerName}
-                            onChange={e => setSignerName(e.target.value)}
-                            placeholder="Name eingeben..."
-                          />
-                        </div>
-                        <div className="relative">
+                        {/* Name */}
+                        <Input
+                          className="h-9 text-sm"
+                          value={signerName}
+                          onChange={e => setSignerName(e.target.value)}
+                          placeholder="Name des Unterzeichners..."
+                        />
+
+                        {/* Signature pad */}
+                        <div className="relative rounded-xl border-2 border-border bg-white overflow-hidden" style={{ height: 180 }}>
+                          {/* Guide line */}
+                          <div className="absolute bottom-9 left-5 right-5 border-b border-dashed border-gray-200 pointer-events-none" />
+                          <span className="absolute bottom-3 left-5 text-[10px] text-gray-300 pointer-events-none select-none">Unterschrift</span>
                           <canvas
                             ref={canvasRef}
-                            className="w-full h-56 border-2 border-dashed border-primary/30 rounded-lg bg-card cursor-crosshair touch-none"
+                            className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
                             onMouseDown={startDraw}
                             onMouseMove={draw}
                             onMouseUp={endDraw}
@@ -1282,28 +1295,40 @@ export default function Leistungsnachweise() {
                             onTouchMove={draw}
                             onTouchEnd={endDraw}
                           />
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="absolute top-2 right-2 h-7 text-xs text-muted-foreground hover:text-destructive gap-1"
+                            className="flex-1 gap-1.5"
                             onClick={clearCanvas}
                           >
-                            <X className="h-3 w-3" /> Löschen
+                            <RotateCcw className="h-3.5 w-3.5" /> Leeren
+                          </Button>
+                          <Button
+                            className="flex-[2] gap-2"
+                            onClick={() => signMutation.mutate()}
+                            disabled={signMutation.isPending}
+                          >
+                            {signMutation.isPending
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : isOnline
+                                ? <CheckCircle2 className="h-4 w-4" />
+                                : <WifiOff className="h-4 w-4" />
+                            }
+                            {isOnline ? 'Unterschreiben & Bestätigen' : 'Lokal speichern'}
                           </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground text-center">Bitte hier unterschreiben (Touch oder Maus)</p>
-                        <Button
-                          className="w-full gap-2 h-11 text-base"
-                          onClick={() => signMutation.mutate()}
-                          disabled={signMutation.isPending}
-                        >
-                          {signMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                          {!isOnline ? <WifiOff className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                          {!isOnline ? 'Unterschrift lokal speichern' : 'Unterschreiben & Bestätigen'}
-                        </Button>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Status: {statusConfig[selectedLN.status]?.label || selectedLN.status} – Unterschrift nicht möglich</p>
+                      <p className="text-xs text-muted-foreground rounded-md border border-border bg-muted/30 px-3 py-2">
+                        {selectedLN.status === 'abgeschlossen'
+                          ? 'Leistungsnachweis ist abgeschlossen.'
+                          : `Status: ${statusConfig[selectedLN.status]?.label || selectedLN.status} – kein Unterschrift-Eingang möglich.`
+                        }
+                      </p>
                     )}
                   </div>
                 </div>

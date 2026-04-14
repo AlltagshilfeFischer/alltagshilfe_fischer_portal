@@ -4,12 +4,10 @@
 -- =====================================================
 
 -- 1. App Role Enum erstellen (falls nicht existiert)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'app_role') THEN
-    CREATE TYPE public.app_role AS ENUM ('admin', 'manager', 'mitarbeiter');
-  END IF;
-END$$;
+DO $$ BEGIN
+  CREATE TYPE public.app_role AS ENUM ('admin', 'manager', 'mitarbeiter');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- 2. User Roles Tabelle erstellen
 CREATE TABLE IF NOT EXISTS public.user_roles (
@@ -71,6 +69,7 @@ $$;
 
 -- 7. RLS Policies für user_roles Tabelle
 -- Admins können alle Rollen sehen
+DROP POLICY IF EXISTS "Admins can view all roles" ON public.user_roles;
 CREATE POLICY "Admins can view all roles"
 ON public.user_roles
 FOR SELECT
@@ -78,6 +77,7 @@ TO authenticated
 USING (public.is_admin_secure(auth.uid()));
 
 -- Benutzer können eigene Rollen sehen
+DROP POLICY IF EXISTS "Users can view own roles" ON public.user_roles;
 CREATE POLICY "Users can view own roles"
 ON public.user_roles
 FOR SELECT
@@ -85,6 +85,7 @@ TO authenticated
 USING (user_id = auth.uid());
 
 -- Nur Admins können Rollen zuweisen
+DROP POLICY IF EXISTS "Admins can insert roles" ON public.user_roles;
 CREATE POLICY "Admins can insert roles"
 ON public.user_roles
 FOR INSERT
@@ -92,11 +93,16 @@ TO authenticated
 WITH CHECK (public.is_admin_secure(auth.uid()));
 
 -- Nur Admins können Rollen entfernen
+DROP POLICY IF EXISTS "Admins can delete roles" ON public.user_roles;
 CREATE POLICY "Admins can delete roles"
 ON public.user_roles
 FOR DELETE
 TO authenticated
 USING (public.is_admin_secure(auth.uid()));
+
+-- 8a. UNIQUE constraint auf user_roles sicherstellen (idempotent)
+ALTER TABLE public.user_roles DROP CONSTRAINT IF EXISTS user_roles_user_id_role_key;
+ALTER TABLE public.user_roles ADD CONSTRAINT user_roles_user_id_role_key UNIQUE (user_id, role);
 
 -- 8. Existierende Rollen aus benutzer-Tabelle migrieren
 -- NUR Benutzer die auch in auth.users existieren!
@@ -104,8 +110,9 @@ INSERT INTO public.user_roles (user_id, role, granted_at)
 SELECT 
   b.id,
   CASE 
-    WHEN b.rolle::text = 'admin' THEN 'admin'::app_role
-    WHEN b.rolle::text = 'manager' THEN 'manager'::app_role
+    WHEN b.rolle::text = 'globaladmin' THEN 'globaladmin'::app_role
+    WHEN b.rolle::text IN ('geschaeftsfuehrer', 'admin', 'manager') THEN 'admin'::app_role
+    WHEN b.rolle::text = 'buchhaltung' THEN 'buchhaltung'::app_role
     ELSE 'mitarbeiter'::app_role
   END,
   b.created_at

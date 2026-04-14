@@ -62,6 +62,8 @@ END;
 $$;
 
 -- Function to generate appointments from templates
+-- Drop old version first (parameter names changed from start_date/end_date to p_from/p_to)
+DROP FUNCTION IF EXISTS public.generate_termine_from_vorlagen(DATE, DATE);
 CREATE OR REPLACE FUNCTION public.generate_termine_from_vorlagen(
   p_from DATE,
   p_to DATE
@@ -72,17 +74,17 @@ SECURITY DEFINER
 AS $$
 DECLARE
   template_rec RECORD;
-  current_date DATE;
+  iter_date DATE;
   appointment_start TIMESTAMP WITH TIME ZONE;
   appointment_end TIMESTAMP WITH TIME ZONE;
   created_count INTEGER := 0;
   interval_days INTEGER;
 BEGIN
   -- Loop through active templates
-  FOR template_rec IN 
-    SELECT * FROM public.termin_vorlagen 
-    WHERE ist_aktiv = true 
-      AND gueltig_von <= p_to 
+  FOR template_rec IN
+    SELECT * FROM public.termin_vorlagen
+    WHERE ist_aktiv = true
+      AND gueltig_von <= p_to
       AND (gueltig_bis IS NULL OR gueltig_bis >= p_from)
   LOOP
     -- Determine interval in days
@@ -92,14 +94,14 @@ BEGIN
       WHEN 'monthly' THEN 30
       ELSE 7
     END;
-    
+
     -- Generate appointments for the date range
-    current_date := GREATEST(p_from, template_rec.gueltig_von);
-    
-    WHILE current_date <= LEAST(p_to, COALESCE(template_rec.gueltig_bis, p_to)) LOOP
+    iter_date := GREATEST(p_from, template_rec.gueltig_von);
+
+    WHILE iter_date <= LEAST(p_to, COALESCE(template_rec.gueltig_bis, p_to)) LOOP
       -- Check if this is the correct day of week
-      IF EXTRACT(DOW FROM current_date)::SMALLINT = template_rec.wochentag THEN
-        appointment_start := current_date + template_rec.start_zeit;
+      IF EXTRACT(DOW FROM iter_date)::SMALLINT = template_rec.wochentag THEN
+        appointment_start := iter_date + template_rec.start_zeit;
         appointment_end := appointment_start + (template_rec.dauer_minuten || ' minutes')::INTERVAL;
         
         -- Check if appointment doesn't already exist
@@ -130,7 +132,7 @@ BEGIN
         END IF;
       END IF;
       
-      current_date := current_date + interval_days;
+      iter_date := iter_date + interval_days;
     END LOOP;
   END LOOP;
   

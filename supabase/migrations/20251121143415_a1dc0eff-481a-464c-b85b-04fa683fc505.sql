@@ -1,8 +1,8 @@
 -- Split adresse field into strasse, stadt, plz for mitarbeiter table
 ALTER TABLE public.mitarbeiter 
-  ADD COLUMN strasse TEXT,
-  ADD COLUMN stadt TEXT,
-  ADD COLUMN plz TEXT;
+  ADD COLUMN IF NOT EXISTS strasse TEXT,
+  ADD COLUMN IF NOT EXISTS stadt TEXT,
+  ADD COLUMN IF NOT EXISTS plz TEXT;
 
 -- Migrate existing data if possible (simple split by comma)
 UPDATE public.mitarbeiter 
@@ -14,9 +14,9 @@ WHERE adresse IS NOT NULL;
 
 -- Split adresse field into strasse, stadt, plz for kunden table
 ALTER TABLE public.kunden 
-  ADD COLUMN strasse TEXT,
-  ADD COLUMN stadt TEXT,
-  ADD COLUMN plz TEXT;
+  ADD COLUMN IF NOT EXISTS strasse TEXT,
+  ADD COLUMN IF NOT EXISTS stadt TEXT,
+  ADD COLUMN IF NOT EXISTS plz TEXT;
 
 -- Migrate existing data if possible
 UPDATE public.kunden 

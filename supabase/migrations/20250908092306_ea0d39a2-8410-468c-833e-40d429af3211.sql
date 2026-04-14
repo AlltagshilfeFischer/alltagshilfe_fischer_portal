@@ -74,7 +74,7 @@ SECURITY DEFINER
 AS $$
 DECLARE
   template_rec RECORD;
-  current_date DATE;
+  iter_date DATE;
   appointment_start TIMESTAMP WITH TIME ZONE;
   appointment_end TIMESTAMP WITH TIME ZONE;
   created_count INTEGER := 0;
@@ -96,12 +96,12 @@ BEGIN
     END;
     
     -- Generate appointments for the date range
-    current_date := GREATEST(p_from, template_rec.gueltig_von);
+    iter_date := GREATEST(p_from, template_rec.gueltig_von);
     
-    WHILE current_date <= LEAST(p_to, COALESCE(template_rec.gueltig_bis, p_to)) LOOP
+    WHILE iter_date <= LEAST(p_to, COALESCE(template_rec.gueltig_bis, p_to)) LOOP
       -- Check if this is the correct day of week
-      IF EXTRACT(DOW FROM current_date)::SMALLINT = template_rec.wochentag THEN
-        appointment_start := current_date + template_rec.start_zeit;
+      IF EXTRACT(DOW FROM iter_date)::SMALLINT = template_rec.wochentag THEN
+        appointment_start := iter_date + template_rec.start_zeit;
         appointment_end := appointment_start + (template_rec.dauer_minuten || ' minutes')::INTERVAL;
         
         -- Check if appointment doesn't already exist
@@ -132,7 +132,7 @@ BEGIN
         END IF;
       END IF;
       
-      current_date := current_date + interval_days;
+      iter_date := iter_date + interval_days;
     END LOOP;
   END LOOP;
   

@@ -4,35 +4,46 @@
 -- ============================================
 
 -- 1. ENUM: Leistungsstatus (State Machine)
-CREATE TYPE public.leistungs_status AS ENUM (
-  'beantragt',    -- Antrag gestellt, wartet auf Bewilligung
-  'genehmigt',    -- Bewilligt, aber noch nicht gestartet
-  'aktiv',        -- Laufende Leistung
-  'pausiert',     -- Vorübergehend ausgesetzt (z.B. Krankenhausaufenthalt)
-  'beendet'       -- Abgeschlossen/Beendet
-);
+DO $$ BEGIN
+  CREATE TYPE public.leistungs_status AS ENUM (
+    'beantragt',
+    'genehmigt',
+    'aktiv',
+    'pausiert',
+    'beendet'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- 2. ENUM: Leistungsart
-CREATE TYPE public.leistungsart AS ENUM (
+DO $$ BEGIN
+  CREATE TYPE public.leistungsart AS ENUM (
   'entlastungsleistung',      -- §45b SGB XI - Entlastungsbetrag
   'verhinderungspflege',      -- §39 SGB XI - Verhinderungspflege
   'kurzzeitpflege',           -- §42 SGB XI - Kurzzeitpflege
   'pflegesachleistung',       -- §36 SGB XI - Pflegesachleistung
   'privat',                   -- Privatleistung
   'sonstige'                  -- Andere Leistungsarten
-);
+); -- CREATE TYPE
+EXCEPTION WHEN duplicate_object THEN
+  NULL; -- bereits vorhanden, überspringen
+END $$;
 
 -- 3. ENUM: Kostentraeger-Typ
-CREATE TYPE public.kostentraeger_typ AS ENUM (
+DO $$ BEGIN
+  CREATE TYPE public.kostentraeger_typ AS ENUM (
   'pflegekasse',
   'krankenkasse', 
   'kommune',
   'privat',
   'beihilfe'
-);
+); -- CREATE TYPE
+EXCEPTION WHEN duplicate_object THEN
+  NULL; -- bereits vorhanden, überspringen
+END $$;
 
 -- 4. KOSTENTRAEGER-Tabelle (referenziert von Leistungen)
-CREATE TABLE public.kostentraeger (
+CREATE TABLE IF NOT EXISTS public.kostentraeger (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   typ kostentraeger_typ NOT NULL,
   name TEXT NOT NULL,                    -- z.B. "AOK Niedersachsen"
@@ -50,7 +61,7 @@ CREATE TABLE public.kostentraeger (
 );
 
 -- 5. LEISTUNGEN-Tabelle (Kern der Abrechnung)
-CREATE TABLE public.leistungen (
+CREATE TABLE IF NOT EXISTS public.leistungen (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
   -- Referenzen
@@ -95,7 +106,7 @@ CREATE TABLE public.leistungen (
 );
 
 -- 6. LEISTUNGS_STATUS_HISTORIE (Append-only Audit Trail)
-CREATE TABLE public.leistungs_status_historie (
+CREATE TABLE IF NOT EXISTS public.leistungs_status_historie (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   leistung_id UUID NOT NULL REFERENCES public.leistungen(id) ON DELETE CASCADE,
   
@@ -188,29 +199,32 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
+DROP TRIGGER IF EXISTS trg_leistungs_status_change ON public.leistungen;
 CREATE TRIGGER trg_leistungs_status_change
   AFTER UPDATE ON public.leistungen
   FOR EACH ROW
   EXECUTE FUNCTION public.log_leistungs_status_change();
 
 -- 10. Trigger für updated_at
+DROP TRIGGER IF EXISTS update_kostentraeger_updated_at ON public.kostentraeger;
 CREATE TRIGGER update_kostentraeger_updated_at
   BEFORE UPDATE ON public.kostentraeger
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_leistungen_updated_at ON public.leistungen;
 CREATE TRIGGER update_leistungen_updated_at
   BEFORE UPDATE ON public.leistungen
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
 -- 11. Indizes
-CREATE INDEX idx_leistungen_kunden ON public.leistungen(kunden_id);
-CREATE INDEX idx_leistungen_status ON public.leistungen(status);
-CREATE INDEX idx_leistungen_art ON public.leistungen(art);
-CREATE INDEX idx_leistungen_gueltig ON public.leistungen(gueltig_von, gueltig_bis);
-CREATE INDEX idx_leistungs_historie_leistung ON public.leistungs_status_historie(leistung_id);
-CREATE INDEX idx_kostentraeger_typ ON public.kostentraeger(typ);
+CREATE INDEX IF NOT EXISTS idx_leistungen_kunden ON public.leistungen(kunden_id);
+CREATE INDEX IF NOT EXISTS idx_leistungen_status ON public.leistungen(status);
+CREATE INDEX IF NOT EXISTS idx_leistungen_art ON public.leistungen(art);
+CREATE INDEX IF NOT EXISTS idx_leistungen_gueltig ON public.leistungen(gueltig_von, gueltig_bis);
+CREATE INDEX IF NOT EXISTS idx_leistungs_historie_leistung ON public.leistungs_status_historie(leistung_id);
+CREATE INDEX IF NOT EXISTS idx_kostentraeger_typ ON public.kostentraeger(typ);
 
 -- 12. Dokumentation
 COMMENT ON TABLE public.leistungen IS 'DDD: Leistungs-Aggregat mit State-Machine. Bildet bewilligte Leistungen nach SGB XI/V ab.';
@@ -239,6 +253,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
+DROP TRIGGER IF EXISTS trg_validate_leistungs_status ON public.leistungen;
 CREATE TRIGGER trg_validate_leistungs_status
   BEFORE UPDATE OF status ON public.leistungen
   FOR EACH ROW

@@ -9,7 +9,7 @@ VALUES (
 );
 
 -- Create table for document metadata
-CREATE TABLE public.dokumente (
+CREATE TABLE IF NOT EXISTS public.dokumente (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   titel TEXT NOT NULL,
   beschreibung TEXT,
@@ -27,6 +27,7 @@ CREATE TABLE public.dokumente (
 ALTER TABLE public.dokumente ENABLE ROW LEVEL SECURITY;
 
 -- Admins can manage all documents
+DROP POLICY IF EXISTS "Admins can manage all dokumente" ON public.dokumente;
 CREATE POLICY "Admins can manage all dokumente"
 ON public.dokumente
 FOR ALL
@@ -34,6 +35,7 @@ USING (is_admin(auth.uid()))
 WITH CHECK (is_admin(auth.uid()));
 
 -- Mitarbeiter can read documents for their assigned customers
+DROP POLICY IF EXISTS "Mitarbeiter can read assigned customer dokumente" ON public.dokumente;
 CREATE POLICY "Mitarbeiter can read assigned customer dokumente"
 ON public.dokumente
 FOR SELECT
@@ -105,5 +107,5 @@ USING (
 );
 
 -- Create index for better query performance
-CREATE INDEX idx_dokumente_kunden_id ON public.dokumente(kunden_id);
-CREATE INDEX idx_dokumente_created_at ON public.dokumente(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_dokumente_kunden_id ON public.dokumente(kunden_id);
+CREATE INDEX IF NOT EXISTS idx_dokumente_created_at ON public.dokumente(created_at DESC);

@@ -1,5 +1,5 @@
 
-CREATE TABLE public.development_todos (
+CREATE TABLE IF NOT EXISTS public.development_todos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   bereich text NOT NULL,
   titel text NOT NULL,

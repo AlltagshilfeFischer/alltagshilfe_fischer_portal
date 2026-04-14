@@ -6,6 +6,7 @@ DROP POLICY IF EXISTS "Allow public registration requests" ON public.pending_reg
 DROP POLICY IF EXISTS "Anyone can create registration request" ON public.pending_registrations;
 
 -- Create explicit public (anon + authenticated) INSERT policy
+DROP POLICY IF EXISTS "Allow public registration requests" ON public.pending_registrations;
 CREATE POLICY "Allow public registration requests"
 ON public.pending_registrations
 FOR INSERT

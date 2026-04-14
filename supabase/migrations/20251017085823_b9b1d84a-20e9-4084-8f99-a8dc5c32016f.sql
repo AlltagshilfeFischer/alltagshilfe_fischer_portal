@@ -1,7 +1,6 @@
--- Add vorname and nachname to mitarbeiter table
-ALTER TABLE public.mitarbeiter 
-ADD COLUMN vorname text,
-ADD COLUMN nachname text;
+-- Add vorname and nachname to mitarbeiter table (idempotent)
+ALTER TABLE public.mitarbeiter ADD COLUMN IF NOT EXISTS vorname text;
+ALTER TABLE public.mitarbeiter ADD COLUMN IF NOT EXISTS nachname text;
 
 -- Copy existing names from benutzer to mitarbeiter
 UPDATE public.mitarbeiter m
@@ -31,6 +30,7 @@ END;
 $$;
 
 -- Create trigger on benutzer table to sync names
+DROP TRIGGER IF EXISTS sync_mitarbeiter_name_trigger ON public.benutzer;
 CREATE TRIGGER sync_mitarbeiter_name_trigger
 AFTER INSERT OR UPDATE OF vorname, nachname ON public.benutzer
 FOR EACH ROW

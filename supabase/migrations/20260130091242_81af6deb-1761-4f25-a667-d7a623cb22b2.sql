@@ -13,7 +13,7 @@ END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
 -- 1. HAUSHALT (Household)
-CREATE TABLE public.haushalte (
+CREATE TABLE IF NOT EXISTS public.haushalte (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   notfall_name TEXT,
@@ -29,7 +29,7 @@ CREATE TABLE public.haushalte (
 );
 
 -- 2. EINSATZORT (Service Location)
-CREATE TABLE public.einsatzorte (
+CREATE TABLE IF NOT EXISTS public.einsatzorte (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   haushalt_id UUID NOT NULL REFERENCES public.haushalte(id) ON DELETE CASCADE,
   bezeichnung TEXT DEFAULT 'Hauptwohnung',
@@ -95,20 +95,22 @@ CREATE POLICY "Mitarbeiter can read einsatzorte via termine" ON public.einsatzor
   );
 
 -- 8. Trigger für updated_at
+DROP TRIGGER IF EXISTS update_haushalte_updated_at ON public.haushalte;
 CREATE TRIGGER update_haushalte_updated_at
   BEFORE UPDATE ON public.haushalte
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_einsatzorte_updated_at ON public.einsatzorte;
 CREATE TRIGGER update_einsatzorte_updated_at
   BEFORE UPDATE ON public.einsatzorte
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
 -- 9. Indizes
-CREATE INDEX idx_einsatzorte_haushalt ON public.einsatzorte(haushalt_id);
-CREATE INDEX idx_kunden_haushalt ON public.kunden(haushalt_id);
-CREATE INDEX idx_termine_einsatzort ON public.termine(einsatzort_id);
+CREATE INDEX IF NOT EXISTS idx_einsatzorte_haushalt ON public.einsatzorte(haushalt_id);
+CREATE INDEX IF NOT EXISTS idx_kunden_haushalt ON public.kunden(haushalt_id);
+CREATE INDEX IF NOT EXISTS idx_termine_einsatzort ON public.termine(einsatzort_id);
 
 -- 10. Dokumentation
 COMMENT ON TABLE public.haushalte IS 'DDD: Haushalt-Aggregat - Kontext für Notfallkontakte und Rechnungsempfänger';

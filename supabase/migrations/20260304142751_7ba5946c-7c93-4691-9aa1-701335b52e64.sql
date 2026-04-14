@@ -1,3 +1,4 @@
+DROP POLICY IF EXISTS "Mitarbeiter can read assigned kunden_zeitfenster" ON public.kunden_zeitfenster;
 CREATE POLICY "Mitarbeiter can read assigned kunden_zeitfenster"
 ON public.kunden_zeitfenster
 FOR SELECT

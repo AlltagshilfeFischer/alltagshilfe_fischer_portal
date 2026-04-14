@@ -8,10 +8,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Upload } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { parseCsvFile } from '@/lib/csv-parser';
 import type { CsvParseResult } from '@/lib/csv-parser';
+import { invokeAiFunction } from '@/lib/aiClient';
 
 const DB_FIELD_OPTIONS = [
   { value: 'vorname', label: 'Vorname *' },
@@ -103,23 +103,10 @@ export function CsvImportStepMapping({ onComplete }: CsvImportStepMappingProps) 
 
       setIsAnalyzing(true);
       try {
-        const { data: session } = await supabase.auth.getSession();
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/map-csv-columns`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session?.session?.access_token}`,
-              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-            body: JSON.stringify({ columns: result.headers }),
-          }
-        );
+        const { data, error } = await invokeAiFunction('map-csv-columns', { columns: result.headers });
+        if (error) throw error;
 
-        if (!response.ok) throw new Error('Edge Function nicht erreichbar');
-
-        const { mapping: aiMapping } = await response.json() as { mapping: Record<string, string | null> };
+        const { mapping: aiMapping } = data as { mapping: Record<string, string | null> };
         setMapping(aiMapping ?? {});
       } catch (aiError) {
         console.error('[CsvImport] KI-Mapping fehlgeschlagen, nutze Fallback:', aiError);

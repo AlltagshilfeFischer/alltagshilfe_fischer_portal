@@ -1,13 +1,17 @@
 -- Rename German tables to English equivalents to match TypeScript definitions
+-- Drop legacy Lovable placeholder tables first (if they exist from base schema migration)
+DROP TABLE IF EXISTS public.customers CASCADE;
+DROP TABLE IF EXISTS public.employees CASCADE;
+DROP TABLE IF EXISTS public.appointments CASCADE;
 
 -- Rename kunden to customers
-ALTER TABLE public.kunden RENAME TO customers;
+ALTER TABLE IF EXISTS public.kunden RENAME TO customers;
 
--- Rename mitarbeiter to employees  
-ALTER TABLE public.mitarbeiter RENAME TO employees;
+-- Rename mitarbeiter to employees
+ALTER TABLE IF EXISTS public.mitarbeiter RENAME TO employees;
 
 -- Rename termine to appointments
-ALTER TABLE public.termine RENAME TO appointments;
+ALTER TABLE IF EXISTS public.termine RENAME TO appointments;
 
 -- Update foreign key constraints to use new table names
 ALTER TABLE public.appointments 
@@ -18,15 +22,5 @@ ALTER TABLE public.appointments
   ADD CONSTRAINT appointments_customer_id_fkey FOREIGN KEY (kunden_id) REFERENCES public.customers(id),
   ADD CONSTRAINT appointments_employee_id_fkey FOREIGN KEY (mitarbeiter_id) REFERENCES public.employees(id);
 
--- Update any other tables that reference the renamed tables
-UPDATE pg_constraint 
-SET confrelid = 'public.customers'::regclass 
-WHERE confrelid = 'public.kunden'::regclass;
-
-UPDATE pg_constraint 
-SET confrelid = 'public.employees'::regclass 
-WHERE confrelid = 'public.mitarbeiter'::regclass;
-
-UPDATE pg_constraint 
-SET confrelid = 'public.appointments'::regclass 
-WHERE confrelid = 'public.termine'::regclass;
+-- PostgreSQL aktualisiert FK-Referenzen bei RENAME TABLE automatisch.
+-- Diese UPDATE-Statements werden übersprungen (Tabellen existieren nach RENAME nicht mehr unter altem Namen).

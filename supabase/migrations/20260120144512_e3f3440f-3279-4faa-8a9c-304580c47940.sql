@@ -5,6 +5,7 @@ DROP POLICY IF EXISTS "Mitarbeiter can read assigned customer dokumente" ON publ
 -- Create comprehensive policies for dokumente
 
 -- Admins can do everything
+DROP POLICY IF EXISTS "Admins full access to dokumente" ON public.dokumente;
 CREATE POLICY "Admins full access to dokumente"
 ON public.dokumente
 FOR ALL
@@ -24,6 +25,7 @@ WITH CHECK (
 );
 
 -- Managers can read all dokumente
+DROP POLICY IF EXISTS "Managers can read all dokumente" ON public.dokumente;
 CREATE POLICY "Managers can read all dokumente"
 ON public.dokumente
 FOR SELECT
@@ -31,11 +33,12 @@ USING (
   EXISTS (
     SELECT 1 FROM benutzer
     WHERE benutzer.id = auth.uid()
-    AND benutzer.rolle = 'manager'
+    AND benutzer.rolle IN ('geschaeftsfuehrer', 'admin', 'globaladmin')
   )
 );
 
 -- Managers can insert dokumente
+DROP POLICY IF EXISTS "Managers can insert dokumente" ON public.dokumente;
 CREATE POLICY "Managers can insert dokumente"
 ON public.dokumente
 FOR INSERT
@@ -43,11 +46,12 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM benutzer
     WHERE benutzer.id = auth.uid()
-    AND benutzer.rolle = 'manager'
+    AND benutzer.rolle IN ('geschaeftsfuehrer', 'admin', 'globaladmin')
   )
 );
 
 -- Managers can update dokumente
+DROP POLICY IF EXISTS "Managers can update dokumente" ON public.dokumente;
 CREATE POLICY "Managers can update dokumente"
 ON public.dokumente
 FOR UPDATE
@@ -55,11 +59,12 @@ USING (
   EXISTS (
     SELECT 1 FROM benutzer
     WHERE benutzer.id = auth.uid()
-    AND benutzer.rolle = 'manager'
+    AND benutzer.rolle IN ('geschaeftsfuehrer', 'admin', 'globaladmin')
   )
 );
 
 -- Managers can delete dokumente
+DROP POLICY IF EXISTS "Managers can delete dokumente" ON public.dokumente;
 CREATE POLICY "Managers can delete dokumente"
 ON public.dokumente
 FOR DELETE
@@ -67,11 +72,12 @@ USING (
   EXISTS (
     SELECT 1 FROM benutzer
     WHERE benutzer.id = auth.uid()
-    AND benutzer.rolle = 'manager'
+    AND benutzer.rolle IN ('geschaeftsfuehrer', 'admin', 'globaladmin')
   )
 );
 
 -- Mitarbeiter can read their own dokumente and assigned customer dokumente
+DROP POLICY IF EXISTS "Mitarbeiter can read own and customer dokumente" ON public.dokumente;
 CREATE POLICY "Mitarbeiter can read own and customer dokumente"
 ON public.dokumente
 FOR SELECT

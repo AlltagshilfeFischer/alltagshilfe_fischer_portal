@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.pending_registrations (
 ALTER TABLE public.pending_registrations ENABLE ROW LEVEL SECURITY;
 
 -- Admins können alles sehen und verwalten
+DROP POLICY IF EXISTS "Admins can manage pending_registrations" ON public.pending_registrations;
 CREATE POLICY "Admins can manage pending_registrations"
 ON public.pending_registrations
 FOR ALL

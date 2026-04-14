@@ -1,6 +1,6 @@
 -- Development Progress Dashboard
 -- Modules (Hauptbereiche)
-CREATE TABLE public.dev_modules (
+CREATE TABLE IF NOT EXISTS public.dev_modules (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   description text NOT NULL DEFAULT '',
@@ -10,7 +10,7 @@ CREATE TABLE public.dev_modules (
 );
 
 -- Features within modules
-CREATE TABLE public.dev_features (
+CREATE TABLE IF NOT EXISTS public.dev_features (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   module_id uuid NOT NULL REFERENCES public.dev_modules(id) ON DELETE CASCADE,
   name text NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE public.dev_features (
 );
 
 -- Notes per feature
-CREATE TABLE public.dev_notes (
+CREATE TABLE IF NOT EXISTS public.dev_notes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   feature_id uuid NOT NULL REFERENCES public.dev_features(id) ON DELETE CASCADE,
   text text NOT NULL,

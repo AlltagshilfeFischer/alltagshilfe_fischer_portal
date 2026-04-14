@@ -8,32 +8,32 @@ CREATE EXTENSION IF NOT EXISTS "btree_gist";
 
 -- 2. ENUMS
 DO $$ BEGIN
-  CREATE TYPE approval_status AS ENUM ('pending', 'approved', 'rejected');
+  CREATE TYPE approval_status AS ENUM ('pending', 'approved', 'rejected'); -- CREATE TYPE
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE benutzer_status AS ENUM ('pending', 'approved', 'rejected');
+  CREATE TYPE benutzer_status AS ENUM ('pending', 'approved', 'rejected'); -- CREATE TYPE
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE recurrence_interval AS ENUM ('none', 'weekly', 'biweekly', 'monthly');
+  CREATE TYPE recurrence_interval AS ENUM ('none', 'weekly', 'biweekly', 'monthly'); -- CREATE TYPE
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE standort AS ENUM ('Hannover');
+  CREATE TYPE standort AS ENUM ('Hannover'); -- CREATE TYPE
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE termin_status AS ENUM ('unassigned', 'scheduled', 'in_progress', 'completed', 'cancelled');
+  CREATE TYPE termin_status AS ENUM ('unassigned', 'scheduled', 'in_progress', 'completed', 'cancelled'); -- CREATE TYPE
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE user_rolle AS ENUM ('admin', 'manager', 'mitarbeiter');
+  CREATE TYPE user_rolle AS ENUM ('admin', 'manager', 'mitarbeiter'); -- CREATE TYPE
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -288,29 +288,37 @@ $$;
 -- 7. RLS POLICIES
 
 -- Benutzer policies
+DROP POLICY IF EXISTS "Users can read own benutzer" ON public.benutzer;
 CREATE POLICY "Users can read own benutzer" ON public.benutzer
   FOR SELECT USING (id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can read all benutzer" ON public.benutzer;
 CREATE POLICY "Admins can read all benutzer" ON public.benutzer
   FOR SELECT USING (is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Admins can update benutzer" ON public.benutzer;
 CREATE POLICY "Admins can update benutzer" ON public.benutzer
   FOR UPDATE USING (is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Allow registration insert" ON public.benutzer;
 CREATE POLICY "Allow registration insert" ON public.benutzer
   FOR INSERT WITH CHECK (status = 'pending' AND rolle = 'mitarbeiter');
 
 -- Mitarbeiter policies
+DROP POLICY IF EXISTS "Mitarbeiter can read own data" ON public.mitarbeiter;
 CREATE POLICY "Mitarbeiter can read own data" ON public.mitarbeiter
   FOR SELECT USING (benutzer_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can manage mitarbeiter" ON public.mitarbeiter;
 CREATE POLICY "Admins can manage mitarbeiter" ON public.mitarbeiter
   FOR ALL USING (is_admin(auth.uid()));
 
 -- Kunden policies
+DROP POLICY IF EXISTS "Admins can manage kunden" ON public.kunden;
 CREATE POLICY "Admins can manage kunden" ON public.kunden
   FOR ALL USING (is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Mitarbeiter can read assigned kunden" ON public.kunden;
 CREATE POLICY "Mitarbeiter can read assigned kunden" ON public.kunden
   FOR SELECT USING (EXISTS (
     SELECT 1 FROM mitarbeiter m
@@ -319,15 +327,18 @@ CREATE POLICY "Mitarbeiter can read assigned kunden" ON public.kunden
   ));
 
 -- Termine policies
+DROP POLICY IF EXISTS "Admins can manage termine" ON public.termine;
 CREATE POLICY "Admins can manage termine" ON public.termine
   FOR ALL USING (is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Employees can read own termine" ON public.termine;
 CREATE POLICY "Employees can read own termine" ON public.termine
   FOR SELECT USING (EXISTS (
     SELECT 1 FROM mitarbeiter m
     WHERE m.benutzer_id = auth.uid() AND m.id = termine.mitarbeiter_id
   ));
 
+DROP POLICY IF EXISTS "Employees can update own termine" ON public.termine;
 CREATE POLICY "Employees can update own termine" ON public.termine
   FOR UPDATE USING (EXISTS (
     SELECT 1 FROM mitarbeiter m
@@ -335,9 +346,11 @@ CREATE POLICY "Employees can update own termine" ON public.termine
   ));
 
 -- Termin Änderungen policies
+DROP POLICY IF EXISTS "Admins can manage termin_aenderungen" ON public.termin_aenderungen;
 CREATE POLICY "Admins can manage termin_aenderungen" ON public.termin_aenderungen
   FOR ALL USING (is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Mitarbeiter can read own requests" ON public.termin_aenderungen;
 CREATE POLICY "Mitarbeiter can read own requests" ON public.termin_aenderungen
   FOR SELECT USING (EXISTS (
     SELECT 1 FROM benutzer b
@@ -345,35 +358,45 @@ CREATE POLICY "Mitarbeiter can read own requests" ON public.termin_aenderungen
   ));
 
 -- Other admin-managed tables
+DROP POLICY IF EXISTS "Admins manage kunden_zeitfenster" ON public.kunden_zeitfenster;
 CREATE POLICY "Admins manage kunden_zeitfenster" ON public.kunden_zeitfenster
   FOR ALL USING (is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Admins manage mitarbeiter_verfuegbarkeit" ON public.mitarbeiter_verfuegbarkeit;
 CREATE POLICY "Admins manage mitarbeiter_verfuegbarkeit" ON public.mitarbeiter_verfuegbarkeit
   FOR ALL USING (is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Admins manage mitarbeiter_abwesenheiten" ON public.mitarbeiter_abwesenheiten;
 CREATE POLICY "Admins manage mitarbeiter_abwesenheiten" ON public.mitarbeiter_abwesenheiten
   FOR ALL USING (is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Admins manage termin_vorlagen" ON public.termin_vorlagen;
 CREATE POLICY "Admins manage termin_vorlagen" ON public.termin_vorlagen
   FOR ALL USING (is_admin(auth.uid()));
 
 -- Dokumente policies
+DROP POLICY IF EXISTS "Admins manage dokumente" ON public.dokumente;
 CREATE POLICY "Admins manage dokumente" ON public.dokumente
   FOR ALL USING (is_admin(auth.uid()));
 
 -- Pending registrations policies
+DROP POLICY IF EXISTS "Anyone can request registration" ON public.pending_registrations;
 CREATE POLICY "Anyone can request registration" ON public.pending_registrations
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Admins can view registrations" ON public.pending_registrations;
 CREATE POLICY "Admins can view registrations" ON public.pending_registrations
   FOR SELECT USING (is_admin(auth.uid()) AND ignored = false);
 
+DROP POLICY IF EXISTS "Admins can update registrations" ON public.pending_registrations;
 CREATE POLICY "Admins can update registrations" ON public.pending_registrations
   FOR UPDATE USING (is_admin(auth.uid()));
 
 -- Audit log policies
+DROP POLICY IF EXISTS "Authenticated can read audit_log" ON public.audit_log;
 CREATE POLICY "Authenticated can read audit_log" ON public.audit_log
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Authenticated can insert audit_log" ON public.audit_log;
 CREATE POLICY "Authenticated can insert audit_log" ON public.audit_log
   FOR INSERT WITH CHECK (true);

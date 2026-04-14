@@ -125,6 +125,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
+DROP TRIGGER IF EXISTS protect_globaladmin_role ON public.user_roles;
 CREATE TRIGGER protect_globaladmin_role
 BEFORE INSERT OR UPDATE OR DELETE ON public.user_roles
 FOR EACH ROW EXECUTE FUNCTION public.protect_globaladmin_role();
@@ -142,6 +143,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
+DROP TRIGGER IF EXISTS protect_globaladmin_user ON public.benutzer;
 CREATE TRIGGER protect_globaladmin_user
 BEFORE UPDATE ON public.benutzer
 FOR EACH ROW EXECUTE FUNCTION public.protect_globaladmin_user();

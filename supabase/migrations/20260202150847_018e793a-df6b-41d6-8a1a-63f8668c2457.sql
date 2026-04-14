@@ -1,6 +1,6 @@
 -- Add avatar_url column to mitarbeiter table
 ALTER TABLE public.mitarbeiter
-ADD COLUMN avatar_url TEXT;
+ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
 -- Create storage bucket for employee avatars
 INSERT INTO storage.buckets (id, name, public)

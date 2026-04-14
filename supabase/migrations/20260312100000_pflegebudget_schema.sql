@@ -5,8 +5,16 @@
 -- 1. Enums
 -- ============================================================
 
-CREATE TYPE service_type AS ENUM ('ENTLASTUNG', 'KOMBI', 'VERHINDERUNG');
-CREATE TYPE transaction_source AS ENUM ('APLANO_IMPORT', 'MANUAL');
+DO $$ BEGIN
+  CREATE TYPE service_type AS ENUM ('ENTLASTUNG', 'KOMBI', 'VERHINDERUNG'); -- CREATE TYPE
+EXCEPTION WHEN duplicate_object THEN
+  NULL; -- bereits vorhanden, überspringen
+END $$;
+DO $$ BEGIN
+  CREATE TYPE transaction_source AS ENUM ('APLANO_IMPORT', 'MANUAL'); -- CREATE TYPE
+EXCEPTION WHEN duplicate_object THEN
+  NULL; -- bereits vorhanden, überspringen
+END $$;
 
 -- ============================================================
 -- 2. Pflegegrad-Budgets (Stammdaten)
@@ -85,10 +93,10 @@ CREATE TABLE budget_transactions (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX budget_transactions_client_id_idx ON budget_transactions(client_id);
-CREATE INDEX budget_transactions_service_date_idx ON budget_transactions(service_date);
-CREATE INDEX budget_transactions_billed_idx ON budget_transactions(billed);
-CREATE INDEX budget_transactions_month_idx ON budget_transactions(date_trunc('month', service_date::timestamp));
+CREATE INDEX IF NOT EXISTS budget_transactions_client_id_idx ON budget_transactions(client_id);
+CREATE INDEX IF NOT EXISTS budget_transactions_service_date_idx ON budget_transactions(service_date);
+CREATE INDEX IF NOT EXISTS budget_transactions_billed_idx ON budget_transactions(billed);
+CREATE INDEX IF NOT EXISTS budget_transactions_month_idx ON budget_transactions(date_trunc('month', service_date::timestamp));
 
 ALTER TABLE budget_transactions ENABLE ROW LEVEL SECURITY;
 

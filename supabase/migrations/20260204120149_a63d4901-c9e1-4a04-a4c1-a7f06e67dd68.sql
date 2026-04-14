@@ -195,7 +195,11 @@ SET role = CASE
 END;
 
 DROP TYPE IF EXISTS public.app_role;
-CREATE TYPE public.app_role AS ENUM ('geschaeftsfuehrer', 'admin', 'mitarbeiter');
+DO $$ BEGIN
+  CREATE TYPE public.app_role AS ENUM ('geschaeftsfuehrer', 'admin', 'mitarbeiter'); -- CREATE TYPE
+EXCEPTION WHEN duplicate_object THEN
+  NULL; -- bereits vorhanden, überspringen
+END $$;
 
 ALTER TABLE public.user_roles 
   ALTER COLUMN role TYPE public.app_role USING role::public.app_role;
@@ -216,7 +220,11 @@ SET rolle = CASE
 END;
 
 DROP TYPE IF EXISTS public.user_rolle;
-CREATE TYPE public.user_rolle AS ENUM ('geschaeftsfuehrer', 'admin', 'mitarbeiter');
+DO $$ BEGIN
+  CREATE TYPE public.user_rolle AS ENUM ('geschaeftsfuehrer', 'admin', 'mitarbeiter'); -- CREATE TYPE
+EXCEPTION WHEN duplicate_object THEN
+  NULL; -- bereits vorhanden, überspringen
+END $$;
 
 ALTER TABLE public.benutzer 
   ALTER COLUMN rolle TYPE public.user_rolle USING rolle::public.user_rolle;

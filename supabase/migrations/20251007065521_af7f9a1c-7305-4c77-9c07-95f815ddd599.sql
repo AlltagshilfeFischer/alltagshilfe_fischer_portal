@@ -5,6 +5,7 @@ DROP TRIGGER IF EXISTS on_auth_user_created_registration ON auth.users;
 DROP POLICY IF EXISTS "Admins can manage pending_registrations" ON public.pending_registrations;
 
 -- Allow anyone to insert their registration request
+DROP POLICY IF EXISTS "Anyone can create registration request" ON public.pending_registrations;
 CREATE POLICY "Anyone can create registration request"
 ON public.pending_registrations
 FOR INSERT
@@ -12,6 +13,7 @@ TO public
 WITH CHECK (true);
 
 -- Only admins can view all registrations
+DROP POLICY IF EXISTS "Admins can view all registrations" ON public.pending_registrations;
 CREATE POLICY "Admins can view all registrations"
 ON public.pending_registrations
 FOR SELECT
@@ -21,6 +23,7 @@ USING (
 );
 
 -- Only admins can update registrations
+DROP POLICY IF EXISTS "Admins can update registrations" ON public.pending_registrations;
 CREATE POLICY "Admins can update registrations"
 ON public.pending_registrations
 FOR UPDATE
@@ -33,6 +36,7 @@ WITH CHECK (
 );
 
 -- Only admins can delete registrations
+DROP POLICY IF EXISTS "Admins can delete registrations" ON public.pending_registrations;
 CREATE POLICY "Admins can delete registrations"
 ON public.pending_registrations
 FOR DELETE

@@ -1,7 +1,7 @@
 -- Step 1: Add vorname and nachname columns to kunden table
 ALTER TABLE public.kunden 
-ADD COLUMN vorname TEXT,
-ADD COLUMN nachname TEXT;
+ADD COLUMN IF NOT EXISTS vorname TEXT,
+ADD COLUMN IF NOT EXISTS nachname TEXT;
 
 -- Step 2: Try to intelligently split existing name data
 -- This splits on the first space, putting everything before in vorname and everything after in nachname
@@ -23,7 +23,7 @@ ALTER TABLE public.kunden DROP COLUMN name;
 
 -- Add it back as a generated column
 ALTER TABLE public.kunden 
-ADD COLUMN name TEXT GENERATED ALWAYS AS (
+ADD COLUMN IF NOT EXISTS name TEXT GENERATED ALWAYS AS (
   CASE 
     WHEN vorname IS NOT NULL AND nachname IS NOT NULL AND nachname != '' THEN vorname || ' ' || nachname
     WHEN vorname IS NOT NULL THEN vorname

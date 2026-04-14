@@ -12,6 +12,7 @@ ALTER TABLE public.pending_registrations ENABLE ROW LEVEL SECURITY;
 
 -- Recreate public insert policy for clarity
 DROP POLICY IF EXISTS "Allow public registration requests" ON public.pending_registrations;
+DROP POLICY IF EXISTS "Allow public registration requests" ON public.pending_registrations;
 CREATE POLICY "Allow public registration requests"
 ON public.pending_registrations
 FOR INSERT
@@ -20,12 +21,14 @@ WITH CHECK (true);
 
 -- Recreate SELECT policies (idempotent)
 DROP POLICY IF EXISTS "Users can view their own registration" ON public.pending_registrations;
+DROP POLICY IF EXISTS "Users can view their own registration" ON public.pending_registrations;
 CREATE POLICY "Users can view their own registration"
 ON public.pending_registrations
 FOR SELECT
 TO authenticated
 USING (email = (auth.jwt() ->> 'email')::citext);
 
+DROP POLICY IF EXISTS "Admins can view all registrations" ON public.pending_registrations;
 DROP POLICY IF EXISTS "Admins can view all registrations" ON public.pending_registrations;
 CREATE POLICY "Admins can view all registrations"
 ON public.pending_registrations

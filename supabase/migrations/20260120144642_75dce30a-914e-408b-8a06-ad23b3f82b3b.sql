@@ -20,6 +20,7 @@ DROP POLICY IF EXISTS "Mitarbeiter can read own and customer dokumente" ON publi
 -- Create new policies using the security definer function
 
 -- Admins have full access
+DROP POLICY IF EXISTS "Admins full access to dokumente" ON public.dokumente;
 CREATE POLICY "Admins full access to dokumente"
 ON public.dokumente
 FOR ALL
@@ -27,30 +28,35 @@ USING (public.get_user_rolle(auth.uid()) = 'admin')
 WITH CHECK (public.get_user_rolle(auth.uid()) = 'admin');
 
 -- Managers can read all
+DROP POLICY IF EXISTS "Managers can read all dokumente" ON public.dokumente;
 CREATE POLICY "Managers can read all dokumente"
 ON public.dokumente
 FOR SELECT
 USING (public.get_user_rolle(auth.uid()) = 'manager');
 
 -- Managers can insert
+DROP POLICY IF EXISTS "Managers can insert dokumente" ON public.dokumente;
 CREATE POLICY "Managers can insert dokumente"
 ON public.dokumente
 FOR INSERT
 WITH CHECK (public.get_user_rolle(auth.uid()) = 'manager');
 
 -- Managers can update
+DROP POLICY IF EXISTS "Managers can update dokumente" ON public.dokumente;
 CREATE POLICY "Managers can update dokumente"
 ON public.dokumente
 FOR UPDATE
 USING (public.get_user_rolle(auth.uid()) = 'manager');
 
 -- Managers can delete
+DROP POLICY IF EXISTS "Managers can delete dokumente" ON public.dokumente;
 CREATE POLICY "Managers can delete dokumente"
 ON public.dokumente
 FOR DELETE
 USING (public.get_user_rolle(auth.uid()) = 'manager');
 
 -- Mitarbeiter can read their own and assigned customer dokumente
+DROP POLICY IF EXISTS "Mitarbeiter can read dokumente" ON public.dokumente;
 CREATE POLICY "Mitarbeiter can read dokumente"
 ON public.dokumente
 FOR SELECT

@@ -1,8 +1,12 @@
 -- Create enum for recurrence intervals
-CREATE TYPE public.recurrence_interval AS ENUM ('weekly', 'biweekly', 'monthly', 'quarterly');
+DO $$ BEGIN
+  CREATE TYPE public.recurrence_interval AS ENUM ('weekly', 'biweekly', 'monthly', 'quarterly'); -- CREATE TYPE
+EXCEPTION WHEN duplicate_object THEN
+  NULL; -- bereits vorhanden, überspringen
+END $$;
 
 -- Create table for recurring appointment templates
-CREATE TABLE public.termin_vorlagen (
+CREATE TABLE IF NOT EXISTS public.termin_vorlagen (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   kunden_id UUID NOT NULL REFERENCES public.kunden(id) ON DELETE CASCADE,
   mitarbeiter_id UUID NOT NULL REFERENCES public.mitarbeiter(id) ON DELETE CASCADE,
@@ -23,6 +27,7 @@ CREATE TABLE public.termin_vorlagen (
 ALTER TABLE public.termin_vorlagen ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for termin_vorlagen
+DROP POLICY IF EXISTS "Authenticated employees can manage appointment templates" ON public.termin_vorlagen;
 CREATE POLICY "Authenticated employees can manage appointment templates"
 ON public.termin_vorlagen
 FOR ALL
@@ -30,12 +35,13 @@ USING (is_authenticated_employee())
 WITH CHECK (is_authenticated_employee());
 
 -- Create indexes for better performance
-CREATE INDEX idx_termin_vorlagen_kunde ON public.termin_vorlagen(kunden_id);
-CREATE INDEX idx_termin_vorlagen_mitarbeiter ON public.termin_vorlagen(mitarbeiter_id);
-CREATE INDEX idx_termin_vorlagen_aktiv ON public.termin_vorlagen(ist_aktiv) WHERE ist_aktiv = true;
-CREATE INDEX idx_termin_vorlagen_wochentag ON public.termin_vorlagen(wochentag);
+CREATE INDEX IF NOT EXISTS idx_termin_vorlagen_kunde ON public.termin_vorlagen(kunden_id);
+CREATE INDEX IF NOT EXISTS idx_termin_vorlagen_mitarbeiter ON public.termin_vorlagen(mitarbeiter_id);
+CREATE INDEX IF NOT EXISTS idx_termin_vorlagen_aktiv ON public.termin_vorlagen(ist_aktiv) WHERE ist_aktiv = true;
+CREATE INDEX IF NOT EXISTS idx_termin_vorlagen_wochentag ON public.termin_vorlagen(wochentag);
 
 -- Add trigger for updated_at
+DROP TRIGGER IF EXISTS update_termin_vorlagen_updated_at ON public.termin_vorlagen;
 CREATE TRIGGER update_termin_vorlagen_updated_at
   BEFORE UPDATE ON public.termin_vorlagen
   FOR EACH ROW

@@ -6,6 +6,7 @@ DROP POLICY IF EXISTS "Authenticated users can insert mitarbeiter" ON public.mit
 DROP POLICY IF EXISTS "Authenticated users can update mitarbeiter" ON public.mitarbeiter;
 
 -- Admins können alle Mitarbeiter verwalten
+DROP POLICY IF EXISTS "Admins can manage mitarbeiter" ON public.mitarbeiter;
 CREATE POLICY "Admins can manage mitarbeiter"
 ON public.mitarbeiter
 FOR ALL
@@ -14,6 +15,7 @@ USING (public.is_admin(auth.uid()))
 WITH CHECK (public.is_admin(auth.uid()));
 
 -- Mitarbeiter können ihre eigenen Daten lesen
+DROP POLICY IF EXISTS "Mitarbeiter can read their own data" ON public.mitarbeiter;
 CREATE POLICY "Mitarbeiter can read their own data"
 ON public.mitarbeiter
 FOR SELECT
@@ -24,6 +26,7 @@ USING (benutzer_id = auth.uid());
 DROP POLICY IF EXISTS "Authenticated users can read benutzer" ON public.benutzer;
 
 -- Nur Admins können alle Benutzer sehen
+DROP POLICY IF EXISTS "Admins can read all benutzer" ON public.benutzer;
 CREATE POLICY "Admins can read all benutzer"
 ON public.benutzer
 FOR SELECT
@@ -31,6 +34,7 @@ TO authenticated
 USING (public.is_admin(auth.uid()));
 
 -- Benutzer können ihre eigenen Daten sehen
+DROP POLICY IF EXISTS "Users can read own benutzer" ON public.benutzer;
 CREATE POLICY "Users can read own benutzer"
 ON public.benutzer
 FOR SELECT
