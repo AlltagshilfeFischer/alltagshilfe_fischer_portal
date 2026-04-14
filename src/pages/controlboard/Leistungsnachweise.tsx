@@ -1034,7 +1034,9 @@ export default function Leistungsnachweise() {
                             {filteredTermine.map(t => {
                               const start = new Date(t.start_at);
                               const end = new Date(t.end_at);
-                              const hours = t.iststunden ?? ((end.getTime() - start.getTime()) / 3600000);
+                              const timeDiff = Math.round(((end.getTime() - start.getTime()) / 3600000) * 100) / 100;
+                              // iststunden=0 gilt als "nicht gesetzt" → Zeitdifferenz verwenden
+                              const hours = (t.iststunden != null && t.iststunden > 0) ? t.iststunden : timeDiff;
                               const sts = terminStatusLabel[t.status] || { label: t.status, color: 'text-muted-foreground bg-muted' };
                               const canEdit = selectedLN?.status === 'offen';
                               return (
@@ -1099,7 +1101,7 @@ export default function Leistungsnachweise() {
                                         type="number"
                                         step="0.25"
                                         min="0"
-                                        defaultValue={Math.round(hours * 100) / 100}
+                                        defaultValue={hours}
                                         className="w-20 h-7 text-xs text-right"
                                         onBlur={async (e) => {
                                           const val = parseFloat(e.target.value);
@@ -1109,7 +1111,7 @@ export default function Leistungsnachweise() {
                                         }}
                                       />
                                     ) : (
-                                      <>{Math.round(hours * 100) / 100}h</>
+                                      <>{hours.toFixed(2)} h</>
                                     )}
                                   </TableCell>
                                 </TableRow>

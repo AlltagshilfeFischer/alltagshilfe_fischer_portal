@@ -1,6 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building, Plus, Upload } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Building, FileSpreadsheet, FileText, Plus, Upload } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
@@ -16,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import CreateCustomerWizard from '@/components/customers/CreateCustomerWizard';
 import { KundenSmartImport } from '@/components/import/KundenSmartImport';
+import { CsvImportWizard } from '@/components/customers/csv-import/CsvImportWizard';
 import { CustomerFilters } from '@/components/customers/CustomerFilters';
 import { CustomerTable } from '@/components/customers/CustomerTable';
 import { CustomerEditDialog } from '@/components/customers/CustomerEditDialog';
@@ -40,6 +47,7 @@ export default function MasterData() {
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [showSmartImport, setShowSmartImport] = useState(false);
+  const [showCsvImport, setShowCsvImport] = useState(false);
   const [detailKundenId, setDetailKundenId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -109,9 +117,21 @@ export default function MasterData() {
           <p className="text-sm sm:text-base text-muted-foreground">Verwalten Sie Kundendaten und Neukundenkontakte</p>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
-          <Button variant="outline" onClick={() => setShowSmartImport(true)} className="gap-2">
-            <Upload className="h-4 w-4" />Importieren
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Upload className="h-4 w-4" />Importieren
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowSmartImport(true)}>
+                <FileText className="h-4 w-4 mr-2" />Freitext / KI-Import
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowCsvImport(true)}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />CSV-Datei importieren
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={() => setIsCreatingCustomer(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Neuen Kunden anlegen</span>
@@ -198,6 +218,7 @@ export default function MasterData() {
 
       <CreateCustomerWizard open={isCreatingCustomer} onOpenChange={setIsCreatingCustomer} employees={employees || []} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['customers'] })} />
       <KundenSmartImport open={showSmartImport} onOpenChange={setShowSmartImport} />
+      <CsvImportWizard open={showCsvImport} onOpenChange={setShowCsvImport} />
       <KundenDetailDialog isOpen={!!detailKundenId} onClose={() => setDetailKundenId(null)} kundenId={detailKundenId} />
     </div>
   );

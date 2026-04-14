@@ -1,0 +1,245 @@
+import { useState, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Loader2, Upload } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { parseCsvFile } from '@/lib/csv-parser';
+import type { CsvParseResult } from '@/lib/csv-parser';
+
+const DB_FIELD_OPTIONS = [
+  { value: 'vorname', label: 'Vorname *' },
+  { value: 'nachname', label: 'Nachname *' },
+  { value: 'telefonnr', label: 'Telefon' },
+  { value: 'email', label: 'E-Mail' },
+  { value: 'strasse', label: 'Straße' },
+  { value: 'plz', label: 'PLZ' },
+  { value: 'stadt', label: 'Stadt' },
+  { value: 'stadtteil', label: 'Stadtteil' },
+  { value: 'adresse', label: 'Adresse (kombiniert)' },
+  { value: 'geburtsdatum', label: 'Geburtsdatum (TT.MM.JJJJ)' },
+  { value: 'pflegegrad', label: 'Pflegegrad (0-5)' },
+  { value: 'pflegekasse', label: 'Pflegekasse' },
+  { value: 'versichertennummer', label: 'Versichertennummer' },
+  { value: 'kategorie', label: 'Kategorie (Kunde/Interessent)' },
+  { value: 'stunden_kontingent_monat', label: 'Stunden/Monat' },
+  { value: 'sonstiges', label: 'Sonstiges' },
+  { value: 'angehoerige_ansprechpartner', label: 'Angehörige/Ansprechpartner' },
+  { value: 'eintritt', label: 'Eintrittsdatum' },
+  { value: 'austritt', label: 'Austrittsdatum' },
+  { value: 'kassen_privat', label: 'Kasse/Privat' },
+] as const;
+
+const FUZZY_MAP: Record<string, string> = {
+  'vorname': 'vorname',
+  'nachname': 'nachname',
+  'name': 'nachname',
+  'telefon': 'telefonnr',
+  'tel': 'telefonnr',
+  'tel.': 'telefonnr',
+  'email': 'email',
+  'e-mail': 'email',
+  'strasse': 'strasse',
+  'straße': 'strasse',
+  'adresse': 'adresse',
+  'plz': 'plz',
+  'postleitzahl': 'plz',
+  'stadt': 'stadt',
+  'ort': 'stadt',
+  'stadtteil': 'stadtteil',
+  'geburtsdatum': 'geburtsdatum',
+  'geb.': 'geburtsdatum',
+  'geburtstag': 'geburtsdatum',
+  'pfg': 'pflegegrad',
+  'pflegegrad': 'pflegegrad',
+  'pg': 'pflegegrad',
+  'pflegekasse': 'pflegekasse',
+  'kasse': 'pflegekasse',
+  'versichertennummer': 'versichertennummer',
+  'vers.nr.': 'versichertennummer',
+  'versichertennnummer': 'versichertennummer',
+  'kategorie': 'kategorie',
+  'stunden': 'stunden_kontingent_monat',
+  'eintritt': 'eintritt',
+  'austritt': 'austritt',
+  'sonstiges': 'sonstiges',
+  'bemerkung': 'sonstiges',
+  'angehöriger/ansprechpartner': 'angehoerige_ansprechpartner',
+};
+
+interface CsvImportStepMappingProps {
+  onComplete: (parseResult: CsvParseResult, mapping: Record<string, string | null>) => void;
+}
+
+export function CsvImportStepMapping({ onComplete }: CsvImportStepMappingProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [parseResult, setParseResult] = useState<CsvParseResult | null>(null);
+  const [mapping, setMapping] = useState<Record<string, string | null>>({});
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const hasMandatoryField = Object.values(mapping).includes('vorname') || Object.values(mapping).includes('nachname');
+
+  const applyFallbackMapping = (headers: string[]): Record<string, string | null> => {
+    const fallback: Record<string, string | null> = {};
+    for (const header of headers) {
+      fallback[header] = FUZZY_MAP[header.toLowerCase()] ?? null;
+    }
+    return fallback;
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await parseCsvFile(file);
+      setParseResult(result);
+
+      setIsAnalyzing(true);
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/map-csv-columns`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.session?.access_token}`,
+              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ columns: result.headers }),
+          }
+        );
+
+        if (!response.ok) throw new Error('Edge Function nicht erreichbar');
+
+        const { mapping: aiMapping } = await response.json() as { mapping: Record<string, string | null> };
+        setMapping(aiMapping ?? {});
+      } catch (aiError) {
+        console.error('[CsvImport] KI-Mapping fehlgeschlagen, nutze Fallback:', aiError);
+        setMapping(applyFallbackMapping(result.headers));
+      } finally {
+        setIsAnalyzing(false);
+      }
+    } catch (err) {
+      console.error('[CsvImport] CSV-Parse-Fehler:', err);
+      toast.error('CSV konnte nicht gelesen werden', {
+        description: err instanceof Error ? err.message : 'Ungültiges Format',
+      });
+    }
+
+    // Reset so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleMappingChange = (csvHeader: string, dbField: string) => {
+    setMapping(prev => ({
+      ...prev,
+      [csvHeader]: dbField === '__ignore__' ? null : dbField,
+    }));
+  };
+
+  const handleComplete = () => {
+    if (!parseResult) return;
+    onComplete(parseResult, mapping);
+  };
+
+  const getExampleValue = (headerIndex: number): string => {
+    if (!parseResult || parseResult.rows.length === 0) return '';
+    return parseResult.rows[0][headerIndex] ?? '';
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.txt"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="h-4 w-4" />
+          CSV-Datei auswählen
+        </Button>
+        {parseResult && (
+          <span className="ml-3 text-sm text-muted-foreground">
+            {parseResult.totalRows} Zeilen geladen
+          </span>
+        )}
+      </div>
+
+      {isAnalyzing && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          KI analysiert Spalten...
+        </div>
+      )}
+
+      {parseResult && !isAnalyzing && (
+        <>
+          <div className="rounded-md border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left px-4 py-2 font-medium">CSV-Spalte</th>
+                  <th className="text-left px-4 py-2 font-medium">Beispielwert (1. Zeile)</th>
+                  <th className="text-left px-4 py-2 font-medium">Datenbankfeld</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parseResult.headers.map((header, index) => (
+                  <tr key={header} className="border-b last:border-0">
+                    <td className="px-4 py-2 font-mono text-xs">{header}</td>
+                    <td className="px-4 py-2 text-muted-foreground truncate max-w-[200px]">
+                      {getExampleValue(index) || '—'}
+                    </td>
+                    <td className="px-4 py-2">
+                      <Select
+                        value={mapping[header] ?? '__ignore__'}
+                        onValueChange={(val) => handleMappingChange(header, val)}
+                      >
+                        <SelectTrigger className="w-[220px]">
+                          <SelectValue placeholder="— Ignorieren —" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__ignore__">— Ignorieren —</SelectItem>
+                          {DB_FIELD_OPTIONS.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            * Pflichtfelder: Vorname oder Nachname müssen gemappt sein
+          </p>
+
+          <div className="flex justify-end">
+            <Button onClick={handleComplete} disabled={!hasMandatoryField}>
+              Weiter zur Validierung
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
