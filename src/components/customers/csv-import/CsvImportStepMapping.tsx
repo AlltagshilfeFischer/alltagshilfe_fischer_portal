@@ -101,18 +101,27 @@ export function CsvImportStepMapping({ onComplete }: CsvImportStepMappingProps) 
       const result = await parseCsvFile(file);
       setParseResult(result);
 
-      setIsAnalyzing(true);
-      try {
-        const { data, error } = await invokeAiFunction('map-csv-columns', { columns: result.headers });
-        if (error) throw error;
+      // Schritt 1: Fuzzy-Matching lokal (kein API-Aufruf)
+      const fuzzyResult = applyFallbackMapping(result.headers);
+      const unknownColumns = result.headers.filter(h => fuzzyResult[h] === null);
 
-        const { mapping: aiMapping } = data as { mapping: Record<string, string | null> };
-        setMapping(aiMapping ?? {});
-      } catch (aiError) {
-        console.error('[CsvImport] KI-Mapping fehlgeschlagen, nutze Fallback:', aiError);
-        setMapping(applyFallbackMapping(result.headers));
-      } finally {
-        setIsAnalyzing(false);
+      // Schritt 2: KI nur für Spalten die Fuzzy nicht erkannt hat
+      if (unknownColumns.length > 0) {
+        setIsAnalyzing(true);
+        try {
+          const { data, error } = await invokeAiFunction('map-csv-columns', { columns: unknownColumns });
+          if (error) throw error;
+
+          const { mapping: aiMapping } = data as { mapping: Record<string, string | null> };
+          setMapping({ ...fuzzyResult, ...(aiMapping ?? {}) });
+        } catch (aiError) {
+          console.error('[CsvImport] KI-Mapping fehlgeschlagen:', aiError);
+          setMapping(fuzzyResult);
+        } finally {
+          setIsAnalyzing(false);
+        }
+      } else {
+        setMapping(fuzzyResult);
       }
     } catch (err) {
       console.error('[CsvImport] CSV-Parse-Fehler:', err);
@@ -170,7 +179,7 @@ export function CsvImportStepMapping({ onComplete }: CsvImportStepMappingProps) 
       {isAnalyzing && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          KI analysiert Spalten...
+          KI analysiert unbekannte Spalten...
         </div>
       )}
 

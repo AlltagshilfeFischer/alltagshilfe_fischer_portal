@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const MAX_ROWS = 1000;
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+const MAX_ROWS = 5000;
 
 export interface CsvParseResult {
   headers: string[];
@@ -107,7 +107,7 @@ export async function parseCsvFile(file: File): Promise<CsvParseResult> {
   const dataLines = nonEmptyLines.slice(1);
 
   if (dataLines.length > MAX_ROWS) {
-    toast.error(`Zu viele Zeilen (max. ${MAX_ROWS}, gefunden: ${dataLines.length})`);
+    toast.error(`Zu viele Zeilen (max. ${MAX_ROWS.toLocaleString('de')}, gefunden: ${dataLines.length.toLocaleString('de')})`);
     throw new Error(`CSV überschreitet die maximale Zeilenanzahl von ${MAX_ROWS}`);
   }
 
