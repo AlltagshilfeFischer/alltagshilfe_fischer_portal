@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { addWeeks, subWeeks } from 'date-fns';
+import { addWeeks, subWeeks, startOfDay } from 'date-fns';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { MyChangeRequests } from '@/components/mitarbeiter/MyChangeRequests';
@@ -51,6 +51,21 @@ export default function MitarbeiterDashboard() {
         .order('start_at', { ascending: true });
 
       if (error) throw error;
+
+      // Auto-Complete: Alle vergangenen Termine (vor heute) die noch scheduled/in_progress sind
+      const today = startOfDay(new Date());
+      const toComplete = (data || []).filter(
+        t => new Date(t.end_at) < today && ['scheduled', 'in_progress'].includes(t.status)
+      );
+      if (toComplete.length > 0) {
+        await supabase
+          .from('termine')
+          .update({ status: 'completed' })
+          .in('id', toComplete.map(t => t.id));
+        // Status lokal aktualisieren damit kein zweiter Fetch nötig
+        for (const t of toComplete) t.status = 'completed';
+      }
+
       setAppointments((data as any) || []);
     } catch (error) {
       console.error('Error loading data:', error);

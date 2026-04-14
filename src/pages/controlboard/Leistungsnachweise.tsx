@@ -927,8 +927,8 @@ export default function Leistungsnachweise() {
                             </span>
                           ) : '–'}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">{rowHours.geplant}h</TableCell>
-                        <TableCell className="text-right tabular-nums font-semibold">{rowHours.geleistet}h</TableCell>
+                        <TableCell className="text-right tabular-nums">{(Number(rowHours.geplant) || 0).toFixed(1)}</TableCell>
+                        <TableCell className="text-right tabular-nums font-semibold">{(Number(rowHours.geleistet) || 0).toFixed(1)}</TableCell>
                         <TableCell>
                           <Badge variant={cfg.variant} className="gap-1 text-xs">
                             {cfg.icon} {cfg.label}
@@ -993,11 +993,11 @@ export default function Leistungsnachweise() {
                   <div className="flex items-center gap-4 text-sm">
                     <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground">Geplant:</span>
-                      <span className="font-bold text-foreground">{displayHours.geplant}h</span>
+                      <span className="font-bold text-foreground">{(Number(displayHours.geplant) || 0).toFixed(1)} h</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground">Geleistet:</span>
-                      <span className="font-bold text-primary">{displayHours.geleistet}h</span>
+                      <span className="font-bold text-primary">{(Number(displayHours.geleistet) || 0).toFixed(1)} h</span>
                     </div>
                   </div>
 
@@ -1046,11 +1046,16 @@ export default function Leistungsnachweise() {
                                     {canEdit ? (
                                       <div className="flex items-center gap-1">
                                         <Input
-                                          type="time"
+                                          type="text"
                                           defaultValue={format(start, 'HH:mm')}
-                                          className="w-24 h-7 text-xs"
+                                          placeholder="HH:MM"
+                                          pattern="[0-9]{2}:[0-9]{2}"
+                                          className="w-20 h-7 text-xs tabular-nums"
                                           onBlur={async (e) => {
-                                            const [h, m] = e.target.value.split(':').map(Number);
+                                            const match = e.target.value.match(/^(\d{1,2}):(\d{2})$/);
+                                            if (!match) { e.target.value = format(start, 'HH:mm'); return; }
+                                            const [, h, m] = match.map(Number);
+                                            if (h > 23 || m > 59) { e.target.value = format(start, 'HH:mm'); return; }
                                             const newStart = new Date(start);
                                             newStart.setHours(h, m, 0, 0);
                                             await supabase.from('termine').update({ start_at: newStart.toISOString() }).eq('id', t.id);
@@ -1059,11 +1064,16 @@ export default function Leistungsnachweise() {
                                         />
                                         <span className="text-muted-foreground">–</span>
                                         <Input
-                                          type="time"
+                                          type="text"
                                           defaultValue={format(end, 'HH:mm')}
-                                          className="w-24 h-7 text-xs"
+                                          placeholder="HH:MM"
+                                          pattern="[0-9]{2}:[0-9]{2}"
+                                          className="w-20 h-7 text-xs tabular-nums"
                                           onBlur={async (e) => {
-                                            const [h, m] = e.target.value.split(':').map(Number);
+                                            const match = e.target.value.match(/^(\d{1,2}):(\d{2})$/);
+                                            if (!match) { e.target.value = format(end, 'HH:mm'); return; }
+                                            const [, h, m] = match.map(Number);
+                                            if (h > 23 || m > 59) { e.target.value = format(end, 'HH:mm'); return; }
                                             const newEnd = new Date(end);
                                             newEnd.setHours(h, m, 0, 0);
                                             await supabase.from('termine').update({ end_at: newEnd.toISOString() }).eq('id', t.id);
