@@ -1,7 +1,6 @@
 import { toast } from 'sonner';
 
-const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
-const MAX_ROWS = 5000;
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 export interface CsvParseResult {
   headers: string[];
@@ -86,8 +85,8 @@ function parseCsvLine(line: string, delimiter: string): string[] {
 
 export async function parseCsvFile(file: File): Promise<CsvParseResult> {
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    toast.error('Datei zu groß (max. 5 MB)');
-    throw new Error('Datei überschreitet die maximale Größe von 5 MB');
+    toast.error('Datei zu groß (max. 50 MB)');
+    throw new Error('Datei überschreitet die maximale Größe von 50 MB');
   }
 
   const text = await readFileWithEncoding(file);
@@ -106,9 +105,8 @@ export async function parseCsvFile(file: File): Promise<CsvParseResult> {
 
   const dataLines = nonEmptyLines.slice(1);
 
-  if (dataLines.length > MAX_ROWS) {
-    toast.error(`Zu viele Zeilen (max. ${MAX_ROWS.toLocaleString('de')}, gefunden: ${dataLines.length.toLocaleString('de')})`);
-    throw new Error(`CSV überschreitet die maximale Zeilenanzahl von ${MAX_ROWS}`);
+  if (dataLines.length > 10000) {
+    toast.warning(`Große Datei: ${dataLines.length.toLocaleString('de')} Zeilen — Import kann etwas länger dauern`);
   }
 
   const rows = dataLines.map(line => parseCsvLine(line, delimiter));
